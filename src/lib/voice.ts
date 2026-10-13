@@ -113,7 +113,7 @@ export class VoiceRecorder {
     // Keep ONE output: a 0-output node cannot be connected, and the failed
     // connect would trigger the ScriptProcessor fallback while this worklet is
     // already wired to the source — capturing the mic TWICE (duplicate audio).
-    const node = new AudioWorkletNode(ctx, easyagent-rec)
+    const node = new AudioWorkletNode(ctx, 'easyagent-rec')
     node.port.onmessage = (e: MessageEvent<Float32Array>) => {
       if (!this.cancelled) this.frames.push(e.data)
     }

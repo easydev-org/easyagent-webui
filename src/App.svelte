@@ -39,6 +39,7 @@
   /** The active token resolved to the ADMIN role: render the admin console
    *  INSTEAD of the chat/settings shell (an admin token has no tenant). */
   let isAdmin = $state(false)
+  let adminScope = $state('')
 
   // setup form
   let setupToken = $state('')
@@ -185,6 +186,7 @@
       const id = await api.identity()
       if (id.role === 'admin') {
         isAdmin = true
+        adminScope = id.scope
         store = null
         phase = 'admin'
         return
@@ -300,7 +302,7 @@
     onAddUser={logout}
   />
 {:else if phase === 'admin'}
-  <AdminConsole {baseUrl} {token} onLogout={logout} />
+  <AdminConsole {baseUrl} {token} scope={adminScope} onLogout={logout} />
 {:else if phase === 'backends'}
   <div class="flex h-full flex-col">
     <header class="flex h-12 shrink-0 items-center gap-2 border-b border-border px-3">

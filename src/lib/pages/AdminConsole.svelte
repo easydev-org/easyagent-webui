@@ -4,7 +4,7 @@
   // admin token can manage tenants + their tokens (agent.v1.AdminService) but
   // has no tenant, so chat/config are meaningless for it.
   import { onMount } from 'svelte'
-  import { AdminApi, type Tenant, type TenantToken } from '$lib/admin'
+  import { AdminApi, type AdminToken, type Tenant, type TenantToken } from '$lib/admin'
   import { t } from '$lib/i18n.svelte'
   import { showErrorToast, showToast } from '$lib/toast.svelte'
   import { confirmDialog } from '$lib/dialogs'
@@ -16,8 +16,16 @@
   import EmptyState from '$lib/components/layout/EmptyState.svelte'
   import IconButton from '$lib/components/layout/IconButton.svelte'
 
-  let { baseUrl, token, onLogout }: { baseUrl: string; token: string; onLogout: () => void } =
-    $props()
+  let {
+    baseUrl,
+    token,
+    scope = '*',
+    onLogout,
+  }: { baseUrl: string; token: string; scope?: string; onLogout: () => void } = $props()
+
+  // A platform admin (scope '*') sees/manages everything; a delegated admin is
+  // limited to its subtree (the server enforces this too).
+  const isPlatform = $derived(scope === '*' || scope === '')
 
   // `$derived` (not a plain const): reads the props reactively and rebuilds the
   // client if baseUrl/token ever change (they are stable per mount).
@@ -36,6 +44,9 @@
   // one-time secrets revealed once (create tenant / issue / rotate token)
   let revealed = $state<{ label: string; value: string } | null>(null)
   let issueLabel = $state('')
+  // delegated admin tokens for the current scope
+  let adminTokens = $state<AdminToken[]>([])
+  let newAdminLabel = $state('')
 
   onMount(() => {
     void load()
@@ -49,6 +60,44 @@
       showErrorToast(String(e))
     }
     loading = false
+    if (isPlatform) return
+    // A delegated admin also sees the delegated-admin tokens of its subtree.
+    await loadAdminTokens()
+  }
+
+  async function loadAdminTokens() {
+    try {
+      adminTokens = await api.listAdminTokens(scope)
+    } catch (e) {
+      showErrorToast(String(e))
+    }
+  }
+
+  async function createAdmin() {
+    try {
+      const plaintext = await api.createAdminToken(scope, newAdminLabel.trim() || 'sub-admin')
+      revealed = { label: `${t('adminSubAdmin')} — ${scope}`, value: plaintext }
+      newAdminLabel = ''
+      await loadAdminTokens()
+    } catch (e) {
+      showErrorToast(String(e))
+    }
+  }
+
+  async function revokeAdmin(tok: AdminToken) {
+    const ok = await confirmDialog({
+      title: t('adminRevokeToken'),
+      body: tok.label || tok.tokenId,
+      confirmLabel: t('delete'),
+      destructive: true,
+    })
+    if (!ok) return
+    try {
+      await api.revokeAdminToken(tok.tokenId)
+      await loadAdminTokens()
+    } catch (e) {
+      showErrorToast(String(e))
+    }
   }
 
   async function toggleExpand(id: string) {
@@ -65,12 +114,29 @@
   }
 
   async function create() {
-    const id = newId.trim()
-    if (!id || creating) return
+    if (creating) return
     creating = true
     try {
-      const plaintext = await api.createTenant(id, newName.trim() || id)
-      revealed = { label: `${t('adminBootstrapToken')} — ${id}`, value: plaintext }
+      if (isPlatform) {
+        // Platform admin: caller supplies the id.
+        const id = newId.trim()
+        if (!id) {
+          creating = false
+          return
+        }
+        const plaintext = await api.createTenant(id, newName.trim() || id)
+        revealed = { label: `${t('adminBootstrapToken')} — ${id}`, value: plaintext }
+      } else {
+        // Delegated admin: the server GENERATES the id under the scope; the
+        // caller supplies only a display name.
+        const name = newName.trim()
+        if (!name) {
+          creating = false
+          return
+        }
+        const r = await api.createSubTenant(name)
+        revealed = { label: `${t('adminBootstrapToken')} — ${r.id}`, value: r.token }
+      }
       newId = ''
       newName = ''
       showToast(t('saved'))
@@ -188,6 +254,13 @@
       </div>
     {/if}
 
+    {#if !isPlatform}
+      <div class="mx-3 mt-3 rounded-md border border-border bg-muted/40 px-3 py-2">
+        <div class="text-micro text-muted-foreground">{t('adminDelegatedScope')}</div>
+        <div class="font-mono text-meta">{scope}</div>
+      </div>
+    {/if}
+
     <!-- tenants: section header with an ADD action (matches ProvidersList). -->
     <div class="flex items-center pr-2">
       <SectionLabel class="min-w-0 flex-1">{t('adminTenants')} · {tenants.length}</SectionLabel>
@@ -213,6 +286,9 @@
             <span class="block truncate text-body font-medium">{tn.name || tn.id}</span>
             <span class="block truncate font-mono text-micro text-muted-foreground">{tn.id}</span>
           </span>
+          {#if isPlatform && tn.scopeId && tn.scopeId !== tn.id}
+            <span class="rounded border border-border px-1.5 py-0.5 font-mono text-micro text-muted-foreground">{tn.scopeId}</span>
+          {/if}
           {#if tn.disabled}
             <span class="text-micro text-destructive">{t('adminDisabled')}</span>
           {/if}
@@ -262,6 +338,34 @@
         {/if}
       {/each}
     {/if}
+
+    {#if !isPlatform}
+      <!-- delegated administrators of this subtree (re-delegation) -->
+      <div class="flex items-center pr-2">
+        <SectionLabel class="min-w-0 flex-1">{t('adminSubAdmins')} · {adminTokens.length}</SectionLabel>
+      </div>
+      <div class="flex items-end gap-2 px-4 py-2">
+        <label class="block">
+          <span class="mb-1 block text-meta text-muted-foreground">{t('adminTokenLabel')}</span>
+          <Input bind:value={newAdminLabel} placeholder="ops" />
+        </label>
+        <Button size="sm" onclick={() => void createAdmin()}>{t('adminCreateSubAdmin')}</Button>
+      </div>
+      {#each adminTokens as at (at.tokenId)}
+        <div class="flex items-center gap-3 px-4 py-2">
+          <AppIcons.key class="size-4 shrink-0 text-muted-foreground" />
+          <span class="min-w-0 flex-1">
+            <span class="block truncate text-meta">{at.label || at.tokenId}</span>
+            <span class="block truncate font-mono text-micro text-muted-foreground">{at.scopeTenantId}</span>
+          </span>
+          {#if at.revoked}
+            <span class="text-micro text-destructive">{t('adminRevoked')}</span>
+          {:else}
+            <IconButton icon={AppIcons.delete} label={t('adminRevokeToken')} variant="destructive" onclick={() => void revokeAdmin(at)} />
+          {/if}
+        </div>
+      {/each}
+    {/if}
   </div>
 </div>
 
@@ -277,17 +381,24 @@
       onclick={e => e.stopPropagation()}
     >
       <div class="mb-3 text-sm font-semibold">{t('adminCreateTenant')}</div>
-      <label class="mb-3 block">
-        <span class="mb-1 block text-meta text-muted-foreground">{t('adminTenantId')}</span>
-        <Input bind:value={newId} placeholder="acme" />
-      </label>
+      {#if isPlatform}
+        <label class="mb-3 block">
+          <span class="mb-1 block text-meta text-muted-foreground">{t('adminTenantId')}</span>
+          <Input bind:value={newId} placeholder="acme" />
+        </label>
+      {:else}
+        <p class="mb-3 text-micro text-muted-foreground">{t('adminSubTenantIdHint')}</p>
+      {/if}
       <label class="mb-4 block">
         <span class="mb-1 block text-meta text-muted-foreground">{t('adminTenantName')}</span>
         <Input bind:value={newName} placeholder="Acme Inc" />
       </label>
       <div class="flex justify-end gap-2">
         <Button variant="outline" onclick={() => (createOpen = false)}>{t('cancel')}</Button>
-        <Button disabled={newId.trim() === '' || creating} onclick={() => void create()}>
+        <Button
+          disabled={(isPlatform && newId.trim() === '') || (!isPlatform && newName.trim() === '') || creating}
+          onclick={() => void create()}
+        >
           {creating ? t('saving') : t('create')}
         </Button>
       </div>

@@ -19,6 +19,28 @@ export interface Tenant {
   disabled: boolean
   createdAt: string
   updatedAt: string
+  /** Delegation: parent tenant (empty = a platform root). */
+  parentId: string
+  /** Delegation: the subtree root this tenant belongs to (its own id if root). */
+  scopeId: string
+}
+
+/** A delegated-admin token row (agent.v1.AdminToken). */
+export interface AdminToken {
+  tokenId: string
+  scopeTenantId: string
+  label: string
+  createdAt: string
+  lastUsedAt: string
+  revoked: boolean
+}
+
+/** The caller's identity (agent.v1.GetIdentityResponse): role + scope. */
+export interface Identity {
+  role: 'admin' | 'tenant'
+  tenant: string
+  /** Admin scope: '*' (platform) or a subtree root id (delegated admin). */
+  scope: string
 }
 
 /** A tenant token row (agent.v1.TenantToken). */
@@ -63,6 +85,8 @@ export class AdminApi {
       disabled: t.disabled,
       createdAt: t.createdAt,
       updatedAt: t.updatedAt,
+      parentId: t.parentId,
+      scopeId: t.scopeId,
     }))
   }
 
@@ -70,6 +94,16 @@ export class AdminApi {
   async createTenant(id: string, name: string): Promise<string> {
     const r = await this._c.createTenant({ id, name })
     return r.token
+  }
+
+  /**
+   * Create a tenant under the caller's scope (delegated admin): the id is
+   * SERVER-GENERATED, so only a display name is sent. Returns the plaintext
+   * bootstrap token + the generated tenant id.
+   */
+  async createSubTenant(name: string): Promise<{ id: string; token: string }> {
+    const r = await this._c.createTenant({ id: '', name })
+    return { id: r.tenant?.id ?? '', token: r.token }
   }
 
   async updateTenant(
@@ -114,5 +148,30 @@ export class AdminApi {
   async rotateToken(tokenId: string): Promise<string> {
     const r = await this._c.rotateTenantToken({ tokenId })
     return r.plaintext
+  }
+
+  // ── delegated administrators (re-delegation) ──────────────────────────────
+
+  /** List delegated admin tokens under a scope (a delegated caller: its own). */
+  async listAdminTokens(scopeTenantId: string): Promise<AdminToken[]> {
+    const r = await this._c.listAdminTokens({ scopeTenantId })
+    return r.tokens.map(t => ({
+      tokenId: t.tokenId,
+      scopeTenantId: t.scopeTenantId,
+      label: t.label,
+      createdAt: t.createdAt,
+      lastUsedAt: t.lastUsedAt ?? '',
+      revoked: t.revoked,
+    }))
+  }
+
+  /** Mint a delegated admin token for a subtree. Returns the one-time plaintext. */
+  async createAdminToken(scopeTenantId: string, label: string): Promise<string> {
+    const r = await this._c.createAdminToken({ scopeTenantId, label })
+    return r.plaintext
+  }
+
+  async revokeAdminToken(tokenId: string): Promise<void> {
+    await this._c.revokeAdminToken({ tokenId })
   }
 }
