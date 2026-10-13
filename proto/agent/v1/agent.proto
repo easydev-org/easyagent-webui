@@ -663,9 +663,15 @@ message ListTenantsRequest {}
 message ListTenantsResponse { repeated Tenant tenants = 1; }
 
 message CreateTenantRequest {
-  // Plaintext tenant id: ^[A-Za-z0-9_-]{1,64}$.
+  // Plaintext tenant id: ^[A-Za-z0-9_-]{1,64}$. A delegated admin must leave
+  // this empty (the id is SERVER-GENERATED under the caller's scope); a
+  // platform admin may supply it, or leave it empty to have one generated.
   string id = 1;
   string name = 2;
+  // Optional: create the tenant UNDER this parent (a user inside a domain).
+  // A platform admin may target any parent; a delegated admin may only target
+  // its own scope. Empty = a subtree root (a new domain).
+  string parent_id = 3;
 }
 message CreateTenantResponse {
   Tenant tenant = 1;
@@ -701,6 +707,14 @@ message ListTenantTokensResponse { repeated TenantToken tokens = 1; }
 message RevokeTenantTokenRequest { string token_id = 1; }
 message RevokeTenantTokenResponse { bool ok = 1; }
 
+// SetTenantTokenLabel renames a tenant token (its display label). The token id
+// (and secret) are unchanged.
+message SetTenantTokenLabelRequest {
+  string token_id = 1;
+  string label = 2;
+}
+message SetTenantTokenLabelResponse { TenantToken token = 1; }
+
 message RotateTenantTokenRequest { string token_id = 1; }
 message RotateTenantTokenResponse {
   TenantToken token = 1;
@@ -719,6 +733,7 @@ service AdminService {
   rpc ListTenantTokens(ListTenantTokensRequest) returns (ListTenantTokensResponse);
   rpc RevokeTenantToken(RevokeTenantTokenRequest) returns (RevokeTenantTokenResponse);
   rpc RotateTenantToken(RotateTenantTokenRequest) returns (RotateTenantTokenResponse);
+  rpc SetTenantTokenLabel(SetTenantTokenLabelRequest) returns (SetTenantTokenLabelResponse);
 
   // Delegated administrators (re-delegation): a platform admin may create an
   // admin token for ANY subtree; a delegated admin only within its OWN subtree.

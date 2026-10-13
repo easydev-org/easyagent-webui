@@ -47,6 +47,41 @@
   // delegated admin tokens for the current scope
   let adminTokens = $state<AdminToken[]>([])
   let newAdminLabel = $state('')
+  let createParent = $state<string | null>(null) // domain to add a user into
+  // inline token rename
+  let renaming = $state<string | null>(null)
+  let renameValue = $state('')
+
+  // The subtree ROOT of a tenant (self if it is a root).
+  function rootOf(t: Tenant): string {
+    return t.scopeId || t.id
+  }
+
+  // Hierarchical view: each subtree root ("domain") with its member users.
+  interface Domain {
+    id: string
+    name: string
+    disabled: boolean
+    members: Tenant[]
+    adminTokens: AdminToken[]
+  }
+  const domains = $derived.by<Domain[]>(() => {
+    const roots = tenants.filter(t => rootOf(t) === t.id)
+    return roots.map(r => ({
+      id: r.id,
+      name: r.name,
+      disabled: r.disabled,
+      members: tenants.filter(t => t.id !== r.id && rootOf(t) === r.id),
+      adminTokens: r.id === scope ? adminTokens : [],
+    }))
+  })
+
+  function openCreate(parentId: string | null) {
+    createParent = parentId
+    newId = ''
+    newName = ''
+    createOpen = true
+  }
 
   onMount(() => {
     void load()
@@ -73,12 +108,29 @@
     }
   }
 
-  async function createAdmin() {
+  async function createAdmin(scopeId: string) {
     try {
-      const plaintext = await api.createAdminToken(scope, newAdminLabel.trim() || 'sub-admin')
-      revealed = { label: `${t('adminSubAdmin')} — ${scope}`, value: plaintext }
+      const plaintext = await api.createAdminToken(scopeId, newAdminLabel.trim() || 'sub-admin')
+      revealed = { label: `${t('adminSubAdmin')} — ${scopeId}`, value: plaintext }
       newAdminLabel = ''
       await loadAdminTokens()
+    } catch (e) {
+      showErrorToast(String(e))
+    }
+  }
+
+  function startRename(tok: TenantToken) {
+    renaming = tok.tokenId
+    renameValue = tok.label
+  }
+
+  async function commitRename(tn: Tenant) {
+    if (renaming == null) return
+    try {
+      await api.setTokenLabel(renaming, renameValue.trim())
+      showToast(t('saved'))
+      renaming = null
+      await toggleRefresh(tn.id)
     } catch (e) {
       showErrorToast(String(e))
     }
@@ -117,26 +169,12 @@
     if (creating) return
     creating = true
     try {
-      if (isPlatform) {
-        // Platform admin: caller supplies the id.
-        const id = newId.trim()
-        if (!id) {
-          creating = false
-          return
-        }
-        const plaintext = await api.createTenant(id, newName.trim() || id)
-        revealed = { label: `${t('adminBootstrapToken')} — ${id}`, value: plaintext }
-      } else {
-        // Delegated admin: the server GENERATES the id under the scope; the
-        // caller supplies only a display name.
-        const name = newName.trim()
-        if (!name) {
-          creating = false
-          return
-        }
-        const r = await api.createSubTenant(name)
-        revealed = { label: `${t('adminBootstrapToken')} — ${r.id}`, value: r.token }
-      }
+      // A platform admin adding a user INSIDE a domain supplies the id; every
+      // other case (a new domain, or a delegated admin) lets the server
+      // generate it under the subtree root.
+      const id = isPlatform && createParent ? newId.trim() : ''
+      const r = await api.createTenant(id, newName.trim() || id, createParent ?? '')
+      revealed = { label: `${t('adminBootstrapToken')} — ${r.id}`, value: r.token }
       newId = ''
       newName = ''
       showToast(t('saved'))
@@ -261,81 +299,123 @@
       </div>
     {/if}
 
-    <!-- tenants: section header with an ADD action (matches ProvidersList). -->
+    <!-- domains (subtree roots) with their member users -->
     <div class="flex items-center pr-2">
-      <SectionLabel class="min-w-0 flex-1">{t('adminTenants')} · {tenants.length}</SectionLabel>
-      <IconButton icon={AppIcons.add} label={t('adminCreateTenant')} variant="primary" class="p-1" onclick={() => (createOpen = true)} />
+      <SectionLabel class="min-w-0 flex-1">{t('adminDomains')} · {domains.length}</SectionLabel>
+      <IconButton icon={AppIcons.add} label={t('adminCreateDomain')} variant="primary" class="p-1" onclick={() => openCreate(null)} />
     </div>
 
     {#if loading}
       <div class="flex justify-center py-8">
         <span class="size-6 animate-spin rounded-full border-2 border-muted-foreground/30 border-t-muted-foreground"></span>
       </div>
-    {:else if tenants.length === 0}
+    {:else if domains.length === 0}
       <EmptyState>{t('adminNoTenants')}</EmptyState>
     {:else}
-      {#each tenants as tn (tn.id)}
-        <!-- one flat hover row per tenant; click expands its token list -->
-        <button
-          type="button"
-          class="flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-muted"
-          onclick={() => void toggleExpand(tn.id)}
-        >
-          {#if expanded === tn.id}<AppIcons.chevron_down class="size-4 shrink-0 text-muted-foreground" />{:else}<AppIcons.chevron_right class="size-4 shrink-0 text-muted-foreground" />{/if}
-          <span class="min-w-0 flex-1">
-            <span class="block truncate text-body font-medium">{tn.name || tn.id}</span>
-            <span class="block truncate font-mono text-micro text-muted-foreground">{tn.id}</span>
-          </span>
-          {#if isPlatform && tn.scopeId && tn.scopeId !== tn.id}
-            <span class="rounded border border-border px-1.5 py-0.5 font-mono text-micro text-muted-foreground">{tn.scopeId}</span>
-          {/if}
-          {#if tn.disabled}
-            <span class="text-micro text-destructive">{t('adminDisabled')}</span>
-          {/if}
-        </button>
+      {#each domains as dom (dom.id)}
+        <!-- DOMAIN (subtree root) -->
+        <div class="flex items-center gap-2 bg-muted/50 px-3 py-2">
+          <button
+            type="button"
+            class="flex min-w-0 flex-1 items-center gap-2 text-left"
+            onclick={() => void toggleExpand('dom:' + dom.id)}
+          >
+            {#if expanded === 'dom:' + dom.id}<AppIcons.chevron_down class="size-4 shrink-0 text-muted-foreground" />{:else}<AppIcons.chevron_right class="size-4 shrink-0 text-muted-foreground" />{/if}
+            <AppIcons.jobs class="size-4 shrink-0 text-primary" />
+            <span class="min-w-0 flex-1">
+              <span class="block truncate text-body font-semibold">{dom.name || dom.id}</span>
+              <span class="block truncate font-mono text-micro text-muted-foreground">{dom.id} · {dom.members.length} {t('adminUsers')}</span>
+            </span>
+            {#if dom.disabled}<span class="text-micro text-destructive">{t('adminDisabled')}</span>{/if}
+          </button>
+          <IconButton icon={AppIcons.add} label={t('adminCreateUser')} onclick={() => openCreate(dom.id)} />
+        </div>
 
-        {#if expanded === tn.id}
-          <div class="border-t border-border bg-muted/30">
-            <!-- issue a new token -->
-            <div class="flex items-end gap-2 px-4 py-3">
-              <label class="block">
-                <span class="mb-1 block text-meta text-muted-foreground">{t('adminTokenLabel')}</span>
-                <Input bind:value={issueLabel} placeholder="ci" />
-              </label>
-              <Button size="sm" onclick={() => void issue(tn)}>{t('adminIssueToken')}</Button>
+        {#if expanded === 'dom:' + dom.id}
+          <!-- domain-level: its own sub-admin tokens -->
+          <div class="border-y border-border bg-card px-4 py-2 pl-9">
+            <div class="mb-1 flex items-center gap-2 text-micro text-muted-foreground">
+              <AppIcons.key class="size-3.5" />{t('adminSubAdmins')}
             </div>
-            {#if (tokens[tn.id] ?? []).length === 0}
-              <p class="px-4 pb-3 text-micro text-muted-foreground">{t('adminNoTokens')}</p>
-            {:else}
-              {#each tokens[tn.id] ?? [] as tok (tok.tokenId)}
-                <div class="flex items-center gap-3 px-4 py-2">
-                  <AppIcons.key class="size-4 shrink-0 text-muted-foreground" />
-                  <span class="min-w-0 flex-1">
-                    <span class="block truncate text-meta">{tok.label || tok.tokenId}</span>
-                    <span class="block truncate text-micro text-muted-foreground">{tok.lastUsedAt ? t('adminUsed') : t('adminUnused')}</span>
-                  </span>
-                  {#if tok.revoked}
-                    <span class="text-micro text-destructive">{t('adminRevoked')}</span>
-                  {:else}
-                    <IconButton icon={AppIcons.refresh} label={t('adminRotateToken')} onclick={() => void rotate(tn, tok)} />
-                    <IconButton icon={AppIcons.delete} label={t('adminRevokeToken')} variant="destructive" onclick={() => void revoke(tn, tok)} />
-                  {/if}
-                </div>
-              {/each}
-            {/if}
-            <!-- tenant-level actions -->
-            <div class="flex items-center gap-2 border-t border-border px-4 py-2.5">
-              <Button size="sm" variant="outline" onclick={() => void setDisabled(tn, !tn.disabled)}>
-                {tn.disabled ? t('adminEnable') : t('adminDisable')}
-              </Button>
-              {#if !tn.disabled}
-                <Button size="sm" variant="destructive" onclick={() => void remove(tn)}>
-                  {t('adminDisableTenant')}
-                </Button>
-              {/if}
+            {#each dom.adminTokens as at (at.tokenId)}
+              <div class="flex items-center gap-2 py-1">
+                <span class="min-w-0 flex-1 truncate text-meta">{at.label || at.tokenId}</span>
+                {#if at.revoked}
+                  <span class="text-micro text-destructive">{t('adminRevoked')}</span>
+                {:else}
+                  <IconButton icon={AppIcons.delete} label={t('adminRevokeToken')} variant="destructive" onclick={() => void revokeAdmin(at)} />
+                {/if}
+              </div>
+            {/each}
+            <div class="mt-1 flex items-end gap-2">
+              <Input bind:value={newAdminLabel} placeholder={t('adminTokenLabel')} />
+              <Button size="sm" onclick={() => void createAdmin(dom.id)}>{t('adminCreateSubAdmin')}</Button>
             </div>
           </div>
         {/if}
+
+        <!-- USERS (tenants in the domain) -->
+        {#each dom.members as tn (tn.id)}
+          <button
+            type="button"
+            class="flex w-full items-center gap-3 border-b border-border/60 px-4 py-2.5 pl-9 text-left hover:bg-muted"
+            onclick={() => void toggleExpand(tn.id)}
+          >
+            {#if expanded === tn.id}<AppIcons.chevron_down class="size-4 shrink-0 text-muted-foreground" />{:else}<AppIcons.chevron_right class="size-4 shrink-0 text-muted-foreground" />{/if}
+            <AppIcons.terminal class="size-4 shrink-0 text-muted-foreground" />
+            <span class="min-w-0 flex-1">
+              <span class="block truncate text-body">{tn.name || tn.id}</span>
+              <span class="block truncate font-mono text-micro text-muted-foreground">{tn.id}</span>
+            </span>
+            {#if tn.disabled}<span class="text-micro text-destructive">{t('adminDisabled')}</span>{/if}
+          </button>
+
+          {#if expanded === tn.id}
+            <div class="border-b border-border bg-muted/30 pl-9">
+              <div class="flex items-end gap-2 px-4 py-3">
+                <label class="block min-w-0 flex-1">
+                  <span class="mb-1 block text-meta text-muted-foreground">{t('adminTokenLabel')}</span>
+                  <Input bind:value={issueLabel} placeholder="ci" />
+                </label>
+                <Button size="sm" onclick={() => void issue(tn)}>{t('adminIssueToken')}</Button>
+              </div>
+              {#if (tokens[tn.id] ?? []).length === 0}
+                <p class="px-4 pb-3 text-micro text-muted-foreground">{t('adminNoTokens')}</p>
+              {:else}
+                {#each tokens[tn.id] ?? [] as tok (tok.tokenId)}
+                  <div class="flex items-center gap-2 px-4 py-2">
+                    <AppIcons.key class="size-4 shrink-0 text-muted-foreground" />
+                    {#if renaming === tok.tokenId}
+                      <Input bind:value={renameValue} />
+                      <Button size="sm" onclick={() => void commitRename(tn)}>{t('save')}</Button>
+                      <Button size="sm" variant="outline" onclick={() => (renaming = null)}>{t('cancel')}</Button>
+                    {:else}
+                      <span class="min-w-0 flex-1">
+                        <span class="block truncate text-meta">{tok.label || tok.tokenId}</span>
+                        <span class="block truncate text-micro text-muted-foreground">{tok.lastUsedAt ? t('adminUsed') : t('adminUnused')}</span>
+                      </span>
+                      {#if tok.revoked}
+                        <span class="text-micro text-destructive">{t('adminRevoked')}</span>
+                      {:else}
+                        <IconButton icon={AppIcons.edit} label={t('adminRenameToken')} onclick={() => startRename(tok)} />
+                        <IconButton icon={AppIcons.refresh} label={t('adminRotateToken')} onclick={() => void rotate(tn, tok)} />
+                        <IconButton icon={AppIcons.delete} label={t('adminRevokeToken')} variant="destructive" onclick={() => void revoke(tn, tok)} />
+                      {/if}
+                    {/if}
+                  </div>
+                {/each}
+              {/if}
+              <div class="flex items-center gap-2 border-t border-border px-4 py-2.5">
+                <Button size="sm" variant="outline" onclick={() => void setDisabled(tn, !tn.disabled)}>
+                  {tn.disabled ? t('adminEnable') : t('adminDisable')}
+                </Button>
+                {#if !tn.disabled}
+                  <Button size="sm" variant="destructive" onclick={() => void remove(tn)}>{t('adminDisableTenant')}</Button>
+                {/if}
+              </div>
+            </div>
+          {/if}
+        {/each}
       {/each}
     {/if}
 

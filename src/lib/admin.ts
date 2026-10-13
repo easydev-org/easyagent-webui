@@ -90,19 +90,13 @@ export class AdminApi {
     }))
   }
 
-  /** Create a tenant. Returns its one-time bootstrap token plaintext. */
-  async createTenant(id: string, name: string): Promise<string> {
-    const r = await this._c.createTenant({ id, name })
-    return r.token
-  }
-
   /**
-   * Create a tenant under the caller's scope (delegated admin): the id is
-   * SERVER-GENERATED, so only a display name is sent. Returns the plaintext
-   * bootstrap token + the generated tenant id.
+   * Create a tenant. `id` may be empty (the server generates one under the
+   * subtree root). `parentId` (optional) creates the tenant UNDER that parent
+   * (a user inside a domain). Returns the generated id + the bootstrap token.
    */
-  async createSubTenant(name: string): Promise<{ id: string; token: string }> {
-    const r = await this._c.createTenant({ id: '', name })
+  async createTenant(id: string, name: string, parentId = ''): Promise<{ id: string; token: string }> {
+    const r = await this._c.createTenant({ id, name, parentId })
     return { id: r.tenant?.id ?? '', token: r.token }
   }
 
@@ -142,6 +136,11 @@ export class AdminApi {
 
   async revokeToken(tokenId: string): Promise<void> {
     await this._c.revokeTenantToken({ tokenId })
+  }
+
+  /** Rename a token (its display label); the secret is unchanged. */
+  async setTokenLabel(tokenId: string, label: string): Promise<void> {
+    await this._c.setTenantTokenLabel({ tokenId, label })
   }
 
   /** Rotate: revoke the old token, issue a fresh one. Returns the new plaintext. */
