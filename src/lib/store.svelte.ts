@@ -1,0 +1,392 @@
+// AppStore — the web port of flutter/lib/store.dart (Svelte 5 runes edition).
+// Owns: the session list (watchSessions live stream + reconnect backoff),
+// unread read-watermarks, per-session chat drafts, provider draft, and the
+// per-tab navigation stacks.
+import type { AgentApi } from './api'
+import { connection } from './connection.svelte'
+import type { LocalStore } from './db'
+import { t } from './i18n.svelte'
+import type { ChatDraft, ProviderDraft, Session } from './models'
+import {
+  draftFromProvider,
+  FALLBACK_API_TYPE_CAPABILITIES,
+  type ProviderInfo,
+} from './models'
+import {
+  type AppPage,
+  popPage,
+  pushPage,
+  pushSibling,
+  rootPageFor,
+  type SessionOverlay,
+  type SiderTab,
+} from './nav'
+import { sortSessionsByRecency } from './session-order'
+import { showErrorToast } from './toast.svelte'
+
+export type { AppPage, SessionOverlay, SiderTab } from './nav'
+export { rootPageFor } from './nav'
+
+export class AppStore {
+  api: AgentApi
+  local: LocalStore | null
+
+  siderTab = $state<SiderTab>('chat')
+  sessions = $state<Session[]>([])
+  activeSessionId = $state<string | null>(null)
+  sessionOverlay = $state<SessionOverlay | null>(null)
+
+  sessionRevision = $state(0)
+
+  /** Per-session composer drafts, surviving navigation. */
+  chatDrafts = $state<Record<string, ChatDraft>>({})
+
+  /** Provider draft shared by the provider/model form pages. */
+  providerDraft: ProviderDraft | null = $state(null)
+  providersRevision = $state(0)
+
+  /** Capability matrix from ListProvidersCatalog (api type -> capabilities).
+   * Seeded with the bundled fallback; refreshed from the server on demand. */
+  providerCatalog = $state<Record<string, string[]>>({
+    ...FALLBACK_API_TYPE_CAPABILITIES,
+  })
+
+  async refreshProviderCatalog(): Promise<void> {
+    try {
+      const c = await this.api.providerCatalog()
+      if (Object.keys(c).length > 0) this.providerCatalog = c
+    } catch {
+      /* keep the fallback */
+    }
+  }
+
+  // $state: push/pop must be reactive (the Shell derives its panes from it).
+  // Both tabs are pre-seeded so no lazy mutation happens during render
+  // (Svelte 5 forbids state_unsafe_mutation inside deriveds).
+  private stacks = $state<Record<SiderTab, AppPage[]>>({
+    chat: [rootPageFor('chat')],
+    config: [rootPageFor('config')],
+  })
+
+  // ---- watchSessions live list ----
+  private sessionAbort: AbortController | null = null
+  private sessionTimer: ReturnType<typeof setTimeout> | null = null
+  private sessionAttempt = 0
+
+  constructor(api: AgentApi, local: LocalStore | null) {
+    this.api = api
+    this.local = local
+    this.hydrateLocal()
+    this.startSessionWatch()
+  }
+
+  private async hydrateLocal() {
+    const l = this.local
+    if (!l) return
+    try {
+      this.chatDrafts = await l.loadDrafts()
+    } catch {
+      /* network-only fallback */
+    }
+  }
+
+  startSessionWatch() {
+    this.sessionTimer && clearTimeout(this.sessionTimer)
+    this.sessionTimer = null
+    this.sessionAbort?.abort()
+    const ac = new AbortController()
+    this.sessionAbort = ac
+    void (async () => {
+      try {
+        for await (const ev of this.api.watchSessions()) {
+          if (ac.signal.aborted) return
+          this.applySessionEvent(ev.snapshot, ev.upserts, ev.removed)
+        }
+        this.onSessionStreamClosed()
+      } catch {
+        if (!ac.signal.aborted) this.onSessionStreamClosed()
+      }
+    })()
+  }
+
+  /** Tear down the live list stream (backend switch / logout). Not a
+   *  connection problem, so clear the banner too. */
+  dispose() {
+    this.sessionTimer && clearTimeout(this.sessionTimer)
+    this.sessionTimer = null
+    this.sessionAbort?.abort()
+    this.sessionAbort = null
+    connection.sessions = false
+  }
+
+  private onSessionStreamClosed() {
+    // The list stream is down: surface the in-page reconnect banner.
+    connection.sessions = true
+    // Retry FOREVER (WeChat-style) with a capped backoff.
+    const delay = Math.min(30, 1 << Math.min(this.sessionAttempt, 5))
+    this.sessionAttempt++
+    this.sessionTimer = setTimeout(() => this.startSessionWatch(), delay * 1000)
+  }
+
+  /** Assign the session list, ALWAYS ordered most-recent-first. The server
+   *  snapshot is ordered by `updated_at`, but a live upsert only advances a
+   *  row's `lastMessageAt` in place — without this re-sort the row's timestamp
+   *  changes while its position does not. */
+  private setSessions(list: Session[]) {
+    this.sessions = sortSessionsByRecency(list)
+  }
+
+  private applySessionEvent(
+    snapshot: boolean,
+    upserts: Session[],
+    removed: string[],
+  ) {
+    this.sessionAttempt = 0
+    // A frame arrived: the list stream is healthy again.
+    connection.sessions = false
+    if (snapshot) {
+      this.setSessions(upserts)
+    } else {
+      const next = [...this.sessions]
+      for (const s of upserts) {
+        const i = next.findIndex(x => x.id === s.id)
+        if (i === -1) next.push(s)
+        else next[i] = s
+      }
+      this.setSessions(
+        removed.length ? next.filter(s => !removed.includes(s.id)) : next,
+      )
+    }
+  }
+
+  get activeSession(): Session | null {
+    return this.sessions.find(s => s.id === this.activeSessionId) ?? null
+  }
+
+  sessionById(id: string): Session | null {
+    return this.sessions.find(s => s.id === id) ?? null
+  }
+
+  /** Manual refresh (pull-to-refresh / fallback reconciliation). Failures
+   *  surface as a toast (the long-lived stream banner already covers a dropped
+   *  connection; a manual refresh that fails is a one-shot action). */
+  async refreshSessions() {
+    try {
+      this.setSessions(await this.api.listSessions())
+    } catch (e) {
+      showErrorToast(`${t('connectionError', { arg1: String(e) })}`)
+    }
+  }
+
+  async deleteSession(id: string) {
+    await this.api.deleteSession(id)
+    if (this.activeSessionId === id) this.closeSession()
+    await this.refreshSessions()
+    void this.local?.removeSession(id)
+  }
+
+  /** Delete several sessions sequentially; returns the ids that failed. */
+  async deleteSessions(ids: string[]): Promise<string[]> {
+    const failed: string[] = []
+    let closedActive = false
+    for (const id of ids) {
+      try {
+        await this.api.deleteSession(id)
+        void this.local?.removeSession(id)
+        if (this.activeSessionId === id) {
+          this.activeSessionId = null
+          closedActive = true
+        }
+      } catch {
+        failed.push(id)
+      }
+    }
+    if (closedActive) this.closeSession()
+    await this.refreshSessions()
+    return failed
+  }
+
+  async forkSession(branch: string): Promise<boolean> {
+    const id = this.sessionById(this.activeSessionId ?? '')?.id
+    if (!id) return false
+    try {
+      const s = await this.api.fork(id, branch)
+      this.activeSessionId = s.id
+      await this.refreshSessions()
+      return true
+    } catch {
+      return false
+    }
+  }
+
+  pickSession(id: string) {
+    this.activeSessionId = id
+    this.sessionOverlay = null
+    this.markSessionRead(id)
+    this.pushPage({ kind: 'chat_session', key: 'chat_session' })
+  }
+
+  /** Mark a session read: the SERVER owns the shared watermark (`read_seq`), so
+   *  this advances it and adopts the returned Session (unreadCount → 0). The
+   *  clear propagates to every device via `WatchSessions`. Best-effort: a failed
+   *  RPC leaves the badge until the next list refresh. */
+  markSessionRead(id: string) {
+    void this.api
+      .markRead(id)
+      .then(updated => {
+        this.sessions = this.sessions.map(s =>
+          s.id === id ? { ...s, unreadCount: updated.unreadCount ?? 0 } : s,
+        )
+      })
+      .catch(() => {})
+  }
+
+  /** The SERVER-authoritative unread count (shared read watermark). */
+  unreadCountFor(s: Session): number {
+    return Math.max(0, s.unreadCount ?? 0)
+  }
+
+  isUnread(s: Session): boolean {
+    return this.unreadCountFor(s) > 0
+  }
+
+  // ---- drafts ----
+
+  draftFor(sessionId: string): ChatDraft {
+    if (!this.chatDrafts[sessionId]) {
+      this.chatDrafts[sessionId] = { text: '', attachments: [] }
+    }
+    return this.chatDrafts[sessionId]
+  }
+
+  saveDraftText(sessionId: string, text: string) {
+    const d = this.draftFor(sessionId)
+    if (d.text === text) return
+    d.text = text
+    if (!text.trim() && !d.attachments.length) {
+      delete this.chatDrafts[sessionId]
+      void this.local?.saveDraft(sessionId, '', [])
+      return
+    }
+    void this.local?.saveDraft(sessionId, d.text, d.attachments)
+  }
+
+  saveDraftAttachments(
+    sessionId: string,
+    attachments: ChatDraft['attachments'],
+  ) {
+    const d = this.draftFor(sessionId)
+    d.attachments = [...attachments]
+    if (!d.text.trim() && !d.attachments.length) {
+      delete this.chatDrafts[sessionId]
+      void this.local?.saveDraft(sessionId, '', [])
+      return
+    }
+    void this.local?.saveDraft(sessionId, d.text, d.attachments)
+  }
+
+  clearDraft(sessionId: string) {
+    delete this.chatDrafts[sessionId]
+    void this.local?.saveDraft(sessionId, '', [])
+  }
+
+  // ---- provider draft ----
+
+  bumpProvidersRevision() {
+    this.providersRevision++
+  }
+
+  beginProviderDraft(existing: ProviderInfo | null, capability = 'text') {
+    this.providerDraft = existing
+      ? draftFromProvider(existing)
+      : {
+          originalId: null,
+          id: '',
+          capability,
+          apiType: 'openai-compatible',
+          baseUrl: '',
+          apiKey: '',
+          models: [],
+        }
+  }
+
+  endProviderDraft() {
+    this.providerDraft = null
+  }
+
+  // ---- overlays ----
+
+  openOverlay(v: SessionOverlay) {
+    if (this.activeSessionId == null) return
+    this.sessionOverlay = v
+  }
+
+  closeOverlay() {
+    this.sessionOverlay = null
+  }
+
+  /** Close the open conversation; chat tab returns to the session list. */
+  closeSession() {
+    this.activeSessionId = null
+    this.sessionOverlay = null
+    const list = this.stackFor('chat')
+    if (list.length > 1) list.splice(1, list.length - 1)
+  }
+
+  bumpSessionRevision() {
+    this.sessionRevision++
+  }
+
+  switchTab(tab: SiderTab) {
+    this.siderTab = tab
+  }
+
+  /** Apply a settings/fork/rename result onto the live list. */
+  applySession(updated: Session) {
+    this.setSessions(
+      this.sessions.map(s => (s.id === updated.id ? updated : s)),
+    )
+    this.bumpSessionRevision()
+  }
+
+  // ---- navigation stacks (per tab) ----
+
+  private stackFor(tab: SiderTab): AppPage[] {
+    return this.stacks[tab] ?? [rootPageFor(tab)]
+  }
+
+  get currentStack(): AppPage[] {
+    return this.stackFor(this.siderTab)
+  }
+
+  get topPage(): AppPage {
+    return this.currentStack[this.currentStack.length - 1]
+  }
+
+  /** Push a page; same-key pages replace at their existing depth. */
+  pushPage(page: AppPage) {
+    this.stacks[this.siderTab] = pushPage(this.currentStack, page)
+  }
+
+  /** Push a SIBLING drill-in (replaces the current drill-in, keeps stack at
+   * [root, current] so the tablet split never shows two parallels). */
+  pushSibling(page: AppPage) {
+    this.stacks[this.siderTab] = pushSibling(this.currentStack, page)
+  }
+
+  /** Pop the top page; never pops below the root. */
+  popPage() {
+    const cur = this.currentStack
+    if (cur.length <= 1) return
+    const next = popPage(cur)
+    this.stacks[this.siderTab] = next
+    if (this.siderTab === 'chat' && next.length === 1) {
+      this.activeSessionId = null
+      this.sessionOverlay = null
+    }
+  }
+
+  get canPopPage(): boolean {
+    return this.currentStack.length > 1
+  }
+}
