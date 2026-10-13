@@ -6,6 +6,7 @@
   import { AgentApi } from './lib/api'
   import { getLocale, setLocale, systemLocale, t } from './lib/i18n.svelte'
   import { Prefs, type ThemeMode } from './lib/prefs'
+  import { login } from './lib/admin'
   import { openLocalStore } from './lib/db'
   import { scopeOf } from './lib/scope'
   import type { LocalStore } from './lib/db'
@@ -43,6 +44,7 @@
 
   // setup form
   let setupToken = $state('')
+  let setupUsername = $state('')
   let showToken = $state(false)
   let busy = $state(false)
 
@@ -231,17 +233,17 @@
   async function connect() {
     const base = SAME_ORIGIN_BASE
     const tok = setupToken.trim()
-    if (!tok || busy) return
+    const user = setupUsername.trim()
+    if (!user || !tok || busy) return
     busy = true
     try {
-      const api = await AgentApi.create(base, tok)
-      // GetIdentity both VERIFIES the credential and resolves its ROLE (works
-      // for a tenant OR an admin token — unlike listSessions, which an admin
-      // token cannot call). A bad token throws here, before anything is saved.
-      const id = await api.identity()
-      const username = id.role === 'admin' ? '' : id.tenantName
+      // Login VERIFIES the (username, token) pair and resolves the role +
+      // scope in one auth-exempt call. A mismatch throws here, before anything
+      // is saved.
+      const id = await login(base, user, tok)
+      const username = id.role === 'admin' ? '' : id.tenantName || user
       Prefs.save(base, tok)
-      Prefs.upsertBackend({ name: username || backendNameFor(base), username, baseUrl: base, token: tok })
+      Prefs.upsertBackend({ name: username || backendNameFor(base), username: username || user, baseUrl: base, token: tok })
       baseUrl = base
       token = tok
       await enterApp()
@@ -287,7 +289,7 @@
     phase = 'setup'
   }
 
-  const canConnect = $derived(setupToken.trim() !== '' && !busy)
+  const canConnect = $derived(setupUsername.trim() !== '' && setupToken.trim() !== '' && !busy)
 </script>
 
 {#if phase === 'app' && store}
@@ -338,6 +340,10 @@
   <div class="flex h-full items-center justify-center overflow-y-auto p-6">
     <div class="w-full max-w-[480px]">
       <h1 class="mb-6 text-xl font-semibold">{t('appTitle')}</h1>
+      <label class="mb-4 block">
+        <span class="mb-1.5 block text-meta text-muted-foreground">{t('usernameLabel')}</span>
+        <Input bind:value={setupUsername} disabled={busy} autocomplete="username" />
+      </label>
       <label class="mb-6 block">
         <span class="mb-1.5 block text-meta text-muted-foreground">{t('tokenLabel')}</span>
         <span class="relative block">

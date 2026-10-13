@@ -39,6 +39,8 @@ export interface AdminToken {
 export interface Identity {
   role: 'admin' | 'tenant'
   tenant: string
+  /** Human-readable tenant name (empty for an admin). */
+  tenantName?: string
   /** Admin scope: '*' (platform) or a subtree root id (delegated admin). */
   scope: string
 }
@@ -65,6 +67,22 @@ function createAdminClient(baseUrl: string, token: string): AdminClient {
     ],
   })
   return createClient(AdminService, transport)
+}
+
+/**
+ * Login verifies a (username, token) pair over the auth-exempt AdminService.Login
+ * RPC and returns the resolved identity. The token is still the credential; the
+ * username must match (the admin name, a tenant id/name, or a subtree root).
+ */
+export async function login(baseUrl: string, username: string, token: string): Promise<Identity> {
+  const c = createAdminClient(baseUrl, '')
+  const r = await c.login({ username, token })
+  return {
+    role: r.role === 'admin' ? 'admin' : 'tenant',
+    tenant: r.tenant,
+    scope: r.scope,
+    tenantName: r.tenantName,
+  } as Identity & { tenantName: string }
 }
 
 /** Thin facade over AdminService (tenants + their tokens). */
