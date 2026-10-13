@@ -18,7 +18,7 @@ type InitMsg = { type: 'init'; scope: string }
 type CallMsg = { type: 'call'; id: number; method: string; args: unknown[] }
 type Msg = InitMsg | CallMsg
 
-const DB_NAME_PREFIX = 'agent-webui-'
+const DB_NAME_PREFIX = 'easyagent-webui-'
 
 let store: LocalStore | null = null
 
@@ -32,7 +32,7 @@ async function init(scope: string): Promise<void> {
     const pool = await sqlite3.installOpfsSAHPoolVfs({
       // A dedicated pool directory keeps this app's databases isolated from any
       // other OPFS sqlite user in the same origin.
-      directory: '.abcp-webui',
+      directory: '.easyagent-webui',
       // Each scope opens one db (+ journal + temp files); 6 is the default and
       // comfortably covers a handful of saved connections.
       initialCapacity: 6,

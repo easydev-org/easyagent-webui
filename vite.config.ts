@@ -12,7 +12,7 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['icon.svg'],
       manifest: {
-        name: 'ABCP Agent',
+        name: 'EasyAgent',
         short_name: 'Agent',
         description:
           'Agent chat over the abc agent backend (agent.v1 via Connect)',

@@ -4,7 +4,7 @@
 
 // Agent API: the shared abc session backend (formerly the Hono/zod-openapi
 // surface under /api/v1). The single source of truth for the agent contract.
-// Server: abcp-agent (TypeScript). Clients: abcp gateway, extension servers,
+// Server: the agent backend. Clients: easybus gateway, extension servers,
 // client apps (web / desktop / mobile).
 
 import type { GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv2";

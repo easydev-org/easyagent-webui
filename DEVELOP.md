@@ -1,4 +1,4 @@
-# Developing agent-webui
+# Developing easyagent-webui
 
 Developer notes for the Svelte 5 (runes) SPA. For what the app is and how to
 run/deploy it, see `README.md`.
@@ -6,7 +6,7 @@ run/deploy it, see `README.md`.
 ## Commands
 
 ```bash
-npm install            # deps; @abcp/* come from the in-cluster artifact registry
+npm install            # deps; the SDK come from the in-cluster artifact registry
 npm run dev            # vite dev server
 npm run test           # vitest (unit tests under src/lib/*.test.ts)
 npm run check          # biome check . (lint + format) — the gate
@@ -18,15 +18,10 @@ npm run build          # vite build -> dist/
 ## Dependencies: agent.v1 (locally generated)
 
 Types + the `AgentService` client come from the locally generated
-`src/gen/agent/v1/agent_pb.ts` (generated from the `agent` repo (`proto/agent/v1/agent.proto`)'s
-`agent/v1/agent.proto` via buf). The external package `@abcp/agent-sdk` /
-`@abc-protocol/agent-sdk` is **retired** — there is no npm/git dependency for it
-any more. `.npmrc` still pins the scope for the other `@abc-protocol/*` packages:
-
-```
-@abcp:registry=http://artifact.worker.svc.cluster.local/artifacts/npm/
-strict-ssl=false
-```
+`src/gen/agent/v1/agent_pb.ts` (generated from `proto/agent/v1/agent.proto` via
+buf). There is no external SDK dependency: the wire types are generated
+locally, and all other dependencies resolve from the public npm registry
+(`.npmrc` carries no private scope).
 
 To refresh the generated file, regenerate it from the `agent` repo (`proto/agent/v1/agent.proto`) (buf) — do NOT
 edit `src/gen/agent/v1/agent_pb.ts` by hand.
@@ -142,12 +137,12 @@ Guard against it:
 
 ## `package-lock.json` registry (artifact vs. npmjs)
 
-`.npmrc` is **scope-only** (`@abcp:registry=…/artifacts/npm/`), so only
-`@abcp/*` resolves from the in-cluster **artifact** mirror; every OTHER
+`.npmrc` is **scope-only** (`n/a so only
+`the SDK` resolves from the in-cluster **artifact** mirror; every OTHER
 dependency resolves from the default registry (npmjs). When (re)generating the
 lock, make sure a stray **global** npmrc does not redirect the default registry:
 the lock's `resolved` URLs should be `registry.npmjs.org` for non-scoped
-packages and `artifact.worker.svc.cluster.local` **only** for `@abcp/*`. A
+packages and `artifact.worker.svc.cluster.local` **only** for `the SDK`. A
 quick check:
 
 ```sh

@@ -9,14 +9,14 @@ import { concat, encodeWav, MIN_VOICE_BYTES, SAMPLE_RATE } from './audio-encode'
 
 /** AudioWorklet processor source (loaded from a Blob URL — no build asset). */
 const WORKLET_SRC = `
-class AbcpRecProcessor extends AudioWorkletProcessor {
+class EasyagentRecProcessor extends AudioWorkletProcessor {
   process(inputs) {
     const ch = inputs[0] && inputs[0][0]
     if (ch) this.port.postMessage(ch.slice(0))
     return true
   }
 }
-registerProcessor('abcp-rec', AbcpRecProcessor)
+registerProcessor(easyagent-rec, EasyagentRecProcessor)
 `
 
 export interface VoiceClip {
@@ -113,7 +113,7 @@ export class VoiceRecorder {
     // Keep ONE output: a 0-output node cannot be connected, and the failed
     // connect would trigger the ScriptProcessor fallback while this worklet is
     // already wired to the source — capturing the mic TWICE (duplicate audio).
-    const node = new AudioWorkletNode(ctx, 'abcp-rec')
+    const node = new AudioWorkletNode(ctx, easyagent-rec)
     node.port.onmessage = (e: MessageEvent<Float32Array>) => {
       if (!this.cancelled) this.frames.push(e.data)
     }

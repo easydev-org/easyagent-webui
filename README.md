@@ -1,4 +1,4 @@
-# agent-webui
+# easyagent-webui
 
 Agent chat SPA over `agent.v1.AgentService` (Connect). **Svelte 5 (runes) +
 shadcn-svelte style components (bits-ui primitives) + lucide icons + Tailwind
