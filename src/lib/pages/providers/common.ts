@@ -20,7 +20,7 @@ export function apiTypesForCapability(
     .filter(([, caps]) => caps.includes(capability))
     .map(([t]) => t)
     .sort()
-  return out.length ? out : ['openai-compatible']
+  return out.length ? out : ['v4-gateway']
 }
 
 /** Localized capability label key. */
@@ -61,6 +61,7 @@ export function apiTypeLabelKey(apiType: string): string {
       return 'apiTypeDeepseek'
     case 'cohere':
       return 'apiTypeCohere'
+    case 'v4-gateway':
     case 'vercel-compatible-gateway':
       return 'apiTypeGateway'
     default:

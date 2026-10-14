@@ -20,7 +20,7 @@
   let id = $state('')
   let url = $state('')
   let key = $state('')
-  let apiType = $state<string>('openai-compatible')
+  let apiType = $state<string>('v4-gateway')
   let registering = $state(false)
   let templateOpen = $state(false)
   let templates = $state<MdProvider[]>([])

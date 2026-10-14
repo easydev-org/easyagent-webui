@@ -42,7 +42,7 @@
     const id = mid.trim()
     if (!id) return
     // context_limit is required (> 0) for TEXT models only.
-    const c = capability === 'text' ? parseInt(ctx.trim()) : 0
+    const c = capability === 'text' ? parseInt(String(ctx).trim()) : 0
     if (capability === 'text' && (!c || c <= 0)) {
       showToast(t('contextLengthRequired'))
       return
@@ -132,7 +132,7 @@
       {#if capability === 'text'}
         <label class="block">
           <span class="mb-1 block text-meta text-muted-foreground">{t('contextLengthLabel')}</span>
-          <Input bind:value={ctx} type="number" min="1" />
+          <Input bind:value={ctx} inputmode="numeric" />
           <span class="mt-1 block text-micro text-muted-foreground">{t('contextOptional')}</span>
         </label>
       {:else}

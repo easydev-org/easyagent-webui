@@ -303,7 +303,7 @@ export class AppStore {
           originalId: null,
           id: '',
           capability,
-          apiType: 'openai-compatible',
+          apiType: 'v4-gateway',
           baseUrl: '',
           apiKey: '',
           models: [],
