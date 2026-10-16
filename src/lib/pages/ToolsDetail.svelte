@@ -1,25 +1,24 @@
 <script lang="ts">
-  // ToolsDetail — web port of flutter config.dart _ToolsDetail: tools grouped
-  // by category, expandable cards, per-knob config fields (text/number/enum/
-  // boolean) saved via setExtensionConfig, required-config badges.
+  // ToolsDetail — tools grouped by extension, expandable cards showing what the
+  // tool is, the config knobs it REQUIRES (read-only, with their current value
+  // and a per-knob status), and its parameter schema.
+  //
+  // This page is READ-ONLY: config is edited on the Extensions page (an
+  // extension's whole surface), so a knob's value is shown here but not edited.
   import type { AppStore } from '$lib/store.svelte'
-  import type { ProviderInfo, ToolConfig, ToolInfo } from '$lib/models'
+  import type { ToolConfig, ToolInfo } from '$lib/models'
   import { t } from '$lib/i18n.svelte'
   import { Prefs } from '$lib/prefs'
-  import { getLocale } from '$lib/i18n.svelte'
-  import { showErrorToast, showToast } from '$lib/toast.svelte'
+  import { showErrorToast } from '$lib/toast.svelte'
   import { AppIcons } from '$lib/icons'
-  import { Select } from '$lib/components/ui/select'
   import { parseToolParams } from '$lib/tool-params'
 
   let { store }: { store: AppStore } = $props()
 
   let tools = $state<ToolInfo[]>([])
   let config = $state<Record<string, unknown>>({})
-  let providers = $state<Record<string, ProviderInfo>>({})
   let expanded = $state<string | null>(null)
   let loading = $state(true)
-  const drafts = $state<Record<string, string>>({})
 
   $effect(() => {
     void (async () => {
@@ -32,11 +31,6 @@
         config = await store.api.toolConfig()
       } catch {
         /* no config yet */
-      }
-      try {
-        providers = await store.api.providers()
-      } catch {
-        /* providers optional */
       }
       loading = false
     })()
@@ -56,6 +50,15 @@
     return v && typeof v === 'object' && !Array.isArray(v) ? (v as Record<string, unknown>) : {}
   }
 
+  function knobValue(tl: ToolInfo, knob: ToolConfig): string {
+    const v = toolConfigValues(tl.name)[knob.name]
+    return v == null ? '' : String(v)
+  }
+
+  function knobSet(tl: ToolInfo, knob: ToolConfig): boolean {
+    return knobValue(tl, knob) !== ''
+  }
+
   function requiredMissing(tl: ToolInfo): boolean {
     const vals = toolConfigValues(tl.name)
     return tl.requiredConfig.some(name => {
@@ -67,48 +70,7 @@
   /** A knob counts as configured only when its value is non-empty (an
    *  explicitly unset knob is stored as '' and must read as "needs config"). */
   function hasAnyConfig(tl: ToolInfo): boolean {
-    const vals = toolConfigValues(tl.name)
-    return Object.values(vals).some(v => v != null && String(v) !== '')
-  }
-
-  /** Registered models of [capability] as `provider_id/model_id` refs. */
-  function modelRefs(capability: string): string[] {
-    const out: string[] = []
-    for (const p of Object.values(providers)) {
-      if (p.capability !== capability) continue
-      for (const m of p.models) out.push(`${p.providerId}/${m.id}`)
-    }
-    return out.sort()
-  }
-
-  function knobValue(tl: ToolInfo, knob: ToolConfig): string {
-    const k = `${tl.name}.${knob.name}`
-    if (k in drafts) return drafts[k]
-    const v = toolConfigValues(tl.name)[knob.name]
-    return v == null ? '' : String(v)
-  }
-
-  async function saveExtConfig(tl: ToolInfo, knob: ToolConfig, value: string) {
-    try {
-      // Empty means UNSET (there is no delete RPC): the store clears the knob
-      // to its declared zero value; the picker then renders 无.
-      // The owning EXTENSION id is `tool.category` (e.g. "bundled"); a tool
-      // name is NOT an extension (`no manifest for image-generate`).
-      await store.api.setToolConfigValue(tl.category, knob.name, value)
-      // refresh local view
-      const vals = { ...toolConfigValues(tl.name) }
-      if (value === '') delete vals[knob.name]
-      else vals[knob.name] = value
-      config = { ...config, [tl.name]: vals }
-      delete drafts[`${tl.name}.${knob.name}`]
-      showToast(t('saved'))
-    } catch (e) {
-      showErrorToast(String(e))
-    }
-  }
-
-  function fmtDefault(v: unknown): string {
-    return v == null ? '' : String(v)
+    return Object.values(toolConfigValues(tl.name)).some(v => v != null && String(v) !== '')
   }
 </script>
 
@@ -120,11 +82,11 @@
   {:else if tools.length === 0}
     <p class="py-2 text-center text-meta text-muted-foreground">{t('noTools')}</p>
   {:else}
+    <p class="mb-2 text-micro text-muted-foreground">{t('toolsReadOnlyHint')}</p>
     {#each categories as [cat, list] (cat)}
       <div class="mt-3 first:mt-0 mb-1 text-micro font-semibold tracking-wider text-muted-foreground uppercase">{cat}</div>
       {#each list as tl (tl.name)}
         {@const knobs = tl.config ?? []}
-        {@const vals = toolConfigValues(tl.name)}
         {@const hasConfig = hasAnyConfig(tl)}
         {@const req = requiredMissing(tl)}
         <div class="mb-2 rounded-md border border-border bg-card">
@@ -150,59 +112,29 @@
                 <p class="text-micro text-muted-foreground">{tl.description}</p>
               {/if}
 
-              {#each knobs as knob (knob.name)}
-                <label class="block">
-                  <span class="mb-1 flex items-center gap-1.5 text-meta">
-                    <span class="font-mono">{knob.name}</span>
-                    {#if tl.requiredConfig.includes(knob.name)}
-                      <span class="text-destructive">*</span>
-                    {/if}
-                    {#if knob.description}
-                      <span class="text-micro text-muted-foreground">— {knob.description}</span>
-                    {/if}
-                  </span>
-                  {#if knob.kind === 'model'}
-                    <!-- Declared model reference: pick from the models
-                         registered under the knob's modality. Selecting a
-                         value SAVES immediately (webui knob policy). -->
-                    <div class="flex gap-2">
-                      <Select
-                        value={knobValue(tl, knob)}
-                        items={[{ value: '', label: t('none') }, ...modelRefs(knob.capability).map(ref => ({ value: ref, label: ref }))]}
-                        onchange={v => void saveExtConfig(tl, knob, v)}
-                      />
-                    </div>
-                  {:else if knob.type === 'enum' && knob.enumValues.length}
-                    <Select
-                      value={knobValue(tl, knob)}
-                      items={[{ value: '', label: t('none') }, ...knob.enumValues.map(ev => ({ value: ev, label: ev }))]}
-                      onchange={v => void saveExtConfig(tl, knob, v)}
-                    />
-                  {:else if knob.type === 'boolean'}
-                    <Select
-                      value={knobValue(tl, knob)}
-                      items={[{ value: '', label: t('none') }, { value: 'true', label: 'true' }, { value: 'false', label: 'false' }]}
-                      onchange={v => void saveExtConfig(tl, knob, v)}
-                    />
-                  {:else}
-                    <div class="flex gap-2">
-                      <input
-                        type={knob.type === 'number' ? 'number' : 'text'}
-                        value={knobValue(tl, knob)}
-                        placeholder={fmtDefault(knob.defaultValue)}
-                        class="h-9 min-w-0 flex-1 rounded-md border border-input bg-transparent px-3 text-sm outline-none focus-visible:border-ring"
-                        oninput={e => (drafts[`${tl.name}.${knob.name}`] = e.currentTarget.value)}
-                        onkeydown={e => e.key === 'Enter' && void saveExtConfig(tl, knob, drafts[`${tl.name}.${knob.name}`] ?? knobValue(tl, knob))}
-                      />
-                      <button
-                        type="button"
-                        class="rounded-md border border-border px-3 text-meta hover:bg-muted"
-                        onclick={() => void saveExtConfig(tl, knob, drafts[`${tl.name}.${knob.name}`] ?? knobValue(tl, knob))}
-                      >{t('save')}</button>
-                    </div>
-                  {/if}
-                </label>
-              {/each}
+              {#if knobs.length > 0}
+                <div>
+                  <div class="mb-1 text-micro font-semibold text-muted-foreground">{t('requiredConfigTitle')}</div>
+                  <div class="space-y-1">
+                    {#each knobs as knob (knob.name)}
+                      {@const set = knobSet(tl, knob)}
+                      {@const required = tl.requiredConfig.includes(knob.name)}
+                      <div class="flex items-center gap-2 text-micro">
+                        <AppIcons.circle class="size-2.5 shrink-0 {set ? 'text-success' : required ? 'text-destructive' : 'text-muted-foreground'}" />
+                        <span class="shrink-0 font-mono">{knob.name}</span>
+                        {#if required}<span class="shrink-0 text-destructive">*</span>{/if}
+                        <span class="min-w-0 flex-1 truncate text-muted-foreground">
+                          {set ? knobValue(tl, knob) : t('unset')}
+                        </span>
+                        <span class="shrink-0 text-muted-foreground">
+                          {#if knob.kind === 'model'}{t('kindModel')} · {knob.capability}{:else}{knob.type}{/if}
+                        </span>
+                      </div>
+                    {/each}
+                  </div>
+                  <p class="mt-1 text-micro text-muted-foreground">{t('editInExtensions')}</p>
+                </div>
+              {/if}
 
               {#if tl.parameters && Object.keys(tl.parameters).length}
                 <div class="rounded-sm border border-border/40 p-2">
