@@ -15,6 +15,7 @@
   import BackendsDetail from './BackendsDetail.svelte'
   import PresetsDetail from './PresetsDetail.svelte'
   import ToolsDetail from './ToolsDetail.svelte'
+  import ExtensionsDetail from './ExtensionsDetail.svelte'
   import PageHeader from '$lib/components/layout/PageHeader.svelte'
   import IconButton from '$lib/components/layout/IconButton.svelte'
   import SectionLabel from '$lib/components/layout/SectionLabel.svelte'
@@ -61,6 +62,8 @@
         return t('appearance')
       case 'tools':
         return t('tools')
+      case 'extensions':
+        return t('extensions')
       case 'backends':
         return t('backendsTitle')
       default:
@@ -115,6 +118,7 @@
     ]
     const workspace: Row[] = [
       { icon: AppIcons.tools, label: t('tools'), onTap: () => store.pushSibling({ kind: 'config_sub', key: 'config_sub_tools', id: 'tools' }) },
+      { icon: AppIcons.server, label: t('extensions'), onTap: () => store.pushSibling({ kind: 'config_sub', key: 'config_sub_extensions', id: 'extensions' }) },
     ]
     const language: Row[] = [
       { icon: AppIcons.globe, label: t('language'), onTap: () => (pickLocaleOpen = true) },
@@ -179,6 +183,8 @@
     {@render presetsDetail()}
   {:else if id === 'tools'}
     {@render toolsDetail()}
+  {:else if id === 'extensions'}
+    {@render extensionsDetail()}
   {:else if id === 'providers'}
     <!-- handled by ProvidersList page -->
   {/if}
@@ -194,6 +200,10 @@
 
 {#snippet toolsDetail()}
   <ToolsDetail {store} />
+{/snippet}
+
+{#snippet extensionsDetail()}
+  <ExtensionsDetail {store} />
 {/snippet}
 
 {#if pickThemeOpen}

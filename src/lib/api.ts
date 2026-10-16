@@ -20,6 +20,7 @@ import {
   type StreamEvent,
 } from './events'
 import type {
+  ExtensionInfo,
   Identity,
   MailboxEntry,
   Message,
@@ -600,6 +601,35 @@ export class AgentApi {
     const values = (r.config?.values ?? {}) as Record<string, unknown>
     const out: Record<string, unknown> = {}
     for (const [k, v] of Object.entries(values)) out[k] = valueToJson(v)
+    return out
+  }
+
+  /** Discovered extensions with their WHOLE config surface + tools. */
+  async extensions(): Promise<ExtensionInfo[]> {
+    const r = await this._c.listExtensions({})
+    return r.extensions.map(e => ({
+      extId: e.extId,
+      version: e.version,
+      capabilities: [...e.capabilities],
+      tools: [...e.tools],
+      configFields: e.configFields.map(c => ({
+        name: c.name,
+        type: c.type,
+        kind: c.kind || 'value',
+        capability: c.capability,
+        enumValues: [...c.enumValues],
+        defaultValue: c.default ? valueToJson(c.default) : null,
+        description: c.description,
+        scope: c.scope,
+      })),
+    }))
+  }
+
+  /** One extension's configured values (`{knob: value}`). */
+  async extensionConfig(extId: string): Promise<Record<string, unknown>> {
+    const r = await this._c.getExtensionConfig({ extId })
+    const out: Record<string, unknown> = {}
+    for (const [k, v] of Object.entries(r.values ?? {})) out[k] = valueToJson(v)
     return out
   }
 

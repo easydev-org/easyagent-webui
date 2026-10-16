@@ -15,11 +15,28 @@
 
   let {
     tools,
+    config = {},
     selected = $bindable(new Set<string>()),
   }: {
     tools: ToolInfo[]
+    /** The aggregate `{toolName: {knob: value}}` config map, so a tool whose
+     *  REQUIRED config is unmet is disabled (it cannot run). */
+    config?: Record<string, unknown>
     selected?: Set<string>
   } = $props()
+
+  // A tool is eligible only when EVERY required config knob has a value.
+  function eligible(tl: ToolInfo): boolean {
+    if (tl.requiredConfig.length === 0) return true
+    const vals = config[tl.name]
+    const m = vals && typeof vals === 'object' && !Array.isArray(vals)
+      ? (vals as Record<string, unknown>)
+      : {}
+    return tl.requiredConfig.every(name => {
+      const v = m[name]
+      return v != null && String(v) !== ''
+    })
+  }
 
   // Canonicalize the STORED whitelist for DISPLAY only: an entry that predates
   // the collision-aware form (`<extId>.<name>`) must still highlight the right
@@ -32,10 +49,14 @@
   const groups = $derived(groupByExtension(tools))
   const valueOf = (tl: ToolInfo) => toolValue(tools, tl)
   const allOn = $derived(
-    tools.length > 0 && tools.every(tl => canonical.has(valueOf(tl))),
+    tools.length > 0 && tools.filter(eligible).every(tl => canonical.has(valueOf(tl))),
   )
 
   function toggle(v: string, on: boolean) {
+    if (on) {
+      const tl = tools.find(t => valueOf(t) === v)
+      if (tl && !eligible(tl)) return // a tool with unmet required config cannot run
+    }
     const next = new Set(canonical)
     if (on) next.add(v)
     else next.delete(v)
@@ -45,6 +66,7 @@
   function toggleGroup(list: ToolInfo[], on: boolean) {
     const next = new Set(canonical)
     for (const tl of list) {
+      if (on && !eligible(tl)) continue // skip ineligible tools
       const v = valueOf(tl)
       if (on) next.add(v)
       else next.delete(v)
@@ -52,8 +74,22 @@
     selected = next
   }
 
+  // Only ELIGIBLE tools can be enabled: prune any ineligible tool that a stored
+  // whitelist selected (config may have been cleared since). Guarded so it does
+  // not loop (writes only when the set actually changes).
+  $effect(() => {
+    const ineligible = tools.filter(tl => !eligible(tl)).map(valueOf)
+    const stale = ineligible.filter(v => canonical.has(v))
+    if (stale.length === 0) return
+    const next = new Set(canonical)
+    for (const v of stale) next.delete(v)
+    selected = next
+  })
+
   function toggleAll(on: boolean) {
-    selected = on ? new Set(tools.map(valueOf)) : new Set()
+    selected = on
+      ? new Set(tools.filter(eligible).map(valueOf))
+      : new Set()
   }
 </script>
 
@@ -83,20 +119,22 @@
         <div class="grid grid-cols-1 gap-1 sm:grid-cols-2">
           {#each g.tools as tl (valueOf(tl))}
             {@const v = valueOf(tl)}
+            {@const ok = eligible(tl)}
             <label
               class={cn(
-                'flex cursor-pointer items-center gap-2 rounded px-1.5 py-1 hover:bg-muted',
-                tl.requiredConfig.length > 0 && 'text-muted-foreground',
+                'flex items-center gap-2 rounded px-1.5 py-1',
+                ok ? 'cursor-pointer hover:bg-muted' : 'cursor-not-allowed opacity-50',
               )}
-              title={tl.description}
+              title={ok ? tl.description : t('toolNeedsConfig')}
             >
-              <Switch checked={canonical.has(v)} onchange={on => toggle(v, on)} />
+              <Switch checked={canonical.has(v)} disabled={!ok} onchange={on => toggle(v, on)} />
               <span class="min-w-0 flex-1 truncate font-mono text-micro">{tl.name}</span>
               {#if isColliding(tools, tl.name)}
                 <span class="shrink-0 text-micro text-warning" title={t('collisionNote')}>({g.extId})</span>
               {/if}
               {#if tl.requiredConfig.length > 0}
-                <span class="shrink-0 text-micro text-destructive" title={t('requiredConfig')}>*</span>
+                <span class="shrink-0 text-micro {ok ? 'text-muted-foreground' : 'text-destructive'}"
+                  title={ok ? t('requiredConfig') : t('toolNeedsConfig')}>*</span>
               {/if}
             </label>
           {/each}

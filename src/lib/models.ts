@@ -301,6 +301,15 @@ export interface ToolInfo {
   requiredConfig: string[]
 }
 
+/** A discovered extension's whole config surface (not per-tool). */
+export interface ExtensionInfo {
+  extId: string
+  version: string
+  capabilities: string[]
+  tools: string[]
+  configFields: ToolConfig[]
+}
+
 // ---- providers / models ----
 
 export interface ProviderModel {

@@ -19,6 +19,7 @@
   let maxTurns = $state('25')
   let selectedTools = $state<Set<string>>(new Set())
   let tools = $state<ToolInfo[]>([])
+  let toolConfig = $state<Record<string, unknown>>({})
   let saving = $state(false)
 
   const canSave = $derived(id.trim() !== '' && !saving)
@@ -29,6 +30,13 @@
         tools = await store.api.tools(Prefs.loadAgentLocale())
       } catch (e) {
         showErrorToast(t('loadError', { e: String(e) }))
+      }
+      try {
+        // A tool whose required config is unmet cannot run, so the picker must
+        // know the config to disable it.
+        toolConfig = await store.api.toolConfig()
+      } catch {
+        /* no config yet */
       }
     })()
   })
@@ -73,7 +81,7 @@
       <Input bind:value={maxTurns} type="number" min="1" />
     </label>
 
-    <ToolPicker {tools} bind:selected={selectedTools} />
+    <ToolPicker {tools} config={toolConfig} bind:selected={selectedTools} />
 
     <div class="flex justify-end">
       <button
