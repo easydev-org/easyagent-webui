@@ -13,6 +13,12 @@
 
   let extensions = $state<ExtensionInfo[]>([])
   let configs = $state<Record<string, Record<string, unknown>>>({})
+  // Per-extension: which secret knobs are SET (the server never returns their
+  // value). The UI shows "set / not set" and a write-only field.
+  let secretSet = $state<Record<string, Set<string>>>({})
+  // Knobs the user is currently re-entering (a secret field is write-only:
+  // it only appears once the user clicks "replace").
+  let editingSecret = $state<Record<string, boolean>>({})
   let providers = $state<Record<string, ProviderInfo>>({})
   let expanded = $state<string | null>(null)
   let loading = $state(true)
@@ -23,7 +29,9 @@
       try {
         extensions = await store.api.extensions()
         for (const e of extensions) {
-          configs[e.extId] = await store.api.extensionConfig(e.extId)
+          const cfg = await store.api.extensionConfig(e.extId)
+          configs[e.extId] = cfg.values
+          secretSet[e.extId] = new Set(cfg.secretSet)
         }
       } catch (e) {
         showErrorToast(t('loadError', { e: String(e) }))
@@ -61,6 +69,17 @@
   async function saveKnob(extId: string, knob: ToolConfig, value: string) {
     try {
       await store.api.setToolConfigValue(extId, knob.name, value)
+      if (knob.kind === 'secret') {
+        // The value is write-only: track only whether it is now set.
+        const s = new Set(secretSet[extId] ?? [])
+        if (value === '') s.delete(knob.name)
+        else s.add(knob.name)
+        secretSet = { ...secretSet, [extId]: s }
+        editingSecret = { ...editingSecret, [`${extId}.${knob.name}`]: false }
+        delete drafts[`${extId}.${knob.name}`]
+        showToast(t('saved'))
+        return
+      }
       const vals = { ...(configs[extId] ?? {}) }
       if (value === '') delete vals[knob.name]
       else vals[knob.name] = value
@@ -70,6 +89,11 @@
     } catch (e) {
       showErrorToast(String(e))
     }
+  }
+
+  /** Whether a secret knob currently has a value set (server-reported). */
+  function isSecretSet(extId: string, name: string): boolean {
+    return secretSet[extId]?.has(name) ?? false
   }
 </script>
 
@@ -103,7 +127,51 @@
                     <span class="text-micro text-muted-foreground">— {knob.description}</span>
                   {/if}
                 </span>
-                {#if knob.kind === 'model'}
+                {#if knob.kind === 'secret'}
+                  {@const key = `${ext.extId}.${knob.name}`}
+                  <div class="flex items-center gap-2">
+                    {#if isSecretSet(ext.extId, knob.name) && !editingSecret[key]}
+                      <!-- A value is set; the server never returns it. Show a
+                           badge + replace/clear, never the credential. -->
+                      <span class="flex items-center gap-1.5 text-meta text-muted-foreground">
+                        <span class="size-1.5 rounded-full bg-emerald-500"></span>
+                        {t('secretSet')}
+                      </span>
+                      <button
+                        type="button"
+                        class="rounded-md border border-border px-3 text-meta hover:bg-muted"
+                        onclick={() => (editingSecret = { ...editingSecret, [key]: true })}
+                      >{t('replace')}</button>
+                      <button
+                        type="button"
+                        class="rounded-md border border-border px-3 text-meta hover:bg-muted"
+                        onclick={() => void saveKnob(ext.extId, knob, '')}
+                      >{t('clear')}</button>
+                    {:else}
+                      <input
+                        type="password"
+                        autocomplete="new-password"
+                        value={drafts[key] ?? ''}
+                        placeholder={t('secretNotSet')}
+                        class="h-9 min-w-0 flex-1 rounded-md border border-input bg-transparent px-3 text-sm outline-none focus-visible:border-ring"
+                        oninput={e => (drafts[key] = e.currentTarget.value)}
+                        onkeydown={e => e.key === 'Enter' && void saveKnob(ext.extId, knob, drafts[key] ?? '')}
+                      />
+                      <button
+                        type="button"
+                        class="rounded-md border border-border px-3 text-meta hover:bg-muted"
+                        onclick={() => void saveKnob(ext.extId, knob, drafts[key] ?? '')}
+                      >{t('save')}</button>
+                      {#if editingSecret[key]}
+                        <button
+                          type="button"
+                          class="rounded-md border border-border px-3 text-meta hover:bg-muted"
+                          onclick={() => (editingSecret = { ...editingSecret, [key]: false })}
+                        >{t('cancel')}</button>
+                      {/if}
+                    {/if}
+                  </div>
+                {:else if knob.kind === 'model'}
                   <Select
                     value={knobValue(ext.extId, knob)}
                     items={[{ value: '', label: t('none') }, ...modelRefs(knob.capability).map(ref => ({ value: ref, label: ref }))]}

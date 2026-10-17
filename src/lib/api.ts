@@ -626,11 +626,17 @@ export class AgentApi {
   }
 
   /** One extension's configured values (`{knob: value}`). */
-  async extensionConfig(extId: string): Promise<Record<string, unknown>> {
+  async extensionConfig(extId: string): Promise<{
+    values: Record<string, unknown>
+    secretSet: string[]
+  }> {
     const r = await this._c.getExtensionConfig({ extId })
-    const out: Record<string, unknown> = {}
-    for (const [k, v] of Object.entries(r.values ?? {})) out[k] = valueToJson(v)
-    return out
+    const values: Record<string, unknown> = {}
+    for (const [k, v] of Object.entries(r.values ?? {})) values[k] = valueToJson(v)
+    // A secret knob's value is NEVER returned by the server; `secretSet` names
+    // the ones that are set (the UI renders "set / not set" + a write-only
+    // field, never the credential).
+    return { values, secretSet: [...(r.secretSet ?? [])] }
   }
 
   async health(): Promise<boolean> {
