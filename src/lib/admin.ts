@@ -43,6 +43,18 @@ export interface Identity {
   tenantName?: string
   /** Admin scope: '*' (platform) or a subtree root id (delegated admin). */
   scope: string
+  /**
+   * The credential to present on every SUBSEQUENT call.
+   *
+   * Login exchanges the (username, token) pair for this once. It is random and
+   * globally unique, so the server can resolve the caller from it alone — the
+   * short, human-chosen token never travels again, and two tenants picking the
+   * same token cannot collide.
+   *
+   * Empty when the pair was the static platform admin token (that one is
+   * presented directly, as before).
+   */
+  sessionToken?: string
 }
 
 /** A tenant token row (agent.v1.TenantToken). */
@@ -71,8 +83,9 @@ function createAdminClient(baseUrl: string, token: string): AdminClient {
 
 /**
  * Login verifies a (username, token) pair over the auth-exempt AdminService.Login
- * RPC and returns the resolved identity. The token is still the credential; the
- * username must match (the admin name, a tenant id/name, or a subtree root).
+ * RPC and returns the resolved identity plus the SESSION token to use from then
+ * on. The username must match (the admin name, a tenant id/name, or a subtree
+ * root); the token is whatever that account's credential is.
  */
 export async function login(baseUrl: string, username: string, token: string): Promise<Identity> {
   const c = createAdminClient(baseUrl, '')
@@ -82,6 +95,7 @@ export async function login(baseUrl: string, username: string, token: string): P
     tenant: r.tenant,
     scope: r.scope,
     tenantName: r.tenantName,
+    sessionToken: r.sessionToken,
   } as Identity & { tenantName: string }
 }
 

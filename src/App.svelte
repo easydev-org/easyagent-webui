@@ -242,10 +242,17 @@
       // is saved.
       const id = await login(base, user, tok)
       const username = id.role === 'admin' ? '' : id.tenantName || user
-      Prefs.save(base, tok)
-      Prefs.upsertBackend({ name: username || backendNameFor(base), username: username || user, baseUrl: base, token: tok })
+      // Present the SESSION token from here on, not the pair's token. Login
+      // exchanges (username, token) once and returns a random, globally unique
+      // session credential: that is what every later RPC carries, so a short
+      // human-chosen token never travels again and cannot collide between
+      // tenants. (A platform-admin token has no session, so it keeps being
+      // presented directly.)
+      const effective = id.sessionToken || tok
+      Prefs.save(base, effective)
+      Prefs.upsertBackend({ name: username || backendNameFor(base), username: username || user, baseUrl: base, token: effective })
       baseUrl = base
-      token = tok
+      token = effective
       await enterApp()
     } catch (e) {
       showErrorToast(t('loadError', { e: String(e) }))
@@ -351,6 +358,10 @@
       </label>
       <label class="mb-6 block">
         <span class="mb-1.5 block text-meta text-muted-foreground">{t('tokenLabel')}</span>
+        <!-- For a tenant this is the label chosen when the account was created;
+             for a sub-admin, the label chosen at delegation. It is exchanged for
+             a session token on success, so it stops travelling after this call. -->
+        <span class="mb-1.5 block text-micro text-muted-foreground">{t('tokenHint')}</span>
         <span class="relative block">
           <Input bind:value={setupToken} disabled={busy} type={showToken ? 'text' : 'password'} />
           <button

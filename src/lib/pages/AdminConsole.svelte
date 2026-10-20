@@ -212,7 +212,9 @@
 
   async function remove(tn: Tenant) {
     const ok = await confirmDialog({
-      title: t('adminDisableTenant'),
+      // This DELETES the account; the old text asked "disable this tenant?",
+      // which is a different (reversible) action offered elsewhere.
+      title: t('adminDeleteUserConfirm'),
       body: tn.id,
       confirmLabel: t('confirm'),
       destructive: true,
@@ -220,6 +222,25 @@
     if (!ok) return
     try {
       await api.deleteTenant(tn.id)
+      showToast(t('saved'))
+      await load()
+    } catch (e) {
+      showErrorToast(String(e))
+    }
+  }
+
+  // Removing a DOMAIN removes its users too (the server cascades the subtree),
+  // so the confirmation has to say so instead of reusing the user wording.
+  async function removeDomain(dom: Domain) {
+    const ok = await confirmDialog({
+      title: t('adminDeleteDomainConfirm'),
+      body: `${dom.name || dom.id} — ${dom.members.length} ${t('adminUsers')}`,
+      confirmLabel: t('confirm'),
+      destructive: true,
+    })
+    if (!ok) return
+    try {
+      await api.deleteTenant(dom.id)
       showToast(t('saved'))
       await load()
     } catch (e) {
@@ -356,6 +377,15 @@
             {#if dom.disabled}<span class="text-micro text-destructive">{t('adminDisabled')}</span>{/if}
           </button>
           <IconButton icon={AppIcons.add} label={t('adminCreateUser')} onclick={() => openCreate(dom.id)} />
+          <!-- A domain (subtree root) had no way to be removed at all: only its
+               individual users had a delete button. Deleting a domain cascades
+               to its users on the server, so the confirm dialog says so. -->
+          <IconButton
+            icon={AppIcons.delete}
+            label={t('adminDeleteDomain')}
+            variant="destructive"
+            onclick={() => void removeDomain(dom)}
+          />
         </div>
 
         {#if expanded === 'dom:' + dom.id}
@@ -378,6 +408,7 @@
               <Input bind:value={newAdminLabel} placeholder={t('adminTokenLabel')} />
               <Button size="sm" onclick={() => void createAdmin(dom.id)}>{t('adminCreateSubAdmin')}</Button>
             </div>
+            <div class="mt-1 text-micro text-muted-foreground">{t('adminTokenLabelHint')}</div>
           </div>
         {/if}
 
@@ -458,6 +489,7 @@
         </label>
         <Button size="sm" onclick={() => void createAdmin()}>{t('adminCreateSubAdmin')}</Button>
       </div>
+      <div class="px-4 text-micro text-muted-foreground">{t('adminTokenLabelHint')}</div>
       {#each adminTokens as at (at.tokenId)}
         <div class="flex items-center gap-3 px-4 py-2">
           <AppIcons.key class="size-4 shrink-0 text-muted-foreground" />
@@ -487,18 +519,25 @@
       role="presentation"
       onclick={e => e.stopPropagation()}
     >
-      <div class="mb-3 text-sm font-semibold">{t('adminCreateTenant')}</div>
+      <!-- The dialog is shared by two different actions, and it always said
+           "create tenant" — so clicking "create DOMAIN" looked like creating a
+           USER. The title now follows what was actually clicked. -->
+      <div class="mb-3 text-sm font-semibold">
+        {createParent ? t('adminCreateUser') : t('adminCreateDomainTitle')}
+      </div>
       {#if isPlatform}
         <label class="mb-3 block">
           <span class="mb-1 block text-meta text-muted-foreground">{t('adminTenantId')}</span>
-          <Input bind:value={newId} placeholder="acme" />
+          <Input bind:value={newId} placeholder={createParent ? 'alice' : 'acme'} />
         </label>
       {:else}
         <p class="mb-3 text-micro text-muted-foreground">{t('adminSubTenantIdHint')}</p>
       {/if}
       <label class="mb-4 block">
-        <span class="mb-1 block text-meta text-muted-foreground">{t('adminTenantName')}</span>
-        <Input bind:value={newName} placeholder="Acme Inc" />
+        <span class="mb-1 block text-meta text-muted-foreground">
+          {createParent ? t('adminUserDisplayName') : t('adminDomainName')}
+        </span>
+        <Input bind:value={newName} placeholder={createParent ? 'Alice' : 'Acme Inc'} />
       </label>
       <div class="flex justify-end gap-2">
         <Button variant="outline" onclick={() => (createOpen = false)}>{t('cancel')}</Button>
