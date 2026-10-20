@@ -35,7 +35,42 @@ import type {
   UploadedFile,
   UploadedFileSource,
 } from './models'
-import { modelRefOf } from './models'
+import { modelRefOf, type ConfigFieldSchema } from './models'
+
+/**
+ * mapConfigFields converts a structured knob's wire shape into the local type.
+ *
+ * Recursion stops where the protocol stops: a field may be an object (one level),
+ * and the renderer refuses to go deeper rather than inventing infinite nesting.
+ */
+function mapConfigFields(
+  list:
+    | {
+        name: string
+        type: string
+        kind: string
+        format: string
+        enumValues: string[]
+        required: boolean
+        description: string
+        default?: unknown
+        fields: unknown[]
+      }[]
+    | undefined,
+): ConfigFieldSchema[] {
+  if (!list?.length) return []
+  return list.map(f => ({
+    name: f.name,
+    type: f.type,
+    kind: f.kind || 'value',
+    format: f.format,
+    enumValues: [...f.enumValues],
+    defaultValue: f.default == null ? null : String(valueToJson(f.default) ?? ''),
+    required: f.required,
+    description: f.description,
+    fields: mapConfigFields(f.fields as Parameters<typeof mapConfigFields>[0]),
+  }))
+}
 
 // ---- the facade ----
 
@@ -621,6 +656,13 @@ export class AgentApi {
         defaultValue: c.default ? valueToJson(c.default) : null,
         description: c.description,
         scope: c.scope,
+        // A structured knob ships its SHAPE; without mapping it the console would
+        // fall back to a JSON textarea for exactly the knobs that most need a
+        // form (a sandbox list with a per-item token).
+        fields: mapConfigFields(c.fields),
+        itemType: c.itemType,
+        minItems: c.minItems,
+        maxItems: c.maxItems,
       })),
     }))
   }

@@ -280,7 +280,11 @@ export interface ToolConfigField {
 
 export interface ToolConfig {
   name: string
-  type: string // string | number | boolean | enum | json
+  // string | number | boolean | enum | json | list | object
+  //
+  // `list`/`object` carry `fields` (their shape) and are rendered as a real
+  // form. `json` with no fields is the FALLBACK: a raw blob in a textarea.
+  type: string
   /** `value` (ordinary knob) or `model` (a provider_id/model_id reference). */
   kind: string
   /** When kind == 'model': the modality the reference must match. */
@@ -289,6 +293,34 @@ export interface ToolConfig {
   defaultValue?: unknown
   description: string
   scope: string // global | session
+  /**
+   * The shape of a structured knob: the keys of an object, or of each list item
+   * when itemType == 'object'. Empty = untyped (json fallback).
+   */
+  fields?: ConfigFieldSchema[] | null
+  /** Element type when type == 'list'. */
+  itemType?: string
+  minItems?: number
+  maxItems?: number
+}
+
+/**
+ * ConfigFieldSchema is one key of a structured config value.
+ *
+ * It is what lets the console render a form instead of a JSON textarea: `enum`
+ * becomes a picker (os -> linux|windows|macos|android), `kind: 'secret'` a masked
+ * input, `format: 'uri'` a URL field. `fields` nests one level for an object.
+ */
+export interface ConfigFieldSchema {
+  name: string
+  type: string // string | number | boolean | enum | json | object
+  kind: string // value | secret
+  format: string // uri | host | path | email | duration | semver
+  enumValues: string[]
+  defaultValue?: string | null
+  required: boolean
+  description: string
+  fields?: ConfigFieldSchema[] | null
 }
 
 export interface ToolInfo {

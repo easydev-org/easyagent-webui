@@ -8,6 +8,7 @@
   import { showErrorToast, showToast } from '$lib/toast.svelte'
   import { AppIcons } from '$lib/icons'
   import { Select } from '$lib/components/ui/select'
+  import StructuredConfigEditor from '$lib/components/StructuredConfigEditor.svelte'
 
   let { store }: { store: AppStore } = $props()
 
@@ -60,6 +61,25 @@
     if (k in drafts) return drafts[k]
     const v = (configs[extId] ?? {})[knob.name]
     return v == null ? '' : String(v)
+  }
+
+  /**
+   * structuredValue parses a structured knob's current value for the editor.
+   *
+   * The stored form is JSON text; a value that is already an object/array (some
+   * paths return it parsed) is used as-is. An unparseable or empty value becomes
+   * the empty shape, so the editor starts clean instead of throwing.
+   */
+  function structuredValue(extId: string, knob: ToolConfig): unknown {
+    const k = `${extId}.${knob.name}`
+    const raw = k in drafts ? drafts[k] : (configs[extId] ?? {})[knob.name]
+    if (raw == null || raw === '') return knob.type === 'object' ? {} : []
+    if (typeof raw !== 'string') return raw
+    try {
+      return JSON.parse(raw)
+    } catch {
+      return knob.type === 'object' ? {} : []
+    }
   }
 
   function fmtDefault(v: unknown): string {
@@ -127,7 +147,29 @@
                     <span class="text-micro text-muted-foreground">— {knob.description}</span>
                   {/if}
                 </span>
-                {#if knob.kind === 'secret'}
+                <!-- STRUCTURED knobs come FIRST, before the secret branch.
+                     A structured knob may itself be kind=secret (the sandbox list
+                     holds a token per item): checking `kind` first would render
+                     it as one masked textarea and hide the whole form. -->
+                {#if (knob.type === 'list' || knob.type === 'object') && knob.fields?.length}
+                  <StructuredConfigEditor
+                    fields={knob.fields}
+                    itemType={knob.itemType}
+                    minItems={knob.minItems}
+                    maxItems={knob.maxItems}
+                    mode={knob.type === 'list' ? 'list' : 'object'}
+                    value={structuredValue(ext.extId, knob)}
+                    onchange={v => (drafts[`${ext.extId}.${knob.name}`] = JSON.stringify(v))}
+                  />
+                  <div class="mt-1 flex items-center gap-2">
+                    <button
+                      type="button"
+                      class="rounded-md border border-border px-3 py-1 text-meta hover:bg-muted"
+                      onclick={() => void saveKnob(ext.extId, knob, drafts[`${ext.extId}.${knob.name}`] ?? JSON.stringify(structuredValue(ext.extId, knob)))}
+                    >{t('save')}</button>
+                    <span class="text-micro text-muted-foreground">{t('structHint')}</span>
+                  </div>
+                {:else if knob.kind === 'secret'}
                   {@const key = `${ext.extId}.${knob.name}`}
                   <div class="flex items-center gap-2">
                     {#if isSecretSet(ext.extId, knob.name) && !editingSecret[key]}
