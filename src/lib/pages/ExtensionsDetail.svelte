@@ -139,7 +139,13 @@
 
         {#if expanded === ext.extId}
           <div class="space-y-3 border-t border-border/60 px-3 py-3">
-            {#each ext.configFields as knob (knob.name)}
+            {#each configGroups(ext) as grp (grp.ns)}
+              {#if grp.ns !== ''}
+                <div class="mb-1 mt-2 text-micro font-semibold uppercase tracking-wide text-muted-foreground">
+                  {grp.ns}{#if grp.description}<span class="ml-1 font-normal normal-case tracking-normal">— {grp.description}</span>{/if}
+                </div>
+              {/if}
+            {#each grp.fields as knob (knob.name)}
               <label class="block">
                 <span class="mb-1 flex items-center gap-1.5 text-meta">
                   <span class="font-mono">{knob.name}</span>
@@ -249,6 +255,7 @@
                   </div>
                 {/if}
               </label>
+            {/each}
             {/each}
           </div>
         {/if}

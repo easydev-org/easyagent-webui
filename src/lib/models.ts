@@ -302,6 +302,13 @@ export interface ToolConfig {
   itemType?: string
   minItems?: number
   maxItems?: number
+  /**
+   * The namespace this knob's stored value is scoped to ('' = extension-level).
+   *
+   * It is part of the storage ADDRESS, so a write must send it back or it lands
+   * in a different cell than the read used.
+   */
+  namespace?: string
 }
 
 /**
@@ -323,6 +330,25 @@ export interface ConfigFieldSchema {
   fields?: ConfigFieldSchema[] | null
 }
 
+/**
+ * ExtensionNamespace is one declared grouping of an extension's tools and
+ * config (pvc, build, storage, ...).
+ *
+ * The ORDER the extension declares is preserved: it reflects how the extension
+ * is actually used, which an alphabetical sort would lose.
+ */
+export interface ExtensionNamespace {
+  name: string
+  description: string
+}
+
+/** One tool plus the namespace it belongs to ('' = ungrouped). */
+export interface ExtensionToolInfo {
+  name: string
+  namespace: string
+  description: string
+}
+
 export interface ToolInfo {
   name: string
   description: string
@@ -340,6 +366,10 @@ export interface ExtensionInfo {
   capabilities: string[]
   tools: string[]
   configFields: ToolConfig[]
+  /** Declared groupings, in the author's order. */
+  namespaces: ExtensionNamespace[]
+  /** Each tool with its namespace ('' = ungrouped). */
+  toolsDetailed: ExtensionToolInfo[]
 }
 
 // ---- providers / models ----

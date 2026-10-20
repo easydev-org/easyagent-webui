@@ -663,6 +663,16 @@ export class AgentApi {
         itemType: c.itemType,
         minItems: c.minItems,
         maxItems: c.maxItems,
+        namespace: c.namespace,
+      })),
+      namespaces: (e.namespaces ?? []).map(n => ({
+        name: n.name,
+        description: n.description,
+      })),
+      toolsDetailed: (e.toolsDetailed ?? []).map(t => ({
+        name: t.name,
+        namespace: t.namespace,
+        description: t.description,
       })),
     }))
   }
