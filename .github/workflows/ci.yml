@@ -18,11 +18,13 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node }}
-      # `--no-package-lock` on a repo with NO lockfile makes npm crash with
-      # "Cannot read properties of null (reading 'edgesOut')" — a known npm bug in
-      # that combination. Plain `npm install` writes a lockfile it can work with;
-      # the file is not committed (the Dockerfile does the same install).
-      - run: npm install --no-audit --no-fund
+          cache: npm
+      # `npm ci` against the committed lockfile: reproducible, and it fails loudly
+      # if package.json and the lock have drifted instead of silently resolving
+      # something else. Adding the lockfile also removed the
+      # "Cannot read properties of null (reading 'edgesOut')" crash that npm hits
+      # when asked to install with no lockfile at all.
+      - run: npm ci --no-audit --no-fund
       # `npm run build` is the type check too: svelte-check runs inside it, so a
       # type error fails here rather than at runtime in the browser.
       - run: npm run build
