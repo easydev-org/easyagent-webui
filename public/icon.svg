@@ -1,7 +1,17 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
-  <rect width="128" height="128" rx="28" fill="#7c3aed"/>
-  <text x="64" y="64" fill="#fafafa"
-        font-family="DejaVu Sans, Helvetica, Arial, sans-serif"
-        font-weight="700" font-size="47" text-anchor="middle"
-        dominant-baseline="central">AW</text>
+  <!-- EasyAgent app icon: orange tile, white bot (lucide `bot`), blue sparkle.
+       This is what the browser tab shows, so it must be the SAME artwork as
+       icon-192/512.png and the in-app splash. -->
+  <rect width="128" height="128" rx="28" fill="#f97316"/>
+  <g fill="none" stroke="#ffffff" stroke-width="8"
+     stroke-linecap="round" stroke-linejoin="round">
+    <rect x="34" y="44" width="60" height="44" rx="7"/>
+    <path d="M64 44 V34 H50"/>
+    <path d="M26 66 h7"/>
+    <path d="M95 66 h7"/>
+    <path d="M54 62 v7"/>
+    <path d="M74 62 v7"/>
+  </g>
+  <circle cx="98" cy="98" r="19" fill="#f97316"/>
+  <path d="M98 79 L102 94 L117 98 L102 102 L98 117 L94 102 L79 98 L94 94 Z" fill="#2563eb"/>
 </svg>

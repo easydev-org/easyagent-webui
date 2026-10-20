@@ -10,15 +10,13 @@
   // Keep in sync with: flutter LoadingScreen, compose LoadingScreen,
   // swiftui LoadingScreen, and the three index.html splashes.
   import { t } from '$lib/i18n.svelte'
-  import { AppIcons } from '$lib/icons'
+  import AppMark from './AppMark.svelte'
 </script>
 
 <div class="flex h-full flex-col items-center justify-center gap-4 bg-background text-foreground">
-  <!-- WebUI mark: AW / violet #7c3aed -->
-  <div
-    class="flex size-10 items-center justify-center rounded-[10px] text-[16px] font-semibold text-white"
-    style="background:#7c3aed;font-family:var(--font-mono)"
-  >AW</div>
+  <!-- The app mark: the SAME artwork as the tab/PWA icon. It used to be a violet
+       square with the letters "AW", which matched nothing the user saw elsewhere. -->
+  <AppMark size={40} />
   <div class="text-body">{t('appTitle')}</div>
   <span
     class="size-6 animate-spin rounded-full border-2 border-muted-foreground/30 border-t-muted-foreground"

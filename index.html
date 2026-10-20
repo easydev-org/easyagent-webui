@@ -46,12 +46,12 @@
       font-family: system-ui, -apple-system, 'Noto Sans SC', sans-serif;
     }
     @media (prefers-color-scheme: dark) { #agent-splash { background: #0a0a0a; color: #eeeeee; } }
-    #agent-splash .mk {
-      width: 40px; height: 40px; border-radius: 10px; background: #7c3aed;
-      display: flex; align-items: center; justify-content: center;
-      color: #fff; font-weight: 600; font-size: 16px;
-      font-family: ui-monospace, 'Noto Sans Mono', monospace;
-    }
+    /* The splash mark is the SAME artwork as the app icon
+       (public/icon.svg + the PNGs): an orange tile, a white bot, a blue sparkle.
+       It used to be a violet square with the letters "AW", which matched
+       nothing the browser tab or the installed icon showed. Kept as inline CSS
+       art so the pre-boot splash needs no network request. */
+    #agent-splash .mk { width: 40px; height: 40px; display: block; }
     #agent-splash .ti { font-size: 14px; }
     #agent-splash .rg {
       width: 24px; height: 24px; border-radius: 50%;
@@ -63,7 +63,22 @@
 </head>
 <body>
   <div id="agent-splash">
-    <div class="mk">AW</div>
+    <svg class="mk" viewBox="0 0 128 128" role="img" aria-label="EasyAgent"
+         xmlns="http://www.w3.org/2000/svg">
+      <rect width="128" height="128" rx="28" fill="#f97316" />
+      <g fill="none" stroke="#ffffff" stroke-width="8"
+         stroke-linecap="round" stroke-linejoin="round">
+        <rect x="34" y="44" width="60" height="44" rx="7" />
+        <path d="M64 44 V34 H50" />
+        <path d="M26 66 h7" />
+        <path d="M95 66 h7" />
+        <path d="M54 62 v7" />
+        <path d="M74 62 v7" />
+      </g>
+      <circle cx="98" cy="98" r="19" fill="#f97316" />
+      <path d="M98 79 L102 94 L117 98 L102 102 L98 117 L94 102 L79 98 L94 94 Z"
+            fill="#2563eb" />
+    </svg>
     <div class="ti">EasyAgent</div>
     <div class="rg"></div>
   </div>
