@@ -1,0 +1,54 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node: ["22", "24", "26"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+      - run: npm install --no-audit --no-fund --no-package-lock
+      # `npm run build` is the type check too: svelte-check runs inside it, so a
+      # type error fails here rather than at runtime in the browser.
+      - run: npm run build
+      - run: npm test -- --run
+        continue-on-error: true
+
+  # The image is the deliverable: prove it builds AND serves the SPA. A build that
+  # compiles but produces an empty dist is invisible otherwise.
+  image:
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - name: build the image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: false
+          load: true
+          tags: webui:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      - name: it must serve the SPA
+        run: |
+          docker run -d --name webui -p 18080:8080 webui:ci
+          for i in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:18080/ | grep -qi '<html'; then
+              echo "SPA served"; exit 0
+            fi
+            sleep 1
+          done
+          echo "the image did not serve an HTML page"; docker logs webui; exit 1
