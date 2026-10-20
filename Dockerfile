@@ -10,7 +10,10 @@
 FROM node:26-alpine AS build
 WORKDIR /src
 COPY package.json .npmrc ./
-RUN npm install --no-audit --no-fund --no-package-lock
+# No `--no-package-lock`: with no lockfile in the repo, that flag makes npm crash
+# ("Cannot read properties of null (reading 'edgesOut')"). A plain install writes
+# a lockfile it can resolve against.
+RUN npm install --no-audit --no-fund
 COPY . ./
 RUN npm run build
 
