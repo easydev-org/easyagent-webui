@@ -343,6 +343,11 @@
       <label class="mb-4 block">
         <span class="mb-1.5 block text-meta text-muted-foreground">{t('usernameLabel')}</span>
         <Input bind:value={setupUsername} disabled={busy} autocomplete="username" />
+        <!-- A delegated-admin credential is a PAIR: the token AND this username.
+             The username is the tenant id/name (or the subtree root for a
+             sub-admin) — the server rejects anything else, and the label typed
+             when creating a sub-admin is NOT a username. -->
+        <span class="mt-1 block text-micro text-muted-foreground">{t('usernameHint')}</span>
       </label>
       <label class="mb-6 block">
         <span class="mb-1.5 block text-meta text-muted-foreground">{t('tokenLabel')}</span>

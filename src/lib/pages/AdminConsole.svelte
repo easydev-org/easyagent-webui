@@ -41,8 +41,15 @@
   let newName = $state('')
   let creating = $state(false)
   let createOpen = $state(false)
-  // one-time secrets revealed once (create tenant / issue / rotate token)
-  let revealed = $state<{ label: string; value: string } | null>(null)
+  // One-time secrets revealed once (create tenant / issue / rotate token).
+  //
+  // `username` is set for DELEGATED-ADMIN tokens: unlike a tenant token, that
+  // credential is a PAIR — the bearer token alone is not enough, the login form
+  // also demands the subtree root's id/name as the username, and the server
+  // rejects anything else with "invalid username or token". Showing only the
+  // token left a freshly created sub-admin unable to sign in at all, because the
+  // "label" typed in the create box is NOT a username (it is never checked).
+  let revealed = $state<{ label: string; value: string; username?: string } | null>(null)
   let issueLabel = $state('')
   // delegated admin tokens for the current scope
   let adminTokens = $state<AdminToken[]>([])
@@ -111,7 +118,15 @@
   async function createAdmin(scopeId: string) {
     try {
       const plaintext = await api.createAdminToken(scopeId, newAdminLabel.trim() || 'sub-admin')
-      revealed = { label: `${t('adminSubAdmin')} — ${scopeId}`, value: plaintext }
+      // The username a delegated admin must type is the subtree root's ID or
+      // NAME — never the label entered above, which is only a display name.
+      // Prefer the human-readable name; the id is shown as well in the dialog.
+      const rootName = tenants.find(t => t.id === scopeId)?.name || scopeId
+      revealed = {
+        label: `${t('adminSubAdmin')} — ${scopeId}`,
+        value: plaintext,
+        username: rootName,
+      }
       newAdminLabel = ''
       await loadAdminTokens()
     } catch (e) {
@@ -284,6 +299,18 @@
       <div class="m-3 rounded-md border border-warning/40 bg-warning/10 p-3">
         <div class="mb-1 text-meta font-semibold text-warning">{revealed.label}</div>
         <div class="mb-2 text-micro text-muted-foreground">{t('adminTokenOnce')}</div>
+        {#if revealed.username}
+          <!-- A delegated-admin credential is a PAIR. Showing only the token is
+               what made a new sub-admin unable to sign in: the login form also
+               requires this username, and the server rejects anything else. -->
+          <div class="mb-2 rounded bg-warning/10 px-2 py-1.5 text-micro">
+            <div class="text-muted-foreground">{t('adminLoginUsername')}</div>
+            <div class="flex items-center gap-2">
+              <code class="min-w-0 flex-1 truncate font-mono">{revealed.username}</code>
+              <IconButton icon={AppIcons.copy} label={t('copy')} onclick={() => void copy(revealed!.username!)} />
+            </div>
+          </div>
+        {/if}
         <div class="flex items-center gap-2">
           <code class="min-w-0 flex-1 truncate rounded bg-muted px-2 py-1 font-mono text-micro">{revealed.value}</code>
           <IconButton icon={AppIcons.copy} label={t('copy')} onclick={() => void copy(revealed!.value)} />
