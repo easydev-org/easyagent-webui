@@ -135,6 +135,24 @@ export function applyStreamEvent(
       }
       break
     }
+    case 'tool-progress': {
+      // Live output from a tool that is still running (a long job, say).
+      //
+      // These frames are durable: the agent turns each one into a session event,
+      // so a client that reconnects replays them and rebuilds the transcript. They
+      // are NOT part of the model's context — only the final result is.
+      const tcId = (params['toolCallId'] ?? params['id']) as string | undefined
+      if (tcId == null) break
+      const text = params['text']
+      if (typeof text === 'string' && text !== '') {
+        store.appendToolProgress(tcId, text, params['phase'] as string | undefined)
+      } else if (params['phase'] != null) {
+        // A phase-only frame (the terminal "exited"): no text, but it tells the
+        // card the process finished before the result arrives.
+        store.appendToolProgress(tcId, '', params['phase'] as string | undefined)
+      }
+      break
+    }
     case 'tool-result': {
       const tcId = (params['toolCallId'] ?? params['id']) as string | undefined
       if (tcId == null) break

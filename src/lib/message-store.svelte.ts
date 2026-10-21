@@ -10,6 +10,7 @@ import {
   addToolPartIn,
   appendDeltaTo,
   appendToolInputTo,
+  appendToolProgressTo,
   applyToolResultTo,
   ensurePartIn,
   startToolPartIn,
@@ -383,6 +384,16 @@ export class MessageStore {
     this.setMsg(sid, m => ({
       ...m,
       parts: applyToolResultTo(m.parts, partId, result, extra),
+    }))
+  }
+
+  /** Append a live output frame from a running tool (`tool-progress`). */
+  appendToolProgress(partId: string, text: string, phase?: string) {
+    const sid = this.streamingId
+    if (!sid) return
+    this.setMsg(sid, m => ({
+      ...m,
+      parts: appendToolProgressTo(m.parts, partId, text, phase),
     }))
   }
 

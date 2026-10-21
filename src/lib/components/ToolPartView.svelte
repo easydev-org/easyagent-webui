@@ -33,6 +33,9 @@
   const input = $derived((toolState?.input ?? {}) as Record<string, unknown>)
 
   const output = $derived(toolState?.output ?? '')
+  // Live transcript from a running tool. Shown while the tool runs and kept
+  // afterwards (the final result is usually a summary, not the raw output).
+  const progress = $derived(toolState?.progress ?? '')
   const meta = $derived((toolState?.data ?? {}) as Record<string, unknown>)
   const metaEntries = $derived(Object.entries(meta).filter(([k]) => k !== 'files'))
 
@@ -188,10 +191,24 @@
         </button>
         {#if contentOpen}
           <div class="px-2 pb-2">
-            {#if running}
+            {#if running && progress}
+              <!-- Live output while the tool is still running: a long job's
+                   stdout appears here as it arrives instead of after it ends. -->
+              <pre
+                class="max-h-72 min-w-0 overflow-auto font-mono text-[11px] wrap-anywhere whitespace-pre-wrap">{progress}</pre>
+              <p class="mt-1 text-micro text-muted-foreground italic">{t('running')}</p>
+            {:else if running}
               <p class="text-micro text-muted-foreground italic">{t('running')}</p>
             {:else if output}
+              {#if progress}
+                <!-- The transcript from the run, above the final result. -->
+                <pre
+                  class="mb-1 max-h-48 min-w-0 overflow-auto font-mono text-[11px] wrap-anywhere whitespace-pre-wrap text-muted-foreground">{progress}</pre>
+              {/if}
               <pre class="max-h-72 min-w-0 overflow-auto font-mono text-[11px] wrap-anywhere whitespace-pre-wrap">{output}</pre>
+            {:else if progress}
+              <pre
+                class="max-h-72 min-w-0 overflow-auto font-mono text-[11px] wrap-anywhere whitespace-pre-wrap">{progress}</pre>
             {/if}
           </div>
         {/if}

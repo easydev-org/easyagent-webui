@@ -130,9 +130,57 @@ export function applyToolResultTo(
         diff: extra.diff ?? old.diff ?? null,
         additions: extra.additions ?? old.additions ?? null,
         deletions: extra.deletions ?? old.deletions ?? null,
+        // Carry the live transcript across: the final result does not repeat it,
+        // and dropping it here would make the output vanish the moment the tool
+        // completes — the worst possible moment to lose it.
+        progress: old.progress ?? null,
+        progressPhase: 'exited',
       } satisfies ToolState,
     }
   })
+}
+
+/**
+ * Append one live output frame from a running tool.
+ *
+ * `text` is a BATCH (the extension throttles to ~5 frames/second), so it is
+ * appended rather than replaced. The part may not exist yet if progress beats the
+ * `tool-call` frame; in that case it is created, so early output is not lost.
+ */
+export function appendToolProgressTo(
+  parts: ChatPart[],
+  partId: string,
+  text: string,
+  phase?: string,
+): ChatPart[] {
+  const next = [...parts]
+  const idx = next.findIndex(p => p.id === partId)
+  if (idx < 0) {
+    // Progress arrived before the tool-call frame. Keep it: a job that prints
+    // immediately would otherwise lose its first lines.
+    next.push({
+      id: partId,
+      type: 'tool',
+      text: '',
+      tool: 'tool',
+      state: { status: 'running', title: 'tool', progress: text, progressPhase: phase ?? 'running' },
+    })
+    return next
+  }
+  const p = next[idx]
+  const old = p.state ?? { status: '', title: '' }
+  const prev = old.progress ?? ''
+  // Cap the retained transcript. A 10-minute job can print a lot, and the DOM
+  // does not need all of it to be useful; the full output arrives with the final
+  // result (and stays available through job-output).
+  const MAX = 200_000
+  let merged = prev === '' ? text : prev + '\n' + text
+  if (merged.length > MAX) merged = '…\n' + merged.slice(merged.length - MAX)
+  next[idx] = {
+    ...p,
+    state: { ...old, progress: merged, progressPhase: phase ?? old.progressPhase ?? 'running' },
+  }
+  return next
 }
 
 /** Build the file part for a streamed `file`/`reasoning-file` event. Returns
