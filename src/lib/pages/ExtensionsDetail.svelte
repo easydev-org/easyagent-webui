@@ -56,6 +56,45 @@
     return out.sort()
   }
 
+  /**
+   * Group an extension's knobs by namespace, in the author's declared order.
+   *
+   * This was MISSING: the template called it, so every attempt to expand an
+   * extension threw and the panel rendered nothing — which reads as "the config
+   * will not open". `tsc` did not catch it because template expressions are not
+   * type-checked, only the <script> block is.
+   *
+   * Ordering matters as much as grouping: an extension with 20 knobs is unusable
+   * as one flat list, and the author's declared namespace order carries intent
+   * (setup steps first). Un-namespaced knobs go in a leading '' group so they
+   * appear before the groups rather than after them.
+   */
+  function configGroups(ext: ExtensionInfo): { ns: string; description: string; fields: ToolConfig[] }[] {
+    const order: string[] = ['']
+    const desc = new Map<string, string>()
+    for (const n of ext.namespaces ?? []) {
+      if (!desc.has(n.name)) {
+        order.push(n.name)
+        desc.set(n.name, n.description ?? '')
+      }
+    }
+    const groups = new Map<string, ToolConfig[]>()
+    for (const ns of order) groups.set(ns, [])
+    for (const knob of ext.configFields ?? []) {
+      const ns = knob.namespace ?? ''
+      // A knob naming a namespace the manifest never declared still has to be
+      // shown; put it in its own group rather than dropping it.
+      if (!groups.has(ns)) {
+        order.push(ns)
+        groups.set(ns, [])
+      }
+      groups.get(ns)!.push(knob)
+    }
+    return order
+      .filter(ns => (groups.get(ns)?.length ?? 0) > 0)
+      .map(ns => ({ ns, description: desc.get(ns) ?? '', fields: groups.get(ns)! }))
+  }
+
   function knobValue(extId: string, knob: ToolConfig): string {
     const k = `${extId}.${knob.name}`
     if (k in drafts) return drafts[k]
