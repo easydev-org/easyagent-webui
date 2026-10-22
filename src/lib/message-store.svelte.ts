@@ -387,14 +387,45 @@ export class MessageStore {
     }))
   }
 
-  /** Append a live output frame from a running tool (`tool-progress`). */
-  appendToolProgress(partId: string, text: string, phase?: string) {
-    const sid = this.streamingId
+  /** Append a live output frame from a running tool (`tool-progress`).
+   *
+   * `msgId` is the server-authored message the frame belongs to. It must be used
+   * rather than `this.streamingId`: progress arrives while a tool runs, and the
+   * streaming bubble is not guaranteed to be the current `streamingId` at that
+   * moment (the stream may have moved on, or no delta has arrived yet for this
+   * step). Relying on `streamingId` alone silently dropped every frame.
+   */
+  appendToolProgress(msgId: string | undefined, partId: string, text: string, phase?: string) {
+    const sid = msgId || this.streamingId
     if (!sid) return
-    this.setMsg(sid, m => ({
-      ...m,
-      parts: appendToolProgressTo(m.parts, partId, text, phase),
-    }))
+    // NOT via setMsg: that drops mutations for a persisted (non-local) row,
+    // treating every one as a reconnect-replay duplicate. Correct for text
+    // deltas — those are re-sent on reconnect and the stored row already has
+    // them — but WRONG for progress: a tool's step is persisted as soon as its
+    // text is finished, and the tool runs AFTER that, so every progress frame
+    // arrived against a persisted row and was silently discarded. The visible
+    // effect was a tool card that stayed empty until the final result landed.
+    //
+    // Progress is append-only and its frames carry a unique (partId, text), so
+    // applying one twice is harmless; the stored row is rewritten from the sink
+    // when the step persists again.
+    const idx = this.messages.findIndex(m => m.id === sid)
+    if (idx < 0) {
+      this.ensureStreamingMsg(sid)
+      const j = this.messages.findIndex(m => m.id === sid)
+      if (j < 0) return
+      this.messages[j] = {
+        ...this.messages[j]!,
+        parts: appendToolProgressTo(this.messages[j]!.parts, partId, text, phase),
+      }
+      this.notify()
+      return
+    }
+    this.messages[idx] = {
+      ...this.messages[idx]!,
+      parts: appendToolProgressTo(this.messages[idx]!.parts, partId, text, phase),
+    }
+    this.notify()
   }
 
   addError(text: string, kind: 'send' | 'model' = 'model') {

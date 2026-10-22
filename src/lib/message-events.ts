@@ -143,13 +143,15 @@ export function applyStreamEvent(
       // are NOT part of the model's context — only the final result is.
       const tcId = (params['toolCallId'] ?? params['id']) as string | undefined
       if (tcId == null) break
+      // Route by the server-authored message id, like every other event.
+      const mid = typeof params['message_id'] === 'string' ? (params['message_id'] as string) : undefined
       const text = params['text']
       if (typeof text === 'string' && text !== '') {
-        store.appendToolProgress(tcId, text, params['phase'] as string | undefined)
+        store.appendToolProgress(mid, tcId, text, params['phase'] as string | undefined)
       } else if (params['phase'] != null) {
         // A phase-only frame (the terminal "exited"): no text, but it tells the
         // card the process finished before the result arrives.
-        store.appendToolProgress(tcId, '', params['phase'] as string | undefined)
+        store.appendToolProgress(mid, tcId, '', params['phase'] as string | undefined)
       }
       break
     }
