@@ -135,56 +135,49 @@ export function applyStreamEvent(
       }
       break
     }
-    case 'tool-progress': {
-      // Live output from a tool that is still running (a long job, say).
+    case 'tool-output-available': {
+      // A tool's output. While the tool runs these are SNAPSHOTS marked
+      // `preliminary`; the one without the flag is the final answer.
       //
-      // These frames are durable: the agent turns each one into a session event,
-      // so a client that reconnects replays them and rebuilds the transcript. They
-      // are NOT part of the model's context — only the final result is.
+      // Snapshots rather than deltas is the AI SDK's own design, and it is the
+      // reason a dropped frame is harmless: every frame carries the whole output so
+      // far, so whichever arrives last is correct. A delta stream would corrupt the
+      // result permanently the first time one went missing.
       const tcId = (params['toolCallId'] ?? params['id']) as string | undefined
       if (tcId == null) break
-      // Route by the server-authored message id, like every other event.
       const mid = typeof params['message_id'] === 'string' ? (params['message_id'] as string) : undefined
-      const text = params['text']
-      if (typeof text === 'string' && text !== '') {
-        store.appendToolProgress(mid, tcId, text, params['phase'] as string | undefined)
-      } else if (params['phase'] != null) {
-        // A phase-only frame (the terminal "exited"): no text, but it tells the
-        // card the process finished before the result arrives.
-        store.appendToolProgress(mid, tcId, '', params['phase'] as string | undefined)
-      }
+      const out = (params['output'] as Record<string, unknown> | undefined) ?? {}
+      const content = typeof out['content'] === 'string' ? out['content'] : ''
+      // `state` distinguishes a clean finish from a tool that stopped early with
+      // real output in hand — the difference between "done" and "stopped after N
+      // lines", which an error string cannot express.
+      const state = typeof out['state'] === 'string' ? out['state'] : undefined
+      const preliminary = params['preliminary'] === true
+      store.applyToolOutput(mid, tcId, {
+        content,
+        state,
+        changeId: typeof out['change_id'] === 'string' ? out['change_id'] : undefined,
+        diff: typeof out['diff'] === 'string' ? out['diff'] : undefined,
+        additions: typeof out['additions'] === 'number' ? out['additions'] : undefined,
+        deletions: typeof out['deletions'] === 'number' ? out['deletions'] : undefined,
+        data: out,
+        preliminary,
+      })
       break
     }
-    case 'tool-result': {
+    case 'tool-output-error': {
+      // The tool ran and failed. Distinct from "denied" (never ran) and from a
+      // timeout (ran, produced output, stopped early).
       const tcId = (params['toolCallId'] ?? params['id']) as string | undefined
       if (tcId == null) break
-      store.updateToolResult(
-        tcId,
-        params['formatted'] ?? params['output'] ?? params['result'],
-        {
-          errorMsg: undefined,
-          changeId: params['change_id'] as string | undefined,
-          diff: params['diff'] as string | undefined,
-          additions: params['additions'] as number | undefined,
-          deletions: params['deletions'] as number | undefined,
-          data: (params['data'] as Record<string, unknown>) ?? undefined,
-        },
-      )
-      break
-    }
-    case 'tool-error': {
-      const tcId = (params['toolCallId'] ?? params['id']) as string | undefined
-      const errObj = params['error']
-      const errMsg = (
-        typeof errObj === 'string'
-          ? errObj
-          : errObj && typeof errObj === 'object'
-            ? ((errObj as Record<string, unknown>)['message'] ??
-              params['message'] ??
-              'tool error')
-            : (params['message'] ?? 'tool error')
-      ) as string
-      if (tcId != null) store.updateToolResult(tcId, null, { errorMsg: errMsg })
+      const mid = typeof params['message_id'] === 'string' ? (params['message_id'] as string) : undefined
+      const text = params['errorText'] ?? params['error'] ?? 'tool error'
+      store.applyToolOutput(mid, tcId, {
+        content: '',
+        state: 'error',
+        error: typeof text === 'string' ? text : 'tool error',
+        preliminary: false,
+      })
       break
     }
     case 'tool-output-denied': {

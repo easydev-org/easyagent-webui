@@ -194,7 +194,13 @@ export function messageFromPb(m: PbMessage): Message {
             title: (d['name'] as string) || '',
             input: (d['input'] as Record<string, unknown>) || null,
             output: typeof content === 'string' ? content : null,
-            data: (res?.['metadata'] as Record<string, unknown>) || null,
+            data:
+              ((res?.['meta'] as Record<string, unknown> | undefined) ??
+                (res?.['metadata'] as Record<string, unknown> | undefined)) ??
+              null,
+            // How the call ended, so a rebuilt transcript says "timed out" the same
+            // way the live one did.
+            toolState: (res?.['state'] as string | undefined) ?? null,
           },
         })
         break

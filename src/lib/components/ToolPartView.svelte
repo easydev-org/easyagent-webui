@@ -33,9 +33,18 @@
   const input = $derived((toolState?.input ?? {}) as Record<string, unknown>)
 
   const output = $derived(toolState?.output ?? '')
-  // Live transcript from a running tool. Shown while the tool runs and kept
-  // afterwards (the final result is usually a summary, not the raw output).
-  const progress = $derived(toolState?.progress ?? '')
+  // How the call ended, when it is worth saying out loud. "ok" is the normal case
+  // and needs no label; anything else is the difference between "finished" and
+  // "stopped after printing what it had".
+  // Only a genuinely interrupted or failed call gets a label. "ok" (and the words
+  // tools use for it — a job says "done", a build "finished") is the normal case
+  // and needs no explanation.
+  const OK_STATES = new Set(['ok', 'done', 'finished', 'exited', 'complete', 'completed', 'success', 'succeeded'])
+  const endedEarly = $derived(
+    toolState?.toolState != null &&
+      toolState.toolState !== '' &&
+      !OK_STATES.has(toolState.toolState),
+  )
   const meta = $derived((toolState?.data ?? {}) as Record<string, unknown>)
   const metaEntries = $derived(Object.entries(meta).filter(([k]) => k !== 'files'))
 
@@ -191,24 +200,27 @@
         </button>
         {#if contentOpen}
           <div class="px-2 pb-2">
-            {#if running && progress}
-              <!-- Live output while the tool is still running: a long job's
-                   stdout appears here as it arrives instead of after it ends. -->
+            <!-- ONE rendering path for every tool.
+
+                 The output is the same field whether the call is still running or
+                 finished: the server sends snapshots, so `output` always holds
+                 everything known so far. There is no separate "live transcript"
+                 to reconcile, which is why a partial result stays readable after
+                 an interrupt instead of vanishing. -->
+            {#if output}
               <pre
-                class="max-h-72 min-w-0 overflow-auto font-mono text-[11px] wrap-anywhere whitespace-pre-wrap">{progress}</pre>
+                class="max-h-72 min-w-0 overflow-auto font-mono text-[11px] wrap-anywhere whitespace-pre-wrap">{output}</pre>
+            {/if}
+            {#if running}
               <p class="mt-1 text-micro text-muted-foreground italic">{t('running')}</p>
-            {:else if running}
-              <p class="text-micro text-muted-foreground italic">{t('running')}</p>
-            {:else if output}
-              {#if progress}
-                <!-- The transcript from the run, above the final result. -->
-                <pre
-                  class="mb-1 max-h-48 min-w-0 overflow-auto font-mono text-[11px] wrap-anywhere whitespace-pre-wrap text-muted-foreground">{progress}</pre>
-              {/if}
-              <pre class="max-h-72 min-w-0 overflow-auto font-mono text-[11px] wrap-anywhere whitespace-pre-wrap">{output}</pre>
-            {:else if progress}
-              <pre
-                class="max-h-72 min-w-0 overflow-auto font-mono text-[11px] wrap-anywhere whitespace-pre-wrap">{progress}</pre>
+            {:else if endedEarly}
+              <p class="mt-1 text-micro text-warning italic">
+                {toolState?.toolState === 'timeout'
+                  ? 'stopped: timed out'
+                  : toolState?.toolState === 'cancelled'
+                    ? 'stopped: cancelled'
+                    : `stopped: ${toolState?.toolState}`}
+              </p>
             {/if}
           </div>
         {/if}

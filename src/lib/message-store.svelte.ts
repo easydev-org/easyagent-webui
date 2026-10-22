@@ -10,13 +10,14 @@ import {
   addToolPartIn,
   appendDeltaTo,
   appendToolInputTo,
-  appendToolProgressTo,
+  applyToolOutputTo,
   applyToolResultTo,
   ensurePartIn,
   startToolPartIn,
+  type ToolOutputUpdate,
   type ToolResultExtra,
 } from './message-parts'
-import type { ChatMessage, Message } from './models'
+import type { ChatMessage, ChatPart, Message } from './models'
 
 export class MessageStore {
   messages = $state<ChatMessage[]>([])
@@ -387,44 +388,35 @@ export class MessageStore {
     }))
   }
 
-  /** Append a live output frame from a running tool (`tool-progress`).
+  /** Apply one `tool-output-available` / `tool-output-error` frame.
    *
-   * `msgId` is the server-authored message the frame belongs to. It must be used
-   * rather than `this.streamingId`: progress arrives while a tool runs, and the
-   * streaming bubble is not guaranteed to be the current `streamingId` at that
-   * moment (the stream may have moved on, or no delta has arrived yet for this
-   * step). Relying on `streamingId` alone silently dropped every frame.
+   * `msgId` is the server-authored message the frame belongs to, used instead of
+   * `this.streamingId`: tool output arrives while a tool runs, and the streaming
+   * bubble is not necessarily the current one.
+   *
+   * NOT via `setMsg`: that ignores mutations for a persisted row (correct for text
+   * deltas, which are re-sent on reconnect). A tool's step is persisted as soon as
+   * its text is finished and the tool runs AFTER that, so routing output through
+   * the replay guard discarded every frame.
+   *
+   * Each frame REPLACES the output rather than appending: the server sends
+   * snapshots (the AI SDK's `preliminary` convention), so the latest frame is the
+   * whole truth and a repeated one is idempotent.
    */
-  appendToolProgress(msgId: string | undefined, partId: string, text: string, phase?: string) {
+  applyToolOutput(msgId: string | undefined, partId: string, upd: ToolOutputUpdate) {
     const sid = msgId || this.streamingId
     if (!sid) return
-    // NOT via setMsg: that drops mutations for a persisted (non-local) row,
-    // treating every one as a reconnect-replay duplicate. Correct for text
-    // deltas — those are re-sent on reconnect and the stored row already has
-    // them — but WRONG for progress: a tool's step is persisted as soon as its
-    // text is finished, and the tool runs AFTER that, so every progress frame
-    // arrived against a persisted row and was silently discarded. The visible
-    // effect was a tool card that stayed empty until the final result landed.
-    //
-    // Progress is append-only and its frames carry a unique (partId, text), so
-    // applying one twice is harmless; the stored row is rewritten from the sink
-    // when the step persists again.
+    const apply = (parts: ChatPart[]) => applyToolOutputTo(parts, partId, upd)
     const idx = this.messages.findIndex(m => m.id === sid)
     if (idx < 0) {
       this.ensureStreamingMsg(sid)
       const j = this.messages.findIndex(m => m.id === sid)
       if (j < 0) return
-      this.messages[j] = {
-        ...this.messages[j]!,
-        parts: appendToolProgressTo(this.messages[j]!.parts, partId, text, phase),
-      }
+      this.messages[j] = { ...this.messages[j]!, parts: apply(this.messages[j]!.parts) }
       this.notify()
       return
     }
-    this.messages[idx] = {
-      ...this.messages[idx]!,
-      parts: appendToolProgressTo(this.messages[idx]!.parts, partId, text, phase),
-    }
+    this.messages[idx] = { ...this.messages[idx]!, parts: apply(this.messages[idx]!.parts) }
     this.notify()
   }
 

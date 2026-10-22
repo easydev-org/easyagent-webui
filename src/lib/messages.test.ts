@@ -282,9 +282,9 @@ describe('MessagesController (server-driven state machine)', () => {
       }),
     )
     server.chan.push(
-      ev('tool-result', {
+      ev('tool-output-available', {
         toolCallId: 'tc1',
-        output: 'found 1',
+        output: { content: 'found 1', state: 'ok' },
         message_id: 'a1',
       }),
     )
@@ -567,9 +567,9 @@ describe('MessagesController (server-driven state machine)', () => {
       }),
     )
     server.chan.push(
-      ev('tool-error', {
+      ev('tool-output-error', {
         toolCallId: 'tc9',
-        error: { message: 'kaput' },
+        errorText: 'kaput',
         message_id: 'a1',
       }),
     )

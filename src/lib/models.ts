@@ -96,15 +96,15 @@ export interface ToolState {
   /** Raw streamed tool-argument JSON (tool-input-delta), shown live until the
    *  complete `input` arrives with `tool-call`. */
   inputText?: string | null
-  /** Live output from a long-running tool (`tool-progress`), newest last.
+  /** How the tool call ENDED: "ok" | "timeout" | "cancelled" | "error".
    *
-   *  Kept separate from `output`, which holds the FINAL result: a running job
-   *  streams here while `output` stays null, and the final result replaces this
-   *  view on completion. This text never reaches the model — see the
-   *  `tool-progress` case in message-events.ts. */
-  progress?: string | null
-  /** Last phase reported by the tool ("running" / "exited"). */
-  progressPhase?: string | null
+   *  Separate from `status`, which is about rendering: a call that stopped early
+   *  after printing twenty useful lines is complete-ish (status "complete") but
+   *  its `toolState` is "timeout" — the card should say so instead of pretending
+   *  the tool failed or that it finished cleanly.
+   *
+   *  This text never reaches the model; only the final result does. */
+  toolState?: string | null
 }
 
 export interface MessagePart {

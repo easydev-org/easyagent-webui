@@ -130,55 +130,87 @@ export function applyToolResultTo(
         diff: extra.diff ?? old.diff ?? null,
         additions: extra.additions ?? old.additions ?? null,
         deletions: extra.deletions ?? old.deletions ?? null,
-        // Carry the live transcript across: the final result does not repeat it,
-        // and dropping it here would make the output vanish the moment the tool
-        // completes — the worst possible moment to lose it.
-        progress: old.progress ?? null,
-        progressPhase: 'exited',
+        toolState: old.toolState ?? null,
       } satisfies ToolState,
     }
   })
 }
 
+/** One `tool-output-available` / `tool-output-error` frame. */
+export interface ToolOutputUpdate {
+  /** Snapshot of the output so far. Empty for an error frame. */
+  content: string
+  /** "ok" | "timeout" | "cancelled" | "error" — how the call ended. */
+  state?: string
+  error?: string
+  changeId?: string
+  diff?: string
+  additions?: number
+  deletions?: number
+  /** The tool's structured output (jobId, exitCode, files...). */
+  data?: Record<string, unknown>
+  /** True while the tool still runs: the frame is a snapshot, not the answer. */
+  preliminary?: boolean
+}
+
 /**
- * Append one live output frame from a running tool.
+ * Apply one tool-output frame to a part.
  *
- * `text` is a BATCH (the extension throttles to ~5 frames/second), so it is
- * appended rather than replaced. The part may not exist yet if progress beats the
- * `tool-call` frame; in that case it is created, so early output is not lost.
+ * The frame REPLACES the output: the server sends snapshots (the AI SDK's
+ * `preliminary` convention), so the newest frame is the whole truth. That is what
+ * makes a dropped frame harmless — the next one re-states everything — whereas
+ * appending deltas would corrupt the result permanently.
+ *
+ * A `preliminary` frame leaves the card `running`; the terminal one completes it.
  */
-export function appendToolProgressTo(
+export function applyToolOutputTo(
   parts: ChatPart[],
   partId: string,
-  text: string,
-  phase?: string,
+  upd: ToolOutputUpdate,
 ): ChatPart[] {
   const next = [...parts]
   const idx = next.findIndex(p => p.id === partId)
+  const finished = !upd.preliminary
+  const failed = upd.state === 'error' || upd.error != null
+
   if (idx < 0) {
-    // Progress arrived before the tool-call frame. Keep it: a job that prints
+    // Output arrived before the tool-call frame. Keep it: a tool that prints
     // immediately would otherwise lose its first lines.
     next.push({
       id: partId,
       type: 'tool',
       text: '',
       tool: 'tool',
-      state: { status: 'running', title: 'tool', progress: text, progressPhase: phase ?? 'running' },
+      state: {
+        status: finished ? (failed ? 'error' : 'complete') : 'running',
+        title: 'tool',
+        output: upd.content,
+        data: upd.data ?? null,
+        error: upd.error ?? null,
+        toolState: upd.state ?? null,
+      },
     })
     return next
   }
+
   const p = next[idx]
   const old = p.state ?? { status: '', title: '' }
-  const prev = old.progress ?? ''
-  // Cap the retained transcript. A 10-minute job can print a lot, and the DOM
-  // does not need all of it to be useful; the full output arrives with the final
-  // result (and stays available through job-output).
-  const MAX = 200_000
-  let merged = prev === '' ? text : prev + '\n' + text
-  if (merged.length > MAX) merged = '…\n' + merged.slice(merged.length - MAX)
   next[idx] = {
     ...p,
-    state: { ...old, progress: merged, progressPhase: phase ?? old.progressPhase ?? 'running' },
+    state: {
+      ...old,
+      status: finished ? (failed ? 'error' : 'complete') : 'running',
+      output: upd.content,
+      error: upd.error ?? (finished ? old.error : null) ?? null,
+      data: upd.data ?? old.data ?? null,
+      changeId: upd.changeId ?? old.changeId ?? null,
+      diff: upd.diff ?? old.diff ?? null,
+      additions: upd.additions ?? old.additions ?? null,
+      deletions: upd.deletions ?? old.deletions ?? null,
+      // How the call ended, kept separate from the text so the card can say
+      // "stopped after N lines" rather than pretending it failed.
+      toolState: upd.state ?? old.toolState ?? null,
+    },
   }
   return next
 }
