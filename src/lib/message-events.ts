@@ -147,7 +147,10 @@ export function applyStreamEvent(
       if (tcId == null) break
       const mid = typeof params['message_id'] === 'string' ? (params['message_id'] as string) : undefined
       const out = (params['output'] as Record<string, unknown> | undefined) ?? {}
-      const content = typeof out['content'] === 'string' ? out['content'] : ''
+      // `content` (terminal, authoritative) or `delta` (live, appended). Exactly one is
+      // present per frame; the store merges accordingly.
+      const content = typeof out['content'] === 'string' ? out['content'] : undefined
+      const delta = typeof out['delta'] === 'string' ? out['delta'] : undefined
       // `state` distinguishes a clean finish from a tool that stopped early with
       // real output in hand — the difference between "done" and "stopped after N
       // lines", which an error string cannot express.
@@ -155,6 +158,7 @@ export function applyStreamEvent(
       const preliminary = params['preliminary'] === true
       store.applyToolOutput(mid, tcId, {
         content,
+        delta,
         state,
         changeId: typeof out['change_id'] === 'string' ? out['change_id'] : undefined,
         diff: typeof out['diff'] === 'string' ? out['diff'] : undefined,
@@ -173,7 +177,8 @@ export function applyStreamEvent(
       const mid = typeof params['message_id'] === 'string' ? (params['message_id'] as string) : undefined
       const text = params['errorText'] ?? params['error'] ?? 'tool error'
       store.applyToolOutput(mid, tcId, {
-        content: '',
+        // No `content`/`delta`: an error frame carries no output of its own, and
+        // sending `content: ''` would ERASE whatever the tool printed before it failed.
         state: 'error',
         error: typeof text === 'string' ? text : 'tool error',
         preliminary: false,

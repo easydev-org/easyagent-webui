@@ -138,8 +138,21 @@ export function applyToolResultTo(
 
 /** One `tool-output-available` / `tool-output-error` frame. */
 export interface ToolOutputUpdate {
-  /** Snapshot of the output so far. Empty for an error frame. */
-  content: string
+  /**
+   * Full output. Present on the TERMINAL frame only; authoritative.
+   *
+   * Absent while the tool runs — live frames carry `delta` instead.
+   */
+  content?: string
+  /**
+   * Lines added since the previous frame. Present on live (preliminary) frames.
+   *
+   * Live frames append rather than replace so the server can send each byte once:
+   * sending the whole output every time is O(n²) and a large job made that obvious.
+   * The terminal `content` then replaces everything, which is what makes a lost
+   * intermediate frame harmless.
+   */
+  delta?: string
   /** "ok" | "timeout" | "cancelled" | "error" — how the call ended. */
   state?: string
   error?: string
@@ -173,6 +186,24 @@ export function applyToolOutputTo(
   const finished = !upd.preliminary
   const failed = upd.state === 'error' || upd.error != null
 
+  /**
+   * Merge one frame into the text accumulated so far.
+   *
+   * TERMINAL (content present) REPLACES: it is the complete, authoritative result, so a
+   * client that missed frames or reconnected mid-stream still converges on the truth.
+   * LIVE (delta present) APPENDS: the server sends each byte once, which is what keeps
+   * a long job's stream linear in size instead of quadratic.
+   */
+  const merge = (prev: string | null | undefined): string => {
+    if (upd.content !== undefined) return upd.content
+    if (upd.delta) {
+      const base = prev ?? ''
+      if (!base) return upd.delta
+      return base.endsWith('\n') ? base + upd.delta : base + '\n' + upd.delta
+    }
+    return prev ?? ''
+  }
+
   if (idx < 0) {
     // Output arrived before the tool-call frame. Keep it: a tool that prints
     // immediately would otherwise lose its first lines.
@@ -184,7 +215,7 @@ export function applyToolOutputTo(
       state: {
         status: finished ? (failed ? 'error' : 'complete') : 'running',
         title: 'tool',
-        output: upd.content,
+        output: merge(''),
         data: upd.data ?? null,
         error: upd.error ?? null,
         toolState: upd.state ?? null,
@@ -200,7 +231,7 @@ export function applyToolOutputTo(
     state: {
       ...old,
       status: finished ? (failed ? 'error' : 'complete') : 'running',
-      output: upd.content,
+      output: merge(old.output),
       error: upd.error ?? (finished ? old.error : null) ?? null,
       data: upd.data ?? old.data ?? null,
       changeId: upd.changeId ?? old.changeId ?? null,

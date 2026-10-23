@@ -53,9 +53,45 @@ describe('applyToolOutput', () => {
   it('replaces rather than appends', () => {
     const s = freshStore()
     s.messages = [persistedMsg('msg-1', 'call-1')]
-    s.applyToolOutput('msg-1', 'call-1', { content: 'a\nb', preliminary: true })
-    s.applyToolOutput('msg-1', 'call-1', { content: 'a\nb', preliminary: true })
+    s.applyToolOutput('msg-1', 'call-1', { content: 'a\nb', state: 'ok' })
+    s.applyToolOutput('msg-1', 'call-1', { content: 'a\nb', state: 'ok' })
     expect(s.messages[0]!.parts[0]!.state?.output).toBe('a\nb')
+  })
+
+  // Live frames carry only the NEW lines, so the server never resends the whole
+  // output — one frame per line with the full content is O(n²), and a large job made
+  // that obvious.
+  it('appends deltas while the tool runs', () => {
+    const s = freshStore()
+    s.messages = [persistedMsg('msg-1', 'call-1')]
+    s.applyToolOutput('msg-1', 'call-1', { delta: 'line1', preliminary: true })
+    s.applyToolOutput('msg-1', 'call-1', { delta: 'line2', preliminary: true })
+    s.applyToolOutput('msg-1', 'call-1', { delta: 'line3', preliminary: true })
+    expect(s.messages[0]!.parts[0]!.state?.output).toBe('line1\nline2\nline3')
+    expect(s.messages[0]!.parts[0]!.state?.status).toBe('running')
+  })
+
+  // The terminal frame is authoritative: it REPLACES whatever the deltas built. That is
+  // what makes a lost live frame harmless — the client converges on the real result.
+  it('terminal content replaces accumulated deltas', () => {
+    const s = freshStore()
+    s.messages = [persistedMsg('msg-1', 'call-1')]
+    s.applyToolOutput('msg-1', 'call-1', { delta: 'partial', preliminary: true })
+    s.applyToolOutput('msg-1', 'call-1', { content: 'the whole truth', state: 'ok' })
+    expect(s.messages[0]!.parts[0]!.state?.output).toBe('the whole truth')
+    expect(s.messages[0]!.parts[0]!.state?.status).toBe('complete')
+  })
+
+  // An error frame carries no output; it must not wipe what was already printed.
+  it('error frame keeps earlier output', () => {
+    const s = freshStore()
+    s.messages = [persistedMsg('msg-1', 'call-1')]
+    s.applyToolOutput('msg-1', 'call-1', { delta: 'printed before failing', preliminary: true })
+    s.applyToolOutput('msg-1', 'call-1', { state: 'error', error: 'boom' })
+    const st = s.messages[0]!.parts[0]!.state!
+    expect(st.output).toBe('printed before failing')
+    expect(st.status).toBe('error')
+    expect(st.error).toBe('boom')
   })
 
   // An interrupted call keeps what it printed. That is the whole reason the
@@ -63,7 +99,8 @@ describe('applyToolOutput', () => {
   it('keeps partial output when the call stopped early', () => {
     const s = freshStore()
     s.messages = [persistedMsg('msg-1', 'call-1')]
-    s.applyToolOutput('msg-1', 'call-1', { content: 'tick1\ntick2', preliminary: true })
+    s.applyToolOutput('msg-1', 'call-1', { delta: 'tick1', preliminary: true })
+    s.applyToolOutput('msg-1', 'call-1', { delta: 'tick2', preliminary: true })
     s.applyToolOutput('msg-1', 'call-1', { content: 'tick1\ntick2', state: 'timeout' })
 
     const st = s.messages[0]!.parts[0]!.state!
@@ -76,7 +113,7 @@ describe('applyToolOutput', () => {
   it('marks a tool error', () => {
     const s = freshStore()
     s.messages = [persistedMsg('msg-1', 'call-1')]
-    s.applyToolOutput('msg-1', 'call-1', { content: '', state: 'error', error: 'boom' })
+    s.applyToolOutput('msg-1', 'call-1', { state: 'error', error: 'boom' })
     const st = s.messages[0]!.parts[0]!.state!
     expect(st.status).toBe('error')
     expect(st.error).toBe('boom')
@@ -84,7 +121,7 @@ describe('applyToolOutput', () => {
 
   it('creates the bubble when output beats the step', () => {
     const s = freshStore()
-    s.applyToolOutput('msg-new', 'call-9', { content: 'early', preliminary: true })
+    s.applyToolOutput('msg-new', 'call-9', { delta: 'early', preliminary: true })
     const msg = s.messages.find(m => m.id === 'msg-new')
     expect(msg).toBeTruthy()
     expect(msg?.parts.find(p => p.id === 'call-9')?.state?.output).toBe('early')
