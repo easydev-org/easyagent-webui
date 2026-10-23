@@ -13,6 +13,8 @@
   import { t } from '$lib/i18n.svelte'
   import type { PermissionDecl, SessionGrant } from '$lib/models'
   import { cn } from '$lib/utils'
+  import ChannelsTab from './ChannelsTab.svelte'
+  import type { ChannelDecl, ChannelSubscription } from '$lib/models'
 
   interface Props {
     /** Session whose permissions are shown. */
@@ -27,8 +29,24 @@
     onrevoke: (grant: SessionGrant) => Promise<void> | void
     onclose: () => void
     class?: string
+    // Channel tab data. Passed in already loaded rather than fetched here: this component
+    // is presentational, and the page owns the data so both tabs read one source.
+    channels?: ChannelDecl[]
+    subs?: ChannelSubscription[]
+    chError?: string
+    onsubscribe?: (channel: string, pattern: string, wake: boolean) => Promise<void> | void
+    onunsubscribe?: (sub: ChannelSubscription) => Promise<void> | void
   }
-  let { sessionId, decls, grants, locale = '', ongrant, onrevoke, onclose, class: className }: Props = $props()
+  let {
+    sessionId, decls, grants, locale = '', ongrant, onrevoke, onclose, class: className,
+    channels = [], subs = [], chError = '', onsubscribe, onunsubscribe,
+  }: Props = $props()
+
+  // Two tabs rather than two panels: permissions and channels answer the same question
+  // ("what may this session do, and what does it hear"), so side by side would just hide one
+  // behind the other.
+  type Tab = 'permissions' | 'channels'
+  let tab = $state<Tab>('permissions')
 
   /** Grants grouped by extension, then by capability, so the list mirrors how a user
    *  thinks ("what may this session do to gitea"). */
@@ -132,7 +150,44 @@
     </button>
   </header>
 
+  <!-- Tabs, not two panels: "what may this session do" and "what does it hear" are the same
+       question asked twice. -->
+  <div class="flex shrink-0 border-b border-border">
+    <button
+      class={cn(
+        'flex-1 py-1.5 text-micro',
+        tab === 'permissions'
+          ? 'border-b-2 border-primary font-semibold text-foreground'
+          : 'text-muted-foreground hover:text-foreground',
+      )}
+      onclick={() => (tab = 'permissions')}
+    >
+      {t('permissionsTab')}
+    </button>
+    <button
+      class={cn(
+        'flex-1 py-1.5 text-micro',
+        tab === 'channels'
+          ? 'border-b-2 border-primary font-semibold text-foreground'
+          : 'text-muted-foreground hover:text-foreground',
+      )}
+      onclick={() => (tab = 'channels')}
+    >
+      {t('channelsTab')}
+    </button>
+  </div>
+
   <div class="min-h-0 flex-1 overflow-y-auto p-3">
+    {#if tab === 'channels'}
+      <ChannelsTab
+        decls={channels}
+        subs={subs}
+        {locale}
+        error={chError}
+        onsubscribe={onsubscribe ?? (() => {})}
+        onunsubscribe={onunsubscribe ?? (() => {})}
+      />
+    {:else}
     {#if grouped.length === 0 && decls.length === 0}
       <p class="text-micro text-muted-foreground italic">{t('permissionsNoneAvailable')}</p>
     {:else}
@@ -234,6 +289,7 @@
       {#if grouped.length === 0}
         <p class="mt-2 text-micro text-muted-foreground italic">{t('permissionsNoneHeld')}</p>
       {/if}
+    {/if}
     {/if}
   </div>
 </aside>

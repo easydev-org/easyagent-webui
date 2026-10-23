@@ -29,6 +29,8 @@ import type {
   ModelInfo,
   Preset,
   PermissionDecl,
+  ChannelSubscription,
+  ChannelDecl,
   ProviderInfo,
   Session,
   SessionGrant,
@@ -415,6 +417,66 @@ export class AgentApi {
         enumValues: f.enumValues ?? [],
         required: false,
         description: f.description,
+      })),
+    }))
+  }
+
+  /** What a session listens to. */
+  async listSubscriptions(id: string): Promise<ChannelSubscription[]> {
+    const r = await this._guard(() => this._c.listSubscriptions({ id }))
+    return (r.subscriptions ?? []).map(s => ({
+      id: s.id,
+      channel: s.channel,
+      pattern: s.pattern,
+      wake: s.wake,
+      system: s.system,
+    }))
+  }
+
+  /** Follow a channel.
+   *
+   *  `pattern` is a NATS subject filter within the channel ("tag.agentdev/mrflow.>"), so a
+   *  user can follow one repository rather than a firehose. `wake` decides whether a
+   *  matching message starts a turn or only lands in the session's context. */
+  async subscribeChannel(
+    id: string,
+    channel: string,
+    pattern: string,
+    wake: boolean,
+  ): Promise<ChannelSubscription> {
+    const r = await this._guard(() =>
+      this._c.subscribeChannel({ id, channel, pattern, wake }),
+    )
+    const s = r.subscription
+    return {
+      id: s?.id ?? '',
+      channel: s?.channel ?? channel,
+      pattern: s?.pattern ?? pattern,
+      wake: s?.wake ?? wake,
+      system: s?.system ?? false,
+    }
+  }
+
+  /** Stop following. The built-in session-channel subscription cannot be removed. */
+  async unsubscribeChannel(id: string, subscriptionId: string): Promise<void> {
+    await this._guard(() => this._c.unsubscribeChannel({ id, subscriptionId }))
+  }
+
+  /** Channels the discovered extensions publish to.
+   *
+   *  Fetched, not hard-coded: a newly-deployed extension's channels appear without a
+   *  console change, which is the point of declaring them in the manifest. */
+  async listChannels(): Promise<ChannelDecl[]> {
+    const r = await this._guard(() => this._c.listChannels({}))
+    return (r.channels ?? []).map(c => ({
+      extId: c.extId,
+      name: c.name,
+      description: c.description,
+      descriptions: c.descriptions,
+      topics: (c.topics ?? []).map(t => ({
+        pattern: t.pattern,
+        description: t.description,
+        descriptions: t.descriptions,
       })),
     }))
   }

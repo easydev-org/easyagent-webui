@@ -17,10 +17,16 @@
   } = $props()
 </script>
 
+<!-- onSelect must NOT be cancelled by default.
+     Cancelling keeps the menu mounted, and a mounted menu keeps a z-50 layer over the whole
+     page: whatever the item opens is then unreachable by pointer — it renders, but clicks
+     land on the menu layer. That is exactly what happened to the permissions drawer, and it
+     would equally affect any other item that opens a panel rather than a modal (a modal's
+     own backdrop hides the leftover menu, which is why this went unnoticed).
+     A caller that genuinely wants to keep the menu open can preventDefault itself. -->
 <DropdownMenuPrimitive.Item
   {disabled}
   onSelect={e => {
-    e.preventDefault()
     onSelect?.(e)
   }}
   class={cn(

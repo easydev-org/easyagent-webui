@@ -25,7 +25,7 @@
   import MediaAttachment from '$lib/components/MediaAttachment.svelte'
   import ChatInfoDialog from './ChatInfoDialog.svelte'
   import PermissionsPanel from '$lib/components/PermissionsPanel.svelte'
-  import type { PermissionDecl, SessionGrant } from '$lib/models'
+  import type { PermissionDecl, SessionGrant, ChannelDecl, ChannelSubscription } from '$lib/models'
   import ChatSettingsDialog from './ChatSettingsDialog.svelte'
   import ReconnectBanner from '$lib/components/ReconnectBanner.svelte'
 
@@ -606,6 +606,49 @@
     } catch (e) {
       showErrorToast(String(e))
     }
+    // Channels load with the panel rather than on tab switch: switching tabs should be
+    // instant, and the panel is opened deliberately.
+    await refreshChannels()
+  }
+
+  // ---- channels ----
+  let chDecls = $state<ChannelDecl[]>([])
+  let chSubs = $state<ChannelSubscription[]>([])
+  let chError = $state('')
+
+  async function refreshChannels() {
+    if (!sid) return
+    chError = ''
+    try {
+      const [decls, subs] = await Promise.all([
+        store.api.listChannels(),
+        store.api.listSubscriptions(sid),
+      ])
+      chDecls = decls
+      chSubs = subs
+    } catch (e) {
+      chError = String(e)
+    }
+  }
+
+  async function subscribeChannel(channel: string, pattern: string, wake: boolean) {
+    if (!sid) return
+    try {
+      await store.api.subscribeChannel(sid, channel, pattern, wake)
+      await refreshChannels()
+    } catch (e) {
+      showErrorToast(String(e))
+    }
+  }
+
+  async function unsubscribeChannel(sub: ChannelSubscription) {
+    if (!sid) return
+    try {
+      await store.api.unsubscribeChannel(sid, sub.id)
+      await refreshChannels()
+    } catch (e) {
+      showErrorToast(String(e))
+    }
   }
 
   async function refreshPermissions() {
@@ -702,10 +745,13 @@
 {#if !sid}
   <div class="flex h-full items-center justify-center text-meta text-muted-foreground">{t('noSessions')}</div>
 {:else if ctrl}
-  <!-- The permissions drawer sits BESIDE the conversation, not over it: a user comparing
-       what a session may do with what it is doing wants both visible. -->
-  <div class="flex h-full min-h-0">
-    <div class="flex min-w-0 flex-1 flex-col">
+  <!-- The permissions drawer OVERLAYS the conversation rather than sharing its flex row.
+       Sharing the row was the first attempt and it broke the page: Chat's parent already
+       owns the horizontal space (with its own border), so adding a 340px sibling squeezed
+       the conversation to nothing and pushed the drawer past the clipping boundary — the
+       panel rendered but no pointer event could reach it. An overlay needs no cooperation
+       from the layout it covers. -->
+  <div class="relative flex h-full w-full min-h-0 flex-col">
   <div
     class="relative flex h-full w-full min-h-0 flex-col" role="application"
     ondragover={e => {
@@ -1051,18 +1097,25 @@
     onSave={() => void applySettings()}
   />
 
-    </div>
-
     {#if permsOpen}
-      <PermissionsPanel
-        sessionId={sid}
-        decls={permsDecls}
-        grants={permsGrants}
-        locale={locale ?? ''}
-        ongrant={grantPermission}
-        onrevoke={revokePermission}
-        onclose={() => (permsOpen = false)}
-      />
+      <!-- Pinned to the right edge of this page's box, on top of the conversation. A
+           sibling in the flex row would need the parent to give up width it does not own. -->
+      <div class="absolute inset-y-0 right-0 z-20">
+        <PermissionsPanel
+          sessionId={sid}
+          decls={permsDecls}
+          grants={permsGrants}
+          locale={locale ?? ''}
+          ongrant={grantPermission}
+          onrevoke={revokePermission}
+          onclose={() => (permsOpen = false)}
+          channels={chDecls}
+          subs={chSubs}
+          chError={chError}
+          onsubscribe={subscribeChannel}
+          onunsubscribe={unsubscribeChannel}
+        />
+      </div>
     {/if}
   </div>
 {/if}

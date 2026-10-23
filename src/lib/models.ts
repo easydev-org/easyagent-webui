@@ -499,6 +499,32 @@ export interface PermissionDecl {
   paramsFields: ConfigFieldSchema[]
 }
 
+/**
+ * One channel a session follows.
+ *
+ * `pattern` is a NATS subject filter WITHIN the channel, so a user can follow one
+ * repository's tags ("tag.agentdev/mrflow.>") instead of every tag in the world. `wake`
+ * decides whether a matching message starts a turn or only lands in the session's context.
+ */
+export interface ChannelSubscription {
+  id: string
+  channel: string
+  pattern: string
+  wake: boolean
+  /** The built-in session-channel subscription: how anything reaches this session. */
+  system: boolean
+}
+
+/** One channel an extension declares it publishes to. */
+export interface ChannelDecl {
+  extId: string
+  name: string
+  description: string
+  descriptions: Record<string, string>
+  /** Documented topic shapes, e.g. "tag.owner/repo.v1.2.3". Documentation only. */
+  topics: { pattern: string; description: string; descriptions: Record<string, string> }[]
+}
+
 /** Display name for a connection. The webui is served same-origin with the
  *  agent, so the host no longer distinguishes accounts; fall back to the host
  *  (useful for the `?base=` dev override) and let callers prefer a custom name. */
