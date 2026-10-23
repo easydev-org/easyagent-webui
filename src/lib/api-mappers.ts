@@ -7,7 +7,39 @@ import {
 } from '../gen/agent/v1/agent_pb.js'
 import { create, fromBinary, toBinary } from '@bufbuild/protobuf'
 import { t } from './i18n.svelte'
-import type { Message, MessagePart, Session } from './models'
+import type { Message, MessagePart, Session, SessionGrant } from './models'
+
+/**
+ * Map a grant from the wire.
+ *
+ * `params` passes through as TEXT, untouched: its shape is the declaring extension's
+ * business, and this console only renders it. Parsing it here to "help" would mean this
+ * file knowing what a repository is.
+ */
+export function grantFromPb(g: {
+  id: string
+  extId: string
+  capability: string
+  params: string
+  risk: string
+  grantedAt: string
+  grantedBy: string
+}): SessionGrant {
+  return {
+    id: g.id,
+    extId: g.extId,
+    capability: g.capability,
+    params: g.params,
+    risk: g.risk,
+    grantedAt: g.grantedAt,
+    grantedBy: g.grantedBy,
+  }
+}
+
+/** An empty grant, for the "create returned nothing" path. */
+export function emptyGrant(): SessionGrant {
+  return { id: '', extId: '', capability: '', params: '', risk: '', grantedAt: '', grantedBy: '' }
+}
 
 /** bigint | number | null → number (codegenv2 encodes int64 as bigint). */
 export const n = (v: bigint | number | undefined | null): number =>

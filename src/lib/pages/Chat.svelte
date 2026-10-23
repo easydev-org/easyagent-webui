@@ -24,6 +24,8 @@
   import MessageBubble from '$lib/components/MessageBubble.svelte'
   import MediaAttachment from '$lib/components/MediaAttachment.svelte'
   import ChatInfoDialog from './ChatInfoDialog.svelte'
+  import PermissionsPanel from '$lib/components/PermissionsPanel.svelte'
+  import type { PermissionDecl, SessionGrant } from '$lib/models'
   import ChatSettingsDialog from './ChatSettingsDialog.svelte'
   import ReconnectBanner from '$lib/components/ReconnectBanner.svelte'
 
@@ -584,6 +586,65 @@
 
   // ---- menu actions ----
 
+  // ---- permissions panel ----
+  //
+  // The panel is a right-hand drawer rather than a dialog: a user comparing what a session
+  // may do against what it is doing wants the conversation still visible.
+  let permsOpen = $state(false)
+  let permsDecls = $state<PermissionDecl[]>([])
+  let permsGrants = $state<SessionGrant[]>([])
+  let permsBusy = $state(false)
+
+  async function openPermissions() {
+    if (!sid) return
+    permsOpen = true
+    await refreshPermissions()
+    // Declarations come from the extensions, so this is fetched fresh each time: a
+    // newly-deployed extension should appear without a page reload.
+    try {
+      permsDecls = await store.api.listPermissionDecls()
+    } catch (e) {
+      showErrorToast(String(e))
+    }
+  }
+
+  async function refreshPermissions() {
+    if (!sid) return
+    try {
+      permsGrants = await store.api.listGrants(sid)
+    } catch (e) {
+      showErrorToast(String(e))
+    }
+  }
+
+  async function grantPermission(d: PermissionDecl, params: string) {
+    if (!sid || permsBusy) return
+    permsBusy = true
+    try {
+      await store.api.createGrant(sid, d.extId, d.key, params, d.risk)
+      await refreshPermissions()
+    } catch (e) {
+      showErrorToast(String(e))
+    } finally {
+      permsBusy = false
+    }
+  }
+
+  async function revokePermission(g: SessionGrant) {
+    if (!sid || permsBusy) return
+    permsBusy = true
+    try {
+      // No confirmation dialog: revoking is trivially reversible (grant it again), and a
+      // prompt on every click makes cleaning up several permissions tedious.
+      await store.api.revokeGrant(sid, g.id)
+      await refreshPermissions()
+    } catch (e) {
+      showErrorToast(String(e))
+    } finally {
+      permsBusy = false
+    }
+  }
+
   async function menuAction(v: string) {
     switch (v) {
       case 'compact': {
@@ -641,6 +702,10 @@
 {#if !sid}
   <div class="flex h-full items-center justify-center text-meta text-muted-foreground">{t('noSessions')}</div>
 {:else if ctrl}
+  <!-- The permissions drawer sits BESIDE the conversation, not over it: a user comparing
+       what a session may do with what it is doing wants both visible. -->
+  <div class="flex h-full min-h-0">
+    <div class="flex min-w-0 flex-1 flex-col">
   <div
     class="relative flex h-full w-full min-h-0 flex-col" role="application"
     ondragover={e => {
@@ -697,6 +762,8 @@
           {/if}
         </div>
         <DropdownMenu label={t('settingsTitle')}>
+          <DropdownMenuItem onSelect={() => void openPermissions()}>{t('permissionsMenu')}</DropdownMenuItem>
+          <DropdownMenuSeparator />
           <DropdownMenuItem onSelect={() => void menuAction('compact')}>{t('compactHistory')}</DropdownMenuItem>
           <DropdownMenuItem onSelect={() => void menuAction('fork')}>{t('fork')}</DropdownMenuItem>
           <DropdownMenuSeparator />
@@ -983,4 +1050,19 @@
     {presetOptions}
     onSave={() => void applySettings()}
   />
+
+    </div>
+
+    {#if permsOpen}
+      <PermissionsPanel
+        sessionId={sid}
+        decls={permsDecls}
+        grants={permsGrants}
+        locale={locale ?? ''}
+        ongrant={grantPermission}
+        onrevoke={revokePermission}
+        onclose={() => (permsOpen = false)}
+      />
+    {/if}
+  </div>
 {/if}

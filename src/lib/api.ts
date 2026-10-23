@@ -7,6 +7,8 @@ import type { AgentClient } from './agent'
 import { createAgentClient } from './agent'
 import {
   encodeIngestRequest,
+  emptyGrant,
+  grantFromPb,
   messageFromPb,
   n,
   sessionFromPb,
@@ -26,8 +28,10 @@ import type {
   Message,
   ModelInfo,
   Preset,
+  PermissionDecl,
   ProviderInfo,
   Session,
+  SessionGrant,
   ToolConfig,
   ToolConfigField,
   ToolInfo,
@@ -354,6 +358,65 @@ export class AgentApi {
   async markRead(id: string, seq = 0): Promise<Session> {
     const r = await this._guard(() => this._c.markRead({ id, seq }))
     return r.session ? sessionFromPb(r.session) : emptySession(id)
+  }
+
+  /** List a session's permissions.
+   *
+   *  `params` comes back as the extension's own JSON text — opaque here, exactly as the
+   *  server stores it. The console renders it through the declared schema; it never
+   *  interprets the fields itself. */
+  async listGrants(id: string): Promise<SessionGrant[]> {
+    const r = await this._guard(() => this._c.listGrants({ id }))
+    return (r.grants ?? []).map(grantFromPb)
+  }
+
+  /** Grant one permission instance.
+   *
+   *  `params` is the JSON text for THIS instance ("repo=agentdev/mrflow"), so granting the
+   *  same capability twice with different params yields two independent authorisations. */
+  async createGrant(
+    id: string,
+    extId: string,
+    capability: string,
+    params: string,
+    risk: string,
+  ): Promise<SessionGrant> {
+    const r = await this._guard(() =>
+      this._c.createGrant({ id, extId, capability, params, risk }),
+    )
+    return grantFromPb(r.grant ?? emptyGrant())
+  }
+
+  /** Withdraw one permission instance, by its grant id.
+   *
+   *  Effective on the session's NEXT tool call — an in-flight call is deliberately not
+   *  interrupted, because stopping a merge halfway is worse than letting it finish. */
+  async revokeGrant(id: string, grantId: string): Promise<void> {
+    await this._guard(() => this._c.revokeGrant({ id, grantId }))
+  }
+
+  /** Every permission the discovered extensions can require.
+   *
+   *  Fetched rather than hard-coded: a newly-deployed extension appears here without a
+   *  console change, which is the whole point of declaring permissions in the manifest. */
+  async listPermissionDecls(): Promise<PermissionDecl[]> {
+    const r = await this._guard(() => this._c.listPermissionDecls({}))
+    return (r.decls ?? []).map(d => ({
+      extId: d.extId,
+      key: d.key,
+      label: d.label,
+      descriptions: d.descriptions,
+      risk: d.risk,
+      paramsFields: (d.paramsFields ?? []).map(f => ({
+        name: f.name,
+        type: f.type,
+        kind: '',
+        format: '',
+        enumValues: f.enumValues ?? [],
+        required: false,
+        description: f.description,
+      })),
+    }))
   }
 
   async interrupt(id: string): Promise<boolean> {

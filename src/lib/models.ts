@@ -463,6 +463,42 @@ export interface Identity {
   role: 'tenant' | 'admin'
 }
 
+/**
+ * One permission a session holds.
+ *
+ * A permission is a (capability, params) pair, so a session may hold several grants of the
+ * same capability with different params — "merge in this repository" and "merge in that
+ * one" are separate authorisations, each revocable on its own.
+ *
+ * `params` is the extension's own JSON text. This console NEVER parses it to make decisions:
+ * it renders it through the extension's declared schema and shows it back. Whether a grant
+ * covers a call is decided by the extension, which is the only side that knows what a
+ * "repository" is.
+ */
+export interface SessionGrant {
+  /** Handle for revoking THIS instance. */
+  id: string
+  extId: string
+  capability: string
+  /** JSON text whose shape the extension declared. Empty for a boolean capability. */
+  params: string
+  /** read | write | destructive — presentation only; drives the warning in the UI. */
+  risk: string
+  grantedAt: string
+  /** "user" | "auto:fork:<parent>" | "auto:preset:<name>". */
+  grantedBy: string
+}
+
+/** One permission an extension declares, as published in its manifest. */
+export interface PermissionDecl {
+  key: string
+  label: string
+  descriptions: Record<string, string>
+  risk: string
+  /** Shape of one grant's params, using the SAME schema as config knobs. */
+  paramsFields: ConfigFieldSchema[]
+}
+
 /** Display name for a connection. The webui is served same-origin with the
  *  agent, so the host no longer distinguishes accounts; fall back to the host
  *  (useful for the `?base=` dev override) and let callers prefer a custom name. */
