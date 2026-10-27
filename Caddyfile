@@ -3,16 +3,20 @@
 # the agent over h2c. This is why the browser needs only a token — the API base
 # is always this page's own origin.
 #
-# AGENT_UPSTREAM IS REQUIRED. There is no default, on purpose.
+# AGENT_UPSTREAM IS REQUIRED. There is no default, on purpose — and the requirement is enforced by
+# `tool/entrypoint.sh`, NOT by this file.
 #
-# There used to be one — a cluster name from whichever environment built the image. A deployment
-# that forgot to set the variable came up HEALTHY (static assets are local) and answered 502 on
-# every /agent.v1.* call, with the cause visible only in Caddy's log as
-# `dial tcp: lookup <name>: no such host`. The page loaded, so the service looked fine, and the
-# breakage surfaced when a user tried to log in.
+# `{$AGENT_UPSTREAM}` expands to an EMPTY string when the variable is unset, and Caddy accepts that:
+# it starts, serves /srv, and answers 502 on every /agent.v1.* request. So a Caddyfile with no
+# default does not fail — it fails SILENTLY, which is how the old default behaved too.
 #
-# Without a default, Caddy refuses to adapt this config and the container exits at startup, naming
-# the missing variable. Set it to the in-cluster agent, e.g. `agent.dev.svc.cluster.local:80`.
+# There used to be a default: a cluster name from whichever environment built the image. A
+# deployment that did not set the variable came up HEALTHY, because static assets are local, and
+# breakage appeared only at login, with the cause visible only in Caddy's log:
+#     dial tcp: lookup standalone-agent.temp.svc.cluster.local: no such host
+#
+# The entrypoint now refuses to start without it, so the failure lands at deploy time. Set it to the
+# in-cluster agent, e.g. `agent.dev.svc.cluster.local:80`.
 :8080 {
 	handle /healthz {
 		respond "ok" 200

@@ -21,4 +21,10 @@ RUN npm run build
 FROM caddy:2.11.7-alpine
 COPY --from=build /src/dist /srv
 COPY Caddyfile /etc/caddy/Caddyfile
+# A thin entrypoint that refuses to start without AGENT_UPSTREAM. The Caddyfile alone cannot do
+# this: `{$AGENT_UPSTREAM}` expands to an EMPTY string when unset, which Caddy accepts, so the
+# container came up healthy and 502'd on every RPC. See tool/entrypoint.sh.
+COPY tool/entrypoint.sh /usr/local/bin/entrypoint.sh
+RUN chmod +x /usr/local/bin/entrypoint.sh
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 EXPOSE 8080
