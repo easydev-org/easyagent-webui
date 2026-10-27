@@ -23,5 +23,13 @@ if [ -z "${AGENT_UPSTREAM:-}" ]; then
 	exit 1
 fi
 
-# Same command the official image would run; nothing else changes.
+# Arguments are passed through VERBATIM, and only an empty command line gets the normal run.
+#
+# The official image's ENTRYPOINT is `caddy`, so `docker run image caddy validate --config …` reaches
+# the binary. A hardcoded `exec caddy run` would IGNORE those arguments and start a server instead —
+# hanging any caller that expected a one-shot command. CI caught exactly that: the `caddy validate`
+# step never returned. Hence: no injected flags, just the caller's argv.
+if [ "$#" -gt 0 ]; then
+	exec /usr/bin/caddy "$@"
+fi
 exec /usr/bin/caddy run --config /etc/caddy/Caddyfile --adapter caddyfile
