@@ -85,5 +85,8 @@ jobs:
       # could pass for the wrong reason (e.g. a typo that breaks Caddy always).
       - name: it must accept AGENT_UPSTREAM when set
         run: |
+          # NO leading "caddy": the image's ENTRYPOINT already is the binary, so the argument list
+          # starts at the SUBCOMMAND. `docker run … webui:ci caddy validate …` passes "caddy" as the
+          # subcommand and fails with 'unknown command "caddy" for "caddy"'.
           docker run --rm -e AGENT_UPSTREAM=standalone-agent.example.svc.cluster.local:80 \
-            webui:ci caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
+            webui:ci validate --config /etc/caddy/Caddyfile --adapter caddyfile
