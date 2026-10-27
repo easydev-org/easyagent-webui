@@ -98,11 +98,20 @@ jobs:
       - name: the extension rule routes /ext/<id>/ to <id>-ext
         run: |
           set -euo pipefail
+          # The SPA step above leaves its container holding 18080. Reusing the port fails with
+          # 'driver failed programming external connectivity', which reads like a Caddy or Docker
+          # networking fault rather than a leftover container.
+          docker rm -f webui >/dev/null 2>&1 || true
+          docker rm -f webui-ext >/dev/null 2>&1 || true
+
           # AGENT_UPSTREAM is required by the entrypoint; pointing it at a closed port keeps the
           # agent out of the way, since this test is only about the /ext/ rule.
           docker run -d --name webui-ext -p 18080:8080 \
             -e AGENT_UPSTREAM=127.0.0.1:18081 webui:ci
           sleep 3
+
+          cleanup() { docker rm -f webui-ext >/dev/null 2>&1 || true; }
+          trap cleanup EXIT
 
           # No <id>-ext host resolves in CI, so the correct outcome is 502 — and crucially the log
           # must NAME the host it tried, proving the placeholder was substituted rather than the
