@@ -313,7 +313,9 @@
             </div>
           {:else if part.type === 'tool' && part.state}
             <div class="w-full">
-              <ToolPartView {part} {isStreaming} {api} />
+              <!-- sessionId goes down so the extension panel can scope its data to THIS session.
+                   No tenant: it lives inside the token and the extension resolves it server-side. -->
+              <ToolPartView {part} {isStreaming} {api} session={sessionId} />
             </div>
           {/if}
         {/each}

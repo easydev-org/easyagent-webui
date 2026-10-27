@@ -16,15 +16,16 @@
     part,
     isStreaming = false,
     api,
-    tenant = '',
     session = '',
   }: {
     part: ChatPart
     isStreaming?: boolean
     api: AgentApi
-    // The scope the extension needs to find its data. Passed down rather than read from a global:
-    // the panel is opened from a CARD, and a card only knows what its own message was scoped to.
-    tenant?: string
+    // The session this card belongs to. Passed down rather than read from a global: the panel is
+    // opened from a CARD, and a card only knows its own message's session.
+    //
+    // No tenant: it lives inside the bearer token, and the extension resolves it server-side. A
+    // client that could name its own tenant could read someone else's data.
     session?: string
   } = $props()
 
@@ -80,7 +81,6 @@
       ext: view.ext,
       route: view.route,
       title: view.title || tool || view.ext,
-      tenant,
       session,
     })
   }
@@ -154,53 +154,46 @@
     hasError ? 'bg-destructive/5' : 'bg-muted/35',
   )}
 >
-  <!-- header: status icon → ONE fixed glyph → name → italic title → chevron -->
-  <button
-    type="button"
-    class="flex w-full items-center gap-1 px-2 py-1 text-left"
-    onclick={() => (open = !open)}
-  >
-    {#if running}
-      <AppIcons.more class="size-3.5 shrink-0 text-warning" />
-    {:else if hasError}
-      <AppIcons.error class="size-3.5 shrink-0 text-destructive" />
-    {:else}
-      <AppIcons.success class="size-3.5 shrink-0 text-success" />
-    {/if}
-    <AppIcons.tools class="size-3.5 shrink-0 text-primary" />
-    <span class="min-w-0 truncate font-semibold text-muted-foreground">{toolDisplayName(tool || toolState?.title || 'tool')}</span>
-    {#if toolState?.title}
-      <span class="min-w-0 flex-1 truncate text-micro text-muted-foreground italic">{toolState.title}</span>
-    {:else}
-      <span class="flex-1"></span>
-    {/if}
+  <!-- header: [fold button ... open button]
+
+       The two buttons are SIBLINGS in a flex row, not nested. The first version put the "open"
+       control inside the fold <button>, which is invalid HTML: a button may not contain
+       interactive content, so the browser treated the inner element as part of the outer one and a
+       click on "open" just folded the card. `stopPropagation` cannot fix that — the event is
+       delivered to the outer button because the inner one was never an independent control. -->
+  <div class="flex w-full items-center gap-1">
+    <button
+      type="button"
+      class="flex min-w-0 flex-1 items-center gap-1 px-2 py-1 text-left"
+      onclick={() => (open = !open)}
+    >
+      {#if running}
+        <AppIcons.more class="size-3.5 shrink-0 text-warning" />
+      {:else if hasError}
+        <AppIcons.error class="size-3.5 shrink-0 text-destructive" />
+      {:else}
+        <AppIcons.success class="size-3.5 shrink-0 text-success" />
+      {/if}
+      <AppIcons.tools class="size-3.5 shrink-0 text-primary" />
+      <span class="min-w-0 truncate font-semibold text-muted-foreground">{toolDisplayName(tool || toolState?.title || 'tool')}</span>
+      {#if toolState?.title}
+        <span class="min-w-0 flex-1 truncate text-micro text-muted-foreground italic">{toolState.title}</span>
+      {:else}
+        <span class="flex-1"></span>
+      {/if}
+      {#if open}<AppIcons.chevron_down class="size-3.5 shrink-0 text-muted-foreground" />{:else}<AppIcons.chevron_right class="size-3.5 shrink-0 text-muted-foreground" />{/if}
+    </button>
     {#if view}
-      <!-- Inside the header row but NOT nested in the fold button: a click here opens the panel, and
-           nesting it would also toggle the card. `stopPropagation` alone is not enough, because the
-           fold handler is on the parent element and would still fire on the same event. -->
-      <span
-        role="button"
-        tabindex="0"
-        class="shrink-0 rounded px-1.5 py-0.5 text-micro font-medium text-primary hover:bg-primary/10"
+      <button
+        type="button"
+        class="mr-1 shrink-0 rounded px-1.5 py-0.5 text-micro font-medium text-primary hover:bg-primary/10"
         title={t('openInPanel')}
-        onclick={e => {
-          e.stopPropagation()
-          e.preventDefault()
-          openPanel()
-        }}
-        onkeydown={e => {
-          if (e.key === 'Enter' || e.key === ' ') {
-            e.stopPropagation()
-            e.preventDefault()
-            openPanel()
-          }
-        }}
+        onclick={openPanel}
       >
         {t('open')}
-      </span>
+      </button>
     {/if}
-    {#if open}<AppIcons.chevron_down class="size-3.5 shrink-0 text-muted-foreground" />{:else}<AppIcons.chevron_right class="size-3.5 shrink-0 text-muted-foreground" />{/if}
-  </button>
+  </div>
 
   {#if open}
     <div class="min-w-0 space-y-2 px-2.5 pb-2.5">

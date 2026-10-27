@@ -19,8 +19,10 @@ export interface ExtFrame {
   route: string
   /** Breadcrumb / tab label. */
   title: string
-  /** Scope the extension needs to find its data. Captured once, when the frame is pushed. */
-  tenant: string
+  /** The session the frame belongs to. Captured when pushed. */
+  //
+  // No tenant: the extension resolves it from the bearer token on the server. Passing one here
+  // would make the tenant caller-controlled, which is the hole the extension's API closed.
   session: string
 }
 
@@ -68,7 +70,7 @@ export function currentFrame(): ExtFrame | null {
  * this on load; later changes arrive over postMessage (see ExtPanel.svelte).
  */
 export function frameSrc(f: ExtFrame, theme: 'light' | 'dark'): string {
-  const q = new URLSearchParams({ tenant: f.tenant, session: f.session, theme })
+  const q = new URLSearchParams({ session: f.session, theme })
   const route = f.route.startsWith('/') ? f.route : `/${f.route}`
   return `/ext/${f.ext}/?${q.toString()}#${route}`
 }
