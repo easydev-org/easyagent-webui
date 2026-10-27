@@ -25,6 +25,7 @@
   import MediaAttachment from '$lib/components/MediaAttachment.svelte'
   import ChatInfoDialog from './ChatInfoDialog.svelte'
   import PermissionsPanel from '$lib/components/PermissionsPanel.svelte'
+  import ExtPanel from '$lib/components/ExtPanel.svelte'
   import type { PermissionDecl, SessionGrant, ChannelDecl, ChannelSubscription } from '$lib/models'
   import ChatSettingsDialog from './ChatSettingsDialog.svelte'
   import ReconnectBanner from '$lib/components/ReconnectBanner.svelte'
@@ -1096,6 +1097,11 @@
     {presetOptions}
     onSave={() => void applySettings()}
   />
+
+    <!-- The extension panel: a separate overlay from the permissions drawer, positioned the same
+         way (see ExtPanel for why a flex sibling does not work here). It renders itself only when
+         its stack is non-empty, so mounting it unconditionally costs nothing. -->
+    <ExtPanel api={store.api} onclose={() => {}} />
 
     {#if permsOpen}
       <!-- Pinned to the right edge of this page's box, on top of the conversation. A

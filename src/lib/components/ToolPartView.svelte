@@ -10,14 +10,22 @@
   import MediaAttachment from './MediaAttachment.svelte'
   import type { FileRef } from '$lib/models'
 
+  import { pushFrame } from '$lib/ext-panel.svelte'
+
   let {
     part,
     isStreaming = false,
     api,
+    tenant = '',
+    session = '',
   }: {
     part: ChatPart
     isStreaming?: boolean
     api: AgentApi
+    // The scope the extension needs to find its data. Passed down rather than read from a global:
+    // the panel is opened from a CARD, and a card only knows what its own message was scoped to.
+    tenant?: string
+    session?: string
   } = $props()
 
   let open = $state(true)
@@ -47,6 +55,35 @@
   )
   const meta = $derived((toolState?.data ?? {}) as Record<string, unknown>)
   const metaEntries = $derived(Object.entries(meta).filter(([k]) => k !== 'files'))
+
+  // A tool may point at a view of its own results: `data.view = { ext, route, title }`.
+  //
+  // Kept in `data` rather than derived from the tool's name because only the tool knows WHERE its
+  // results live — a clone names the workspace it just created, a status names the one it was given.
+  // Reading it from `data` also means an old client shows nothing rather than a broken button: the
+  // key is simply absent.
+  interface ToolView {
+    ext: string
+    route: string
+    title?: string
+  }
+  const view = $derived.by<ToolView | null>(() => {
+    const v = meta['view'] as Partial<ToolView> | undefined
+    if (!v || typeof v.ext !== 'string' || typeof v.route !== 'string') return null
+    if (v.ext === '' || v.route === '') return null
+    return { ext: v.ext, route: v.route, title: v.title }
+  })
+
+  function openPanel(): void {
+    if (!view) return
+    pushFrame({
+      ext: view.ext,
+      route: view.route,
+      title: view.title || tool || view.ext,
+      tenant,
+      session,
+    })
+  }
 
   interface MediaRef {
     code: string
@@ -136,6 +173,31 @@
       <span class="min-w-0 flex-1 truncate text-micro text-muted-foreground italic">{toolState.title}</span>
     {:else}
       <span class="flex-1"></span>
+    {/if}
+    {#if view}
+      <!-- Inside the header row but NOT nested in the fold button: a click here opens the panel, and
+           nesting it would also toggle the card. `stopPropagation` alone is not enough, because the
+           fold handler is on the parent element and would still fire on the same event. -->
+      <span
+        role="button"
+        tabindex="0"
+        class="shrink-0 rounded px-1.5 py-0.5 text-micro font-medium text-primary hover:bg-primary/10"
+        title={t('openInPanel')}
+        onclick={e => {
+          e.stopPropagation()
+          e.preventDefault()
+          openPanel()
+        }}
+        onkeydown={e => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.stopPropagation()
+            e.preventDefault()
+            openPanel()
+          }
+        }}
+      >
+        {t('open')}
+      </span>
     {/if}
     {#if open}<AppIcons.chevron_down class="size-3.5 shrink-0 text-muted-foreground" />{:else}<AppIcons.chevron_right class="size-3.5 shrink-0 text-muted-foreground" />{/if}
   </button>
