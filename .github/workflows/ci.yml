@@ -50,7 +50,10 @@ jobs:
           cache-to: type=gha,mode=max
       - name: it must serve the SPA
         run: |
-          docker run -d --name webui -p 18080:8080 webui:ci
+          # AGENT_UPSTREAM is required (the Caddyfile has no default), so the container exits at
+          # startup without it. Set it here to a name that does not need to resolve: this step only
+          # checks that the STATIC build is served, and never calls /agent.v1.*.
+          docker run -d --name webui -p 18080:8080 -e AGENT_UPSTREAM=agent:80 webui:ci
           for i in $(seq 1 30); do
             if curl -fsS http://127.0.0.1:18080/ | grep -qi '<html'; then
               echo "SPA served"; exit 0
@@ -58,3 +61,29 @@ jobs:
             sleep 1
           done
           echo "the image did not serve an HTML page"; docker logs webui; exit 1
+
+      # The whole point of removing the default: a deployment that forgets AGENT_UPSTREAM must fail
+      # LOUDLY AT STARTUP, not come up healthy and 502 on every RPC.
+      #
+      # That regression is what this guards. The old default was a cluster name from whichever
+      # environment built the image; a deployment without the variable answered 200 for / and 502
+      # for /agent.v1.*, so the page loaded and the breakage surfaced only when a user logged in.
+      - name: it must REFUSE to start without AGENT_UPSTREAM
+        run: |
+          set +e
+          out="$(docker run --rm webui:ci 2>&1)"
+          code=$?
+          set -e
+          echo "$out" | tail -5
+          if [ "$code" -eq 0 ]; then
+            echo "::error::the container started without AGENT_UPSTREAM; a missing upstream must be a startup failure, not a 502 on every RPC"
+            exit 1
+          fi
+          echo "refused as expected (exit $code)"
+
+      # And with the variable set it must adapt the config cleanly — otherwise the previous step
+      # could pass for the wrong reason (e.g. a typo that breaks Caddy always).
+      - name: it must accept AGENT_UPSTREAM when set
+        run: |
+          docker run --rm -e AGENT_UPSTREAM=standalone-agent.example.svc.cluster.local:80 \
+            webui:ci caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile

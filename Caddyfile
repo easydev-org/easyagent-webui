@@ -3,8 +3,16 @@
 # the agent over h2c. This is why the browser needs only a token — the API base
 # is always this page's own origin.
 #
-# Upstream agent address is overridable with AGENT_UPSTREAM (Caddy env), e.g.
-# `standalone-agent.temp.svc.cluster.local:80`.
+# AGENT_UPSTREAM IS REQUIRED. There is no default, on purpose.
+#
+# There used to be one — a cluster name from whichever environment built the image. A deployment
+# that forgot to set the variable came up HEALTHY (static assets are local) and answered 502 on
+# every /agent.v1.* call, with the cause visible only in Caddy's log as
+# `dial tcp: lookup <name>: no such host`. The page loaded, so the service looked fine, and the
+# breakage surfaced when a user tried to log in.
+#
+# Without a default, Caddy refuses to adapt this config and the container exits at startup, naming
+# the missing variable. Set it to the in-cluster agent, e.g. `agent.dev.svc.cluster.local:80`.
 :8080 {
 	handle /healthz {
 		respond "ok" 200
@@ -12,7 +20,7 @@
 
 	# Connect RPC (AgentService / AdminService) -> agent over cleartext HTTP/2.
 	handle /agent.v1.* {
-		reverse_proxy {$AGENT_UPSTREAM:standalone-agent.temp.svc.cluster.local:80} {
+		reverse_proxy {$AGENT_UPSTREAM} {
 			transport http {
 				versions h2c
 			}
