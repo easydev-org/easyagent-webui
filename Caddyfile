@@ -31,6 +31,23 @@
 		}
 	}
 
+	# Extension UIs, proxied so an iframe embedding one is SAME-ORIGIN with this app.
+	#
+	# WHY PROXY AT ALL: extension Services are ClusterIP, so the browser cannot reach them. Proxying
+	# also means the iframe's own fetches carry this origin's cookies — with a cross-origin iframe the
+	# extension UI would have to log in separately, and `allow-same-origin` would be meaningless.
+	#
+	# The prefix is passed through UNCHANGED (not `handle_path`): each extension's UISpec.Base is
+	# "/ext/<id>", and it serves its assets at that path. Stripping the prefix here would make every
+	# asset 404.
+	#
+	# Each extension is listed explicitly rather than matched by a wildcard. There are five, the list
+	# changes only when an extension ships a UI, and a wrong entry should be a visible line in this
+	# file rather than a regexp whose upstream is derived from the URL.
+	handle /ext/github/* {
+		reverse_proxy github-ext.dev.svc.cluster.local:8080
+	}
+
 	# Static SPA with client-side routing fallback.
 	handle {
 		root * /srv
