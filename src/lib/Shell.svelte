@@ -12,6 +12,7 @@
   import SessionList from './pages/SessionList.svelte'
   import Chat from './pages/Chat.svelte'
   import Mailbox from './pages/Mailbox.svelte'
+  import ExtPanel from './components/ExtPanel.svelte'
   import Config from './pages/Config.svelte'
   import ProvidersList from './pages/providers/ProvidersList.svelte'
   import ProviderForm from './pages/providers/ProviderForm.svelte'
@@ -51,6 +52,8 @@
         return Chat as Component<PageProps>
       case 'chat_overlay':
         return Mailbox as Component<PageProps>
+      case 'ext_view':
+        return ExtPanel as Component<PageProps>
       case 'config_root':
       case 'config_sub':
         return Config as Component<PageProps>
@@ -113,6 +116,7 @@
           showBack={p.isTop}
           initialId={p.page.kind === 'config_sub' ? p.page.id : undefined}
           overlay={p.page.kind === 'chat_overlay' ? p.page.overlay : undefined}
+          view={p.page.kind === 'ext_view' ? p.page : undefined}
           modelId={p.page.kind === 'provider_models' ? p.page.modelId : undefined}
         />
       </div>

@@ -10,13 +10,19 @@
   import MediaAttachment from './MediaAttachment.svelte'
   import type { FileRef } from '$lib/models'
 
-  import { pushFrame } from '$lib/ext-panel.svelte'
+
+  // The app's own navigation stack. An extension view is a PAGE, not a floating panel: that is what
+  // makes it behave like the mailbox overlay on a phone (full width, with a back button) instead of
+  // splitting the screen beside the conversation.
+  import { extViewPage } from '$lib/ext-panel.svelte'
+  import type { AppStore } from '$lib/store.svelte'
 
   let {
     part,
     isStreaming = false,
     api,
     session = '',
+    store,
   }: {
     part: ChatPart
     isStreaming?: boolean
@@ -27,6 +33,9 @@
     // No tenant: it lives inside the bearer token, and the extension resolves it server-side. A
     // client that could name its own tenant could read someone else's data.
     session?: string
+    // Needed to push the extension view onto the app's navigation stack. Optional so a card
+    // rendered outside a shell (a test, a preview) still renders — it just cannot open a view.
+    store?: AppStore
   } = $props()
 
   let open = $state(true)
@@ -77,12 +86,16 @@
 
   function openPanel(): void {
     if (!view) return
-    pushFrame({
-      ext: view.ext,
-      route: view.route,
-      title: view.title || tool || view.ext,
-      session,
-    })
+    // Every ext_view carries the same page key, so this REPLACES an already-open one. One extension
+    // view at a time, newest wins — the browse trail lives in the extension's own router.
+    store?.pushPage(
+      extViewPage({
+        ext: view.ext,
+        route: view.route,
+        title: view.title || tool || view.ext,
+        session,
+      }),
+    )
   }
 
   interface MediaRef {

@@ -9,6 +9,24 @@ export type AppPage =
   | { kind: 'chat_list'; key: 'chat_list' }
   | { kind: 'chat_session'; key: 'chat_session' }
   | { kind: 'chat_overlay'; key: 'chat_overlay'; overlay: SessionOverlay }
+  // An extension's own UI, as a PAGE rather than a floating panel.
+  //
+  // Being a page is what makes it behave like the mailbox overlay on every screen size: the Shell
+  // shows one pane when compact and two when wide, so a phone gets the extension full-screen with a
+  // back button instead of a panel squeezed beside the conversation.
+  //
+  // ONE at a time, by construction: every ext_view uses the SAME key, and pushPage replaces a page
+  // whose key already exists. Opening a second view replaces the first rather than stacking, which
+  // is the rule this feature wants — a browse trail lives inside the extension's own router (its
+  // hash), not in this stack.
+  | {
+      kind: 'ext_view'
+      key: 'ext_view'
+      ext: string
+      route: string
+      title: string
+      session: string
+    }
   | { kind: 'config_root'; key: 'config_root' }
   | { kind: 'config_sub'; key: string; id: string }
   | { kind: 'providers_list'; key: 'providers_list' }

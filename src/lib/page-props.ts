@@ -17,5 +17,7 @@ export interface PageProps {
   showBack?: boolean
   initialId?: string
   overlay?: 'mailbox'
+  /** Present only on an `ext_view` page: which extension UI to mount and where. */
+  view?: { ext: string; route: string; title: string; session: string }
   modelId?: string | null
 }

@@ -15,6 +15,7 @@
   import { Textarea } from '$lib/components/ui/textarea'
   import ChatAvatar from '$lib/components/ChatAvatar.svelte'
   import ToolPartView from './ToolPartView.svelte'
+  import type { AppStore } from '$lib/store.svelte'
   import MediaAttachment from './MediaAttachment.svelte'
   import FileRefText from './FileRefText.svelte'
   import CompactionDivider from './CompactionDivider.svelte'
@@ -29,10 +30,13 @@
     onOpenSession,
     sessionExists,
     sessionId = '',
+    store,
   }: {
     msg: ChatMessage
     api: AgentApi
     onUndo: (messageId: string) => void
+    // For opening an extension view from a tool card: it is a PAGE on this store's stack.
+    store?: AppStore
     onResend?: ((text: string) => void) | null
     onEdit?: ((text: string) => void) | null
     /** Re-run the turn from THIS agent step: withdraw this message and
@@ -313,9 +317,10 @@
             </div>
           {:else if part.type === 'tool' && part.state}
             <div class="w-full">
-              <!-- sessionId goes down so the extension panel can scope its data to THIS session.
+              <!-- sessionId scopes the extension's data to THIS session; `store` is what lets the
+                   card push the view onto the app's navigation stack.
                    No tenant: it lives inside the token and the extension resolves it server-side. -->
-              <ToolPartView {part} {isStreaming} {api} session={sessionId} />
+              <ToolPartView {part} {isStreaming} {api} session={sessionId} {store} />
             </div>
           {/if}
         {/each}

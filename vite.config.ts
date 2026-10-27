@@ -48,6 +48,15 @@ export default defineConfig({
         // stale-while-revalidate everything, precache the app shell.
         globPatterns: ['**/*.{js,css,html,svg,png,woff2,ttf}'],
         navigateFallback: 'index.html',
+        // NEVER serve this app's index.html for an /ext/ URL.
+        //
+        // navigateFallback intercepts every NAVIGATION request, and an iframe loading
+        // /ext/<id>/ is one. Without this, the service worker answers the iframe with THIS app's
+        // HTML, so the panel showed the agent UI instead of the extension's UI — while a direct
+        // fetch of the same URL (no service worker in the way) returned the correct document.
+        // The failure was invisible from curl and from the server logs, which is what made it
+        // look like a routing bug.
+        navigateFallbackDenylist: [/^\/ext\//, /^\/agent\.v1\./],
         runtimeCaching: [
           {
             urlPattern: /sqlite3\.wasm$|opfs-async-proxy/,
