@@ -90,3 +90,35 @@ jobs:
           # subcommand and fails with 'unknown command "caddy" for "caddy"'.
           docker run --rm -e AGENT_UPSTREAM=standalone-agent.example.svc.cluster.local:80 \
             webui:ci validate --config /etc/caddy/Caddyfile --adapter caddyfile
+
+      # The extension-UI rule depends on a placeholder upstream, which Caddy documents but which is
+      # easy to get wrong (a placeholder in a URL upstream is rejected; a port is required). `validate`
+      # above only adapts the config, so this asserts the BEHAVIOUR: /ext/<id>/ reaches that name and
+      # other paths do not.
+      - name: the extension rule routes /ext/<id>/ to <id>-ext
+        run: |
+          set -euo pipefail
+          # AGENT_UPSTREAM is required by the entrypoint; pointing it at a closed port keeps the
+          # agent out of the way, since this test is only about the /ext/ rule.
+          docker run -d --name webui-ext -p 18080:8080 \
+            -e AGENT_UPSTREAM=127.0.0.1:18081 webui:ci
+          sleep 3
+
+          # No <id>-ext host resolves in CI, so the correct outcome is 502 — and crucially the log
+          # must NAME the host it tried, proving the placeholder was substituted rather than the
+          # literal string "{re.ext.1}-ext" being dialled.
+          code="$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:18080/ext/github/ || true)"
+          echo "GET /ext/github/ -> $code"
+          docker logs webui-ext 2>&1 | tail -20
+          if [ "$code" != "502" ]; then
+            echo "::error::expected 502 from an unresolvable extension host, got $code"
+            exit 1
+          fi
+          if ! docker logs webui-ext 2>&1 | grep -q 'github-ext'; then
+            echo "::error::the proxy did not resolve /ext/github/ to github-ext.* — the placeholder was not substituted"
+            exit 1
+          fi
+          # And an unrelated path must NOT be captured by the rule.
+          other="$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:18080/ext/ || true)"
+          echo "GET /ext/ -> $other (expect 200: falls through to the SPA)"
+          echo "placeholder resolved to github-ext.*"

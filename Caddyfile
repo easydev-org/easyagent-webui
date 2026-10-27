@@ -38,14 +38,25 @@
 	# extension UI would have to log in separately, and `allow-same-origin` would be meaningless.
 	#
 	# The prefix is passed through UNCHANGED (not `handle_path`): each extension's UISpec.Base is
-	# "/ext/<id>", and it serves its assets at that path. Stripping the prefix here would make every
-	# asset 404.
+	# "/ext/<id>", and it serves its assets at that path. Stripping it here would 404 every asset.
 	#
-	# Each extension is listed explicitly rather than matched by a wildcard. There are five, the list
-	# changes only when an extension ships a UI, and a wrong entry should be a visible line in this
-	# file rather than a regexp whose upstream is derived from the URL.
-	handle /ext/github/* {
-		reverse_proxy github-ext.dev.svc.cluster.local:8080
+	# ONE rule for every extension, keyed on the CONVENTION `<id>` -> Service `<id>-ext`.
+	#
+	# This is what makes the list self-registering: shipping a UI means deploying a Service named
+	# `<id>-ext`, and `/ext/<id>/` starts working with no change here. The alternative — one `handle`
+	# per extension — needs a webui rebuild and redeploy for every new UI, which is exactly the
+	# coupling a convention removes.
+	#
+	# Caddy allows placeholders in a non-URL upstream (a port is then required, which `:8080` is).
+	# Such an upstream is "dynamically static": resolved per request, so a Service that appears later
+	# is picked up without a reload. One that is absent answers 502 naming the host, which is the
+	# right failure — it says which name was looked up.
+	#
+	# `[a-z0-9-]+` is deliberate: the capture becomes a HOSTNAME. Allowing dots or slashes would let
+	# a crafted path address something other than an extension Service.
+	@extUI path_regexp ext ^/ext/([a-z0-9-]+)(/.*)?$
+	handle @extUI {
+		reverse_proxy {re.ext.1}-ext.dev.svc.cluster.local:8080
 	}
 
 	# Static SPA with client-side routing fallback.
