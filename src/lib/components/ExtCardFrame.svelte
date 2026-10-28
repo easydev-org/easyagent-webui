@@ -119,6 +119,21 @@
     }
   }
 
+  /**
+   * Push again once the frame has loaded.
+   *
+   * The readiness handshake is the primary path, and on its own it was enough until it was not: a
+   * frame that loads, announces, and then RELOADS (a hash-only navigation inside the extension, an
+   * iframe sandbox quirk) announces from a new document, and a message sent to the previous one is
+   * lost — leaving the card on "waiting for data" forever with no error anywhere.
+   *
+   * Re-sending on load is idempotent: the card replaces its payload wholesale, so a duplicate
+   * delivery costs one render and cannot corrupt anything.
+   */
+  function onFrameLoad(): void {
+    pushData(frame?.contentWindow)
+  }
+
   onMount(() => {
     window.addEventListener('message', onMessage)
     return () => window.removeEventListener('message', onMessage)
@@ -131,7 +146,9 @@
     frame.contentWindow?.postMessage({ type: 'easyagent:theme', theme: mode }, '*')
   })
 
-  const src = $derived(extCardSrc(card, themeNow()))
+  // The session is passed even though this route renders from the payload: the extension's UI is one
+  // document, and its api client scopes every request by `?session=`.
+  const src = $derived(extCardSrc(card, themeNow(), session))
 </script>
 
 <div bind:this={host} class="min-w-0">
@@ -148,6 +165,7 @@
       class="w-full rounded-sm border border-border/50 bg-background"
       style={`height:${height}px`}
       sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
+      onload={onFrameLoad}
       onerror={() => (failed = true)}
     ></iframe>
   {:else}

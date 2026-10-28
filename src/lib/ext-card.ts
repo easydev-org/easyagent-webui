@@ -50,15 +50,23 @@ export function extCardFrom(data: Record<string, unknown> | null | undefined): E
 /**
  * The iframe src for an extension card.
  *
- * Only the TEMPLATE and the theme travel in the URL. The theme is there because the frame has its own
- * `<html>` and would otherwise flash light in dark mode before a message could arrive. The DATA does
- * not: it goes over postMessage once the frame is ready, because a tool result can be large and a URL
- * is the wrong place for it — it lands in history and in logs.
+ * The TEMPLATE, the theme and the SESSION travel here; the call's DATA does not.
  *
- * No session and no tenant: the card reads nothing, so it needs neither.
+ * The theme is in the URL because the frame has its own `<html>` and would otherwise flash light in
+ * dark mode before a message could arrive. The data is not, because a tool result can be large and a
+ * URL lands in history and in logs — it goes over postMessage once the frame is ready.
+ *
+ * The SESSION is here even though the CARD itself needs no scope. The extension's UI is one
+ * document: the card route shares its `api` client with every other route in it, and that client
+ * reads `?session=` to scope its requests. Without it a card renders fine and then every other
+ * screen in the same frame reports an empty workspace list — a regression that looked like a
+ * backend fault.
+ *
+ * No tenant, ever: it lives in the bearer token and the extension resolves it server-side.
  */
-export function extCardSrc(card: ExtCard, theme: 'light' | 'dark'): string {
+export function extCardSrc(card: ExtCard, theme: 'light' | 'dark', session = ''): string {
   const q = new URLSearchParams({ theme })
+  if (session !== '') q.set('session', session)
   return `/ext/${card.ext}/?${q.toString()}#/card/${encodeURIComponent(card.template)}`
 }
 

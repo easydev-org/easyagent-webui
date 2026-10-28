@@ -38,6 +38,19 @@ describe('extCardSrc', () => {
     )
   })
 
+  // The card renders from the payload, so it needs no scope — but the extension's UI is ONE document
+  // and its api client scopes every request by `?session=`. Leaving it out made the card work and
+  // every other screen in the same frame report an empty workspace list.
+  it('carries the session when there is one', () => {
+    const src = extCardSrc({ ext: 'github', template: 't' }, 'light', 'sess-1')
+    expect(src).toContain('session=sess-1')
+  })
+
+  it('omits an empty session rather than sending a blank scope', () => {
+    const src = extCardSrc({ ext: 'github', template: 't' }, 'light', '')
+    expect(src).not.toContain('session=')
+  })
+
   it('escapes a template that would otherwise break the path', () => {
     const src = extCardSrc({ ext: 'github', template: 'a/b' }, 'light')
     expect(src.endsWith('#/card/a%2Fb')).toBe(true)
