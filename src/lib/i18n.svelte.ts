@@ -180,7 +180,6 @@ const en = {
   extCardShow: `Extension view`,
   extCardNoSession: `This card needs a session to load its data.`,
   extCardFailed: `The extension card could not be loaded:`,
-  toolViewRaw: `Raw`,
   // Tool-card row labels (`tc*`). The registry refers to these by key; a tool whose payload has no
   // value for one simply omits the row, so a missing key would only ever hide a label, never break a
   // card — but they are all here so nothing shows a raw key.
@@ -575,7 +574,6 @@ const zh = {
   extCardShow: `扩展视图`,
   extCardNoSession: `此卡片需要会话信息才能加载数据。`,
   extCardFailed: `扩展卡片加载失败：`,
-  toolViewRaw: `原始`,
   tcFile: `文件`,
   tcName: `名称`,
   tcMime: `类型`,

@@ -11,10 +11,6 @@
   import type { FileRef } from '$lib/models'
 
 
-  // The app's own navigation stack. An extension view is a PAGE, not a floating panel: that is what
-  // makes it behave like the mailbox overlay on a phone (full width, with a back button) instead of
-  // splitting the screen beside the conversation.
-  import { extViewPage } from '$lib/ext-panel.svelte'
   import type { AppStore } from '$lib/store.svelte'
   import TodosPanel from './TodosPanel.svelte'
   import { isTodoWrite, parseTodos } from '$lib/todos'
@@ -72,24 +68,6 @@
   const meta = $derived((toolState?.data ?? {}) as Record<string, unknown>)
   const metaEntries = $derived(Object.entries(meta).filter(([k]) => k !== 'files'))
 
-  // A tool may point at a view of its own results: `data.view = { ext, route, title }`.
-  //
-  // Kept in `data` rather than derived from the tool's name because only the tool knows WHERE its
-  // results live — a clone names the workspace it just created, a status names the one it was given.
-  // Reading it from `data` also means an old client shows nothing rather than a broken button: the
-  // key is simply absent.
-  interface ToolView {
-    ext: string
-    route: string
-    title?: string
-  }
-  const view = $derived.by<ToolView | null>(() => {
-    const v = meta['view'] as Partial<ToolView> | undefined
-    if (!v || typeof v.ext !== 'string' || typeof v.route !== 'string') return null
-    if (v.ext === '' || v.route === '') return null
-    return { ext: v.ext, route: v.route, title: v.title }
-  })
-
   /**
    * A `todo-write` card draws the checklist instead of its arguments.
    *
@@ -127,29 +105,6 @@
    */
   let preferPretty = $state(true)
   const showPretty = $derived(hasCard && preferPretty)
-
-  /**
-   * The raw source, shown UNDER an extension's card.
-   *
-   * A card is the extension's reading of its own payload; when that reading is wrong — a renamed
-   * field, a case it did not expect — the raw text is the only way to see what actually arrived.
-   * Off by default so the card stands alone, and one click away so it is never a dead end.
-   */
-  let rawOpen = $state(false)
-
-  function openPanel(): void {
-    if (!view) return
-    // Every ext_view carries the same page key, so this REPLACES an already-open one. One extension
-    // view at a time, newest wins — the browse trail lives in the extension's own router.
-    store?.pushPage(
-      extViewPage({
-        ext: view.ext,
-        route: view.route,
-        title: view.title || tool || view.ext,
-        session,
-      }),
-    )
-  }
 
   interface MediaRef {
     code: string
@@ -250,70 +205,52 @@
       {#if open}<AppIcons.chevron_down class="size-3.5 shrink-0 text-muted-foreground" />{:else}<AppIcons.chevron_right class="size-3.5 shrink-0 text-muted-foreground" />{/if}
     </button>
     {#if hasCard}
-      <!-- Basic / pretty, a SIBLING of the fold button for the same reason "open" is: a button may
-           not contain interactive content, so nesting makes the outer handler swallow the click. -->
-      <button
-        type="button"
-        class="shrink-0 rounded px-1.5 py-0.5 text-micro font-medium text-muted-foreground hover:bg-muted"
-        title={preferPretty ? t('toolViewBasic') : t('toolViewPretty')}
-        onclick={() => (preferPretty = !preferPretty)}
-      >
-        {preferPretty ? t('toolViewPretty') : t('toolViewBasic')}
-      </button>
-      {#if showPretty && extCard}
-        <!-- The card is the extension's READING of the payload; this is the payload. Shown next to
-             the toggle because it belongs to the same question — "which presentation". -->
+      <!-- Two SEGMENTS, both visible, the active one filled.
+
+           A single button showing the CURRENT mode was the first attempt and it read as a second
+           control appearing after a click: press "Pretty", the button becomes "Basic", and the reader
+           cannot tell whether that is a new button or the same one. Showing both states always makes
+           the choice legible and the current one obvious.
+
+           A sibling of the fold button, not a child: a button may not contain interactive content, so
+           nesting would make the outer fold handler swallow these clicks. -->
+      <div class="flex shrink-0 items-center rounded border border-border/60 p-px" role="group">
         <button
           type="button"
-          class="shrink-0 rounded px-1.5 py-0.5 text-micro text-muted-foreground hover:bg-muted {rawOpen
-            ? 'bg-muted'
-            : ''}"
-          title={t('toolViewRaw')}
-          onclick={() => (rawOpen = !rawOpen)}
+          class="rounded-sm px-1.5 py-0.5 text-micro font-medium {preferPretty
+            ? 'text-muted-foreground hover:bg-muted'
+            : 'bg-primary/15 text-primary'}"
+          aria-pressed={!preferPretty}
+          onclick={() => (preferPretty = false)}
         >
-          {t('toolViewRaw')}
+          {t('toolViewBasic')}
         </button>
-      {/if}
-    {/if}
-    {#if view}
-      <button
-        type="button"
-        class="mr-1 shrink-0 rounded px-1.5 py-0.5 text-micro font-medium text-primary hover:bg-primary/10"
-        title={t('openInPanel')}
-        onclick={openPanel}
-      >
-        {t('open')}
-      </button>
+        <button
+          type="button"
+          class="rounded-sm px-1.5 py-0.5 text-micro font-medium {preferPretty
+            ? 'bg-primary/15 text-primary'
+            : 'text-muted-foreground hover:bg-muted'}"
+          aria-pressed={preferPretty}
+          onclick={() => (preferPretty = true)}
+        >
+          {t('toolViewPretty')}
+        </button>
+      </div>
     {/if}
   </div>
 
   {#if open}
     {#if showPretty && extCard}
-      <!-- The extension owns the WHOLE body in pretty mode: its arguments, its result, and any
-           action worth taking from here.
+      <!-- The extension draws this call in FULL: its arguments and its result, as its own sections,
+           with any action at the end.
 
-           Not "the result half, with the arguments left to us" — that was the first attempt and it
-           was wrong twice over: the reader saw raw JSON above a nice card, and the extension could
-           not offer a link from the place it belongs. The card knows everything about this call,
-           because the call is what it was built to describe.
+           From the outside it is ONE card, and that is deliberate: only the extension knows how its
+           own payload divides into "what was asked" and "what came back" — and for some tools there
+           is no meaningful split at all. The host does not second-guess the division.
 
-           Below it, one escape hatch: the raw source, so a card that misreads its own payload is
-           never a dead end. -->
-      <div class="min-w-0 px-2.5 pb-2.5">
+           The body has no padding of its own: the card is a document, and it lays itself out. -->
+      <div class="min-w-0 pb-2">
         <ExtCardFrame card={extCard} session={session} {store} />
-        {#if rawOpen}
-          <div class="mt-2 space-y-2">
-            {#if Object.keys(input).length}
-              <pre class="max-h-52 min-w-0 overflow-auto rounded-sm border border-border/50 bg-background/50 px-2 py-1.5 font-mono text-[11px] wrap-anywhere whitespace-pre-wrap">{prettyJson(input)}</pre>
-            {/if}
-            {#if output}
-              <pre class="max-h-52 min-w-0 overflow-auto rounded-sm border border-border/50 bg-background/50 px-2 py-1.5 font-mono text-[11px] wrap-anywhere whitespace-pre-wrap">{output}</pre>
-            {/if}
-            {#if toolState?.error}
-              <pre class="max-h-52 min-w-0 overflow-auto rounded-sm border border-destructive/40 bg-background/50 px-2 py-1.5 font-mono text-[11px] wrap-anywhere whitespace-pre-wrap text-destructive">{toolState.error}</pre>
-            {/if}
-          </div>
-        {/if}
       </div>
     {:else}
     <div class="min-w-0 space-y-2 px-2.5 pb-2.5">
