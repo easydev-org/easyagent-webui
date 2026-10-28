@@ -4,14 +4,18 @@
   // Only extensions that ANSWER `/ext/<id>/api/v1/ui` appear. A registered extension with no UI is a
   // tool provider, not a place to visit, and listing it would offer a link to nothing.
   import { onMount } from 'svelte'
-  import { t } from '$lib/i18n.svelte'
+  import { getLocale, t } from '$lib/i18n.svelte'
   import { AppIcons } from '$lib/icons'
   import type { PageProps } from '$lib/page-props'
-  import { discoverExtUis, type ExtUi } from '$lib/ext-catalog.svelte'
+  import { descriptionFor, discoverExtUis, type ExtUi } from '$lib/ext-catalog.svelte'
   import { extViewPage } from '$lib/ext-panel.svelte'
   import PageHeader from '$lib/components/layout/PageHeader.svelte'
 
   let { store }: PageProps = $props()
+
+  // `getLocale` reads the module's `$state`, so switching language re-renders these descriptions with
+  // everything else.
+  const locale = $derived(getLocale())
 
   let items = $state<ExtUi[]>([])
   let loading = $state(true)
@@ -82,8 +86,17 @@
         {#each items as e (e.id)}
           <li>
             <button type="button" class="card" onclick={() => open(e)} title={e.base}>
-              <span class="glyph"><AppIcons.apps class="size-5" /></span>
+              {#if e.icon}
+                <!-- The extension serves its own icon, so it can change without a host release. -->
+                <img class="glyph-img" src={e.icon} alt="" width="28" height="28" />
+              {:else}
+                <!-- No declared icon: a neutral glyph rather than a broken image. -->
+                <span class="glyph"><AppIcons.apps class="size-5" /></span>
+              {/if}
               <span class="name">{e.title}</span>
+              {#if descriptionFor(e, locale)}
+                <span class="desc">{descriptionFor(e, locale)}</span>
+              {/if}
               <span class="id mono">{e.id}</span>
             </button>
           </li>
@@ -143,6 +156,27 @@
   .glyph {
     color: var(--primary);
     margin-bottom: var(--sp-xs, 4px);
+  }
+  /* The extension's own icon. Sized by the attributes so a missing intrinsic size cannot break the
+     layout before it loads. */
+  .glyph-img {
+    width: 28px;
+    height: 28px;
+    margin-bottom: var(--sp-xs, 4px);
+    border-radius: 6px;
+    object-fit: contain;
+  }
+  /* Two lines at most: a description is a hint, not a paragraph, and an unbounded one would make
+     cards of wildly different heights in the same row. */
+  .desc {
+    font-size: var(--text-meta, 12px);
+    line-height: 1.4;
+    color: var(--muted-foreground);
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
   }
   .name {
     font-weight: 600;

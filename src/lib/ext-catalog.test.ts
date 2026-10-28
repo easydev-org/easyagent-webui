@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { discoverExtUis } from './ext-catalog.svelte'
+import { descriptionFor, discoverExtUis, type ExtUi } from './ext-catalog.svelte'
 
 /**
  * The shelf is driven by one question per extension: does `/ext/<id>/api/v1/ui` answer? A 200 means
@@ -50,7 +50,9 @@ describe('discoverExtUis', () => {
     )
 
     const got = await discoverExtUis(fakeApi(['github', 'sandbox']))
-    expect(got).toEqual([{ id: 'github', title: 'GitHub', base: '/ext/github' }])
+    expect(got).toEqual([
+      { id: 'github', title: 'GitHub', base: '/ext/github', descriptions: {}, icon: '' },
+    ])
   })
 
   it('treats a 502 as "no UI", not as an error', async () => {
@@ -73,7 +75,13 @@ describe('discoverExtUis', () => {
   it('falls back to the id when an extension reports no title', async () => {
     withFetch(() => Promise.resolve(new Response(JSON.stringify({}), { status: 200 })))
     const got = await discoverExtUis(fakeApi(['plain']))
-    expect(got[0]).toEqual({ id: 'plain', title: 'plain', base: '/ext/plain' })
+    expect(got[0]).toEqual({
+      id: 'plain',
+      title: 'plain',
+      base: '/ext/plain',
+      descriptions: {},
+      icon: '',
+    })
   })
 
   it('sends the bearer as a header, never in the URL', async () => {
@@ -94,5 +102,70 @@ describe('discoverExtUis', () => {
     withFetch(() => Promise.reject(new Error('should not be called')))
     const api = { extensions: () => Promise.reject(new Error('no agent')) } as never
     expect(await discoverExtUis(api)).toEqual([])
+  })
+
+  // The shelf says what an extension is FOR. Only the extension knows, so it declares the text and
+  // the host renders the entry matching the reader's language.
+  it('reads the descriptions and resolves the icon under the reported mount', async () => {
+    withFetch(() =>
+      Promise.resolve(
+        new Response(
+          JSON.stringify({
+            id: 'github',
+            title: 'GitHub',
+            base: '/ext/github',
+            descriptions: { en: 'Repos and PRs', zh: '仓库与合并请求' },
+            icon: '/icon.svg',
+          }),
+          { status: 200 },
+        ),
+      ),
+    )
+    const [got] = await discoverExtUis(fakeApi(['github']))
+    expect(got!.descriptions).toEqual({ en: 'Repos and PRs', zh: '仓库与合并请求' })
+    expect(got!.icon).toBe('/ext/github/icon.svg')
+  })
+
+  it('drops blank description entries rather than rendering an empty slot', async () => {
+    withFetch(() =>
+      Promise.resolve(
+        new Response(JSON.stringify({ descriptions: { en: 'Real', zh: '   ' } }), { status: 200 }),
+      ),
+    )
+    const [got] = await discoverExtUis(fakeApi(['x']))
+    expect(got!.descriptions).toEqual({ en: 'Real' })
+  })
+})
+
+describe('descriptionFor', () => {
+  const ex = (descriptions: Record<string, string>): ExtUi => ({
+    id: 'x',
+    title: 'X',
+    base: '/ext/x',
+    descriptions,
+    icon: '',
+  })
+
+  it('prefers an exact locale match', () => {
+    expect(descriptionFor(ex({ en: 'E', 'zh-hans': 'Z' }), 'zh-Hans')).toBe('Z')
+  })
+
+  // A region variant must fall back to its language, or `zh-CN` would miss a `zh` entry entirely.
+  it('falls back to the bare language', () => {
+    expect(descriptionFor(ex({ zh: 'Z' }), 'zh-CN')).toBe('Z')
+  })
+
+  // English is the safer fallback than "whatever was listed first": an extension that happened to
+  // list Chinese first would otherwise show Chinese to an English reader.
+  it('falls back to English before an arbitrary entry', () => {
+    expect(descriptionFor(ex({ fr: 'F', en: 'E' }), 'de')).toBe('E')
+  })
+
+  it('uses the only entry when nothing matches', () => {
+    expect(descriptionFor(ex({ fr: 'F' }), 'de')).toBe('F')
+  })
+
+  it('returns empty when the extension declared none', () => {
+    expect(descriptionFor(ex({}), 'en')).toBe('')
   })
 })

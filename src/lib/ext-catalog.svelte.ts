@@ -20,6 +20,10 @@ export interface ExtUi {
   title: string
   /** Where it is mounted, as it reported. Used instead of guessing the prefix. */
   base: string
+  /** What it is for, keyed by language tag. Empty when the extension declared none. */
+  descriptions: Record<string, string>
+  /** Absolute URL of the shelf icon, or '' when the extension declared none. */
+  icon: string
 }
 
 /** The shape an extension answers `/api/v1/ui` with. */
@@ -27,6 +31,56 @@ interface UiInfo {
   base?: unknown
   id?: unknown
   title?: unknown
+  descriptions?: unknown
+  icon?: unknown
+}
+
+/**
+ * Read the description table, keeping only non-empty strings.
+ *
+ * The host renders whichever entry matches the reader's language, so a blank entry would be a card
+ * with a description slot that is silently empty — worse than having none at all.
+ */
+function readDescriptions(v: unknown): Record<string, string> {
+  if (v === null || typeof v !== 'object') return {}
+  const out: Record<string, string> = {}
+  for (const [k, val] of Object.entries(v as Record<string, unknown>)) {
+    if (typeof val === 'string' && val.trim() !== '') out[k.toLowerCase()] = val
+  }
+  return out
+}
+
+/**
+ * Turn the declared icon path into a URL under the mount.
+ *
+ * The extension serves its own icon, so the host must not assume where it lives: an absolute URL is
+ * left alone, and anything else is joined to the base the extension REPORTED — the same value its own
+ * assets resolve against.
+ */
+function resolveIcon(base: string, v: unknown): string {
+  if (typeof v !== 'string' || v.trim() === '') return ''
+  const path = v.trim()
+  if (/^https?:\/\//i.test(path) || path.startsWith('data:')) return path
+  const root = base.replace(/\/+$/, '')
+  return `${root}/${path.replace(/^\/+/, '')}`
+}
+
+/**
+ * The description to show for a locale.
+ *
+ * Exact tag first, then the bare language (`zh-Hans` -> `zh`), then English, then whatever the
+ * extension sent. That order matters: falling straight to "first entry" would show Chinese to an
+ * English reader whenever the extension happened to list it first.
+ */
+export function descriptionFor(ex: ExtUi, locale: string): string {
+  const d = ex.descriptions
+  if (Object.keys(d).length === 0) return ''
+  const tag = locale.toLowerCase()
+  if (d[tag]) return d[tag]!
+  const lang = tag.split('-')[0] ?? ''
+  if (lang !== '' && d[lang]) return d[lang]!
+  if (d['en']) return d['en']!
+  return Object.values(d)[0] ?? ''
 }
 
 /**
@@ -59,6 +113,10 @@ async function probe(id: string, token: string): Promise<ExtUi | null> {
       // The extension's own name for itself; the id is the fallback, never a blank cell.
       title: typeof info.title === 'string' && info.title !== '' ? info.title : id,
       base,
+      descriptions: readDescriptions(info.descriptions),
+      // Resolved against the mount the extension reported, so an icon path is a path under it rather
+      // than a URL the host had to guess. An empty value means the shelf draws a neutral glyph.
+      icon: resolveIcon(base, info.icon),
     }
   } catch {
     // Unreachable (a 502 from the proxy, a network failure) means the same thing as "no UI" here:
