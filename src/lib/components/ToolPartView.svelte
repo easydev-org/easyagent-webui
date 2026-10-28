@@ -128,6 +128,15 @@
   let preferPretty = $state(true)
   const showPretty = $derived(hasCard && preferPretty)
 
+  /**
+   * The raw source, shown UNDER an extension's card.
+   *
+   * A card is the extension's reading of its own payload; when that reading is wrong — a renamed
+   * field, a case it did not expect — the raw text is the only way to see what actually arrived.
+   * Off by default so the card stands alone, and one click away so it is never a dead end.
+   */
+  let rawOpen = $state(false)
+
   function openPanel(): void {
     if (!view) return
     // Every ext_view carries the same page key, so this REPLACES an already-open one. One extension
@@ -251,6 +260,20 @@
       >
         {preferPretty ? t('toolViewPretty') : t('toolViewBasic')}
       </button>
+      {#if showPretty && extCard}
+        <!-- The card is the extension's READING of the payload; this is the payload. Shown next to
+             the toggle because it belongs to the same question — "which presentation". -->
+        <button
+          type="button"
+          class="shrink-0 rounded px-1.5 py-0.5 text-micro text-muted-foreground hover:bg-muted {rawOpen
+            ? 'bg-muted'
+            : ''}"
+          title={t('toolViewRaw')}
+          onclick={() => (rawOpen = !rawOpen)}
+        >
+          {t('toolViewRaw')}
+        </button>
+      {/if}
     {/if}
     {#if view}
       <button
@@ -265,6 +288,34 @@
   </div>
 
   {#if open}
+    {#if showPretty && extCard}
+      <!-- The extension owns the WHOLE body in pretty mode: its arguments, its result, and any
+           action worth taking from here.
+
+           Not "the result half, with the arguments left to us" — that was the first attempt and it
+           was wrong twice over: the reader saw raw JSON above a nice card, and the extension could
+           not offer a link from the place it belongs. The card knows everything about this call,
+           because the call is what it was built to describe.
+
+           Below it, one escape hatch: the raw source, so a card that misreads its own payload is
+           never a dead end. -->
+      <div class="min-w-0 px-2.5 pb-2.5">
+        <ExtCardFrame card={extCard} session={session} {store} />
+        {#if rawOpen}
+          <div class="mt-2 space-y-2">
+            {#if Object.keys(input).length}
+              <pre class="max-h-52 min-w-0 overflow-auto rounded-sm border border-border/50 bg-background/50 px-2 py-1.5 font-mono text-[11px] wrap-anywhere whitespace-pre-wrap">{prettyJson(input)}</pre>
+            {/if}
+            {#if output}
+              <pre class="max-h-52 min-w-0 overflow-auto rounded-sm border border-border/50 bg-background/50 px-2 py-1.5 font-mono text-[11px] wrap-anywhere whitespace-pre-wrap">{output}</pre>
+            {/if}
+            {#if toolState?.error}
+              <pre class="max-h-52 min-w-0 overflow-auto rounded-sm border border-destructive/40 bg-background/50 px-2 py-1.5 font-mono text-[11px] wrap-anywhere whitespace-pre-wrap text-destructive">{toolState.error}</pre>
+            {/if}
+          </div>
+        {/if}
+      </div>
+    {:else}
     <div class="min-w-0 space-y-2 px-2.5 pb-2.5">
       <!-- input section -->
       {#if Object.keys(input).length}
@@ -422,5 +473,6 @@
         </div>
       {/if}
     </div>
+    {/if}
   {/if}
 </div>

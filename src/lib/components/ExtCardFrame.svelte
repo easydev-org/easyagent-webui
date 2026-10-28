@@ -36,7 +36,14 @@
     return document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light'
   }
 
-  let height = $state(220)
+  /**
+   * The frame's height, before and after the card reports its own.
+   *
+   * Starts small on purpose: the card measures and announces itself within a frame or two, and a
+   * tall placeholder would show as a pale block that collapses — the reader sees a jump where
+   * nothing is happening. A short one grows into the content instead.
+   */
+  let height = $state(96)
   let failed = $state(false)
   let frame: HTMLIFrameElement | null = $state(null)
   let host: HTMLDivElement | null = $state(null)
