@@ -29,6 +29,9 @@
   import type { PermissionDecl, SessionGrant, ChannelDecl, ChannelSubscription } from '$lib/models'
   import ChatSettingsDialog from './ChatSettingsDialog.svelte'
   import ReconnectBanner from '$lib/components/ReconnectBanner.svelte'
+  import TodosPanel from '$lib/components/TodosPanel.svelte'
+  import { latestTodos, todoCounts } from '$lib/todos'
+  import { Popover } from '$lib/components/ui/popover'
 
   let { store }: PageProps = $props()
 
@@ -42,6 +45,12 @@
   let providers = $state<Record<string, ProviderInfo>>({})
   let presets: Preset[] = $state([])
   let localUrls = $state<Record<string, string>>({})
+
+  // The session's checklist, derived from message history — the LAST `todo-write` call wins,
+  // because that tool replaces the whole list rather than appending to it. Live, since `ctrl.sorted`
+  // is reactive: a new call updates the badge as it streams.
+  const todos = $derived(latestTodos(ctrl?.sorted ?? []))
+  const todoRemaining = $derived(todoCounts(todos).remaining)
 
   // settings dialog state
   let settingsOpen = $state(false)
@@ -798,6 +807,33 @@
         </button>
       </div>
       <div class="ml-auto flex items-center gap-0.5">
+        <!-- Tasks: the session's checklist, derived from the last `todo-write` call.
+             Badge = remaining (not completed, not cancelled), so it counts down as the agent works
+             and disappears when there is nothing left. -->
+        {#if todos.length > 0}
+          <Popover side="bottom" align="end" class="w-80 p-2">
+            {#snippet trigger()}
+              <button
+                type="button"
+                class="relative rounded p-1.5 text-muted-foreground hover:bg-muted"
+                aria-label={t('todos')}
+                title={t('todos')}
+              >
+                <AppIcons.todo class="size-[18px]" />
+                {#if todoRemaining > 0}
+                  <span
+                    class="pointer-events-none absolute top-0.5 right-0.5 flex min-w-[14px] items-center justify-center rounded-full bg-destructive px-1 text-[9px] leading-[14px] font-bold text-destructive-foreground"
+                  >
+                    {todoRemaining}
+                  </span>
+                {/if}
+              </button>
+            {/snippet}
+            <div class="max-h-80 overflow-y-auto">
+              <TodosPanel {todos} />
+            </div>
+          </Popover>
+        {/if}
         <!-- Mailbox, extracted from the ⋯ menu into its own button. The red
              dot (top-right) counts PENDING (unconsumed) mailbox entries. -->
         <div bind:this={mailboxBtnEl} class="relative">

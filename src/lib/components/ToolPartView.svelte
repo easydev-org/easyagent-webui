@@ -16,6 +16,8 @@
   // splitting the screen beside the conversation.
   import { extViewPage } from '$lib/ext-panel.svelte'
   import type { AppStore } from '$lib/store.svelte'
+  import TodosPanel from './TodosPanel.svelte'
+  import { isTodoWrite, parseTodos } from '$lib/todos'
 
   let {
     part,
@@ -83,6 +85,14 @@
     if (v.ext === '' || v.route === '') return null
     return { ext: v.ext, route: v.route, title: v.title }
   })
+
+  /**
+   * A `todo-write` card draws the checklist instead of its arguments.
+   *
+   * Null while the arguments are still streaming (only `inputText` exists): the raw preview is the
+   * honest thing to show then, because the list is still being written.
+   */
+  const todoList = $derived(isTodoWrite(tool) ? parseTodos(input) : null)
 
   function openPanel(): void {
     if (!view) return
@@ -223,7 +233,16 @@
             <span>{t('toolInputParams')}</span>
           </button>
           {#if inputOpen}
-            <pre class="max-h-52 min-w-0 overflow-auto px-2 pb-2 font-mono text-[11px] wrap-anywhere whitespace-pre-wrap">{prettyJson(input)}</pre>
+            {#if todoList}
+              <!-- A checklist rendered as JSON is the same information with the structure thrown
+                   away. Once the arguments have fully streamed, draw the list itself; while they are
+                   still arriving the raw preview below is what shows progress. -->
+              <div class="max-h-52 overflow-auto px-1 pb-1">
+                <TodosPanel todos={todoList} />
+              </div>
+            {:else}
+              <pre class="max-h-52 min-w-0 overflow-auto px-2 pb-2 font-mono text-[11px] wrap-anywhere whitespace-pre-wrap">{prettyJson(input)}</pre>
+            {/if}
           {/if}
         </div>
       {:else if toolState?.inputText}
