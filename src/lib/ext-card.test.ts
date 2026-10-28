@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { extCardFrom, extCardSrc } from './ext-card'
+import { extCardFrom, extCardSrc, MSG_OPEN_VIEW, openViewFrom } from './ext-card'
 
 describe('extCardFrom', () => {
   it('reads a well-formed declaration', () => {
@@ -43,5 +43,25 @@ describe('extCardSrc', () => {
   it('never puts a tenant in the URL', () => {
     const src = extCardSrc({ ext: 'github', route: '/c' }, { session: 's', theme: 'light' })
     expect(src).not.toContain('tenant')
+  })
+})
+
+describe('openViewFrom', () => {
+  it('accepts a well-formed request from a card', () => {
+    expect(
+      openViewFrom({ type: MSG_OPEN_VIEW, ext: 'github', route: '/ws/a/tree/', title: 'r' }),
+    ).toEqual({ type: MSG_OPEN_VIEW, ext: 'github', route: '/ws/a/tree/', title: 'r' })
+  })
+
+  // The frame is a separate document. Anything else arriving on `message` — the theme channel, a
+  // stray payload, another origin — must not be able to push a page.
+  it('ignores every other message shape', () => {
+    expect(openViewFrom({ type: 'easyagent:theme', theme: 'dark' })).toBeNull()
+    expect(openViewFrom({ type: MSG_OPEN_VIEW })).toBeNull()
+    expect(openViewFrom({ type: MSG_OPEN_VIEW, ext: 'github' })).toBeNull()
+    expect(openViewFrom({ type: MSG_OPEN_VIEW, ext: '', route: '/x' })).toBeNull()
+    expect(openViewFrom({ type: MSG_OPEN_VIEW, ext: 'github', route: '' })).toBeNull()
+    expect(openViewFrom('easyagent:open-view')).toBeNull()
+    expect(openViewFrom(null)).toBeNull()
   })
 })

@@ -61,3 +61,46 @@ export function extCardFrom(data: Record<string, unknown> | null | undefined): E
   if (v.ext === '' || v.route === '') return null
   return { ext: v.ext, route: v.route, title: typeof v.title === 'string' ? v.title : undefined }
 }
+
+/** The frame reports its own content height, so the host can size it exactly. */
+export const MSG_CARD_HEIGHT = 'easyagent:card-height'
+
+/**
+ * The frame asks the HOST to open a view.
+ *
+ * Why a message and not a link: the card renders inside a frame a few hundred pixels tall, so an
+ * `<a href="#/ws/…">` would open the full browser INSIDE that frame — unusable, and the reader would
+ * have to collapse the card to get out. Only the host can put the view where views belong (the side
+ * panel on a wide screen, a full page on a phone).
+ *
+ * This is the reason `card` and `view` are separate declarations: the card knows WHICH route is worth
+ * opening, the host knows where to open it.
+ */
+export const MSG_OPEN_VIEW = 'easyagent:open-view'
+
+export interface OpenViewMessage {
+  type: typeof MSG_OPEN_VIEW
+  ext: string
+  route: string
+  title?: string
+}
+
+/**
+ * Read an open-view request, or null.
+ *
+ * Validated on arrival rather than trusted: a frame is a separate document, and a malformed request
+ * must not become a broken page push. `ext` and `route` are the only fields a view needs to exist.
+ */
+export function openViewFrom(data: unknown): OpenViewMessage | null {
+  if (data === null || typeof data !== 'object') return null
+  const d = data as Partial<OpenViewMessage>
+  if (d.type !== MSG_OPEN_VIEW) return null
+  if (typeof d.ext !== 'string' || d.ext === '') return null
+  if (typeof d.route !== 'string' || d.route === '') return null
+  return {
+    type: MSG_OPEN_VIEW,
+    ext: d.ext,
+    route: d.route,
+    title: typeof d.title === 'string' ? d.title : undefined,
+  }
+}

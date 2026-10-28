@@ -279,11 +279,7 @@
             <span>{t('toolInputParams')}</span>
           </button>
           {#if inputOpen}
-            {#if showPretty && extCard}
-              <!-- The extension's own card. It covers the RESULT, so the arguments keep their plain
-                   rendering above it rather than being drawn twice by two different systems. -->
-              <pre class="max-h-52 min-w-0 overflow-auto px-2 pb-1 font-mono text-[11px] wrap-anywhere whitespace-pre-wrap">{prettyJson(input)}</pre>
-            {:else if showPretty && card}
+            {#if showPretty && card}
               <!-- Pretty: the handler's description of these arguments. A checklist drawn as JSON is
                    the same information with the structure thrown away, which is why this exists. -->
               <div class="min-w-0 px-2 pb-2">
@@ -294,6 +290,9 @@
                 {/if}
               </div>
             {:else}
+              <!-- Includes the extension-card case: an extension describes its RESULT, not its
+                   arguments, so the arguments keep the plain rendering. Drawing them through two
+                   different systems would show the same JSON twice. -->
               <pre class="max-h-52 min-w-0 overflow-auto px-2 pb-2 font-mono text-[11px] wrap-anywhere whitespace-pre-wrap">{prettyJson(input)}</pre>
             {/if}
           {/if}
@@ -342,8 +341,10 @@
           <div class="px-2 pb-2">
             {#if showPretty && extCard}
               <!-- The extension draws its own card, in its own document (see ext-card.ts for why an
-                   iframe rather than returned HTML). Lazily: this is a button until asked for. -->
-              <ExtCardFrame card={extCard} session={session} />
+                   iframe rather than returned HTML), and it is mounted when scrolled into view.
+                   `store` lets the card ask the HOST to open a view: the card knows which route is
+                   worth opening, only the host knows where views live. -->
+              <ExtCardFrame card={extCard} session={session} {store} />
             {:else if showPretty && card}
               <!-- The handler's reading of the result: fields plus a typed body (code, diff, image,
                    list…). The RAW text stays one tap away — this replaces the presentation of the
