@@ -9,6 +9,7 @@
   import type { PageProps } from '$lib/page-props'
   import { discoverExtUis, type ExtUi } from '$lib/ext-catalog.svelte'
   import { extViewPage } from '$lib/ext-panel.svelte'
+  import PageHeader from '$lib/components/layout/PageHeader.svelte'
 
   let { store }: PageProps = $props()
 
@@ -49,37 +50,77 @@
     {error}
     <button type="button" class="retry" onclick={() => void load()}>{t('retry')}</button>
   </div>
-{:else if loading}
-  <div class="state muted">{t('loading')}</div>
-{:else if items.length === 0}
-  <div class="state muted">
-    {t('noExtUis')}
-    <div class="hint t-meta">
-      An extension appears here when it serves its own browser UI. Tool-only extensions do not.
-    </div>
-  </div>
 {:else}
-  <ul class="grid">
-    {#each items as e (e.id)}
-      <li>
-        <button type="button" class="card" onclick={() => open(e)} title={e.base}>
-          <span class="glyph"><AppIcons.apps class="size-5" /></span>
-          <span class="name">{e.title}</span>
-          <span class="id mono">{e.id}</span>
+  <!-- The same bar as every other page, so a reader moving between them sees one layout rather than
+       a page that appears to be missing its header. -->
+  <div class="page">
+    <PageHeader title={t('tabExtensions')}>
+      {#snippet right()}
+        <button
+          type="button"
+          class="rounded p-1.5 text-muted-foreground hover:bg-muted"
+          aria-label={t('retry')}
+          title={t('retry')}
+          onclick={() => void load()}
+        >
+          <AppIcons.refresh class="size-[18px]" />
         </button>
-      </li>
-    {/each}
-  </ul>
+      {/snippet}
+    </PageHeader>
+
+    {#if loading}
+      <div class="state muted">{t('loading')}</div>
+    {:else if items.length === 0}
+      <div class="state muted">
+        {t('noExtUis')}
+        <div class="hint t-meta">
+          An extension appears here when it serves its own browser UI. Tool-only extensions do not.
+        </div>
+      </div>
+    {:else}
+      <ul class="grid">
+        {#each items as e (e.id)}
+          <li>
+            <button type="button" class="card" onclick={() => open(e)} title={e.base}>
+              <span class="glyph"><AppIcons.apps class="size-5" /></span>
+              <span class="name">{e.title}</span>
+              <span class="id mono">{e.id}</span>
+            </button>
+          </li>
+        {/each}
+      </ul>
+    {/if}
+  </div>
 {/if}
 
 <style>
+  /* A column, so the header stays put and only the list scrolls. */
+  .page {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-height: 0;
+  }
   .grid {
     margin: 0;
     padding: var(--sp-md);
     list-style: none;
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    /* TWO things were wrong with `repeat(auto-fill, minmax(180px, 1fr))`:
+     *
+     *  - `auto-fill` reserves a track for every slot that WOULD fit, so with two extensions in a wide
+     *    panel it created eight empty tracks and the two cards sat at opposite ends with a void
+     *    between them. `auto-fit` collapses the unused tracks, which is what "lay these out" means.
+     *  - `1fr` let each card grow to fill whatever width was left, so two cards stretched across the
+     *    whole panel. A max caps the card and leaves the extra space at the END of the row.
+     */
+    grid-template-columns: repeat(auto-fit, minmax(180px, 220px));
+    justify-content: start;
+    align-content: start;
     gap: var(--sp-sm);
+    flex: 1;
+    min-height: 0;
+    overflow: auto;
   }
   .card {
     display: flex;
