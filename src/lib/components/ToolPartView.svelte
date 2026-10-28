@@ -20,6 +20,8 @@
   import { isTodoWrite, parseTodos } from '$lib/todos'
   import ToolCard from './ToolCard.svelte'
   import { cardFor } from '$lib/tool-cards'
+  import ExtCardFrame from './ExtCardFrame.svelte'
+  import { extCardFrom } from '$lib/ext-card'
 
   let {
     part,
@@ -108,13 +110,23 @@
   )
 
   /**
+   * An extension's OWN card, when the tool result declares one.
+   *
+   * Ranked ABOVE the built-in registry: the extension knows its own payload, and it ships on its own
+   * schedule, so its rendering is more likely to be right than a registry compiled into this app. The
+   * built-in cards exist for the bundled tools, which have no extension to ask.
+   */
+  const extCard = $derived(extCardFrom(meta))
+  const hasCard = $derived(card !== null || extCard !== null)
+
+  /**
    * Pretty is the default WHEN a card exists; raw is always one tap away.
    *
    * Derived rather than stateful so a call that starts streaming (no card yet) flips to pretty on its
    * own once the handler can read it — a user who never touched the toggle should not have to.
    */
   let preferPretty = $state(true)
-  const showPretty = $derived(card !== null && preferPretty)
+  const showPretty = $derived(hasCard && preferPretty)
 
   function openPanel(): void {
     if (!view) return
@@ -228,7 +240,7 @@
       {/if}
       {#if open}<AppIcons.chevron_down class="size-3.5 shrink-0 text-muted-foreground" />{:else}<AppIcons.chevron_right class="size-3.5 shrink-0 text-muted-foreground" />{/if}
     </button>
-    {#if card}
+    {#if hasCard}
       <!-- Basic / pretty, a SIBLING of the fold button for the same reason "open" is: a button may
            not contain interactive content, so nesting makes the outer handler swallow the click. -->
       <button
@@ -267,7 +279,11 @@
             <span>{t('toolInputParams')}</span>
           </button>
           {#if inputOpen}
-            {#if showPretty && card}
+            {#if showPretty && extCard}
+              <!-- The extension's own card. It covers the RESULT, so the arguments keep their plain
+                   rendering above it rather than being drawn twice by two different systems. -->
+              <pre class="max-h-52 min-w-0 overflow-auto px-2 pb-1 font-mono text-[11px] wrap-anywhere whitespace-pre-wrap">{prettyJson(input)}</pre>
+            {:else if showPretty && card}
               <!-- Pretty: the handler's description of these arguments. A checklist drawn as JSON is
                    the same information with the structure thrown away, which is why this exists. -->
               <div class="min-w-0 px-2 pb-2">
@@ -324,7 +340,11 @@
         </button>
         {#if contentOpen}
           <div class="px-2 pb-2">
-            {#if showPretty && card}
+            {#if showPretty && extCard}
+              <!-- The extension draws its own card, in its own document (see ext-card.ts for why an
+                   iframe rather than returned HTML). Lazily: this is a button until asked for. -->
+              <ExtCardFrame card={extCard} session={session} />
+            {:else if showPretty && card}
               <!-- The handler's reading of the result: fields plus a typed body (code, diff, image,
                    list…). The RAW text stays one tap away — this replaces the presentation of the
                    output, never the output itself. -->
