@@ -250,7 +250,19 @@
 
            The body has no padding of its own: the card is a document, and it lays itself out. -->
       <div class="min-w-0 pb-2">
-        <ExtCardFrame card={extCard} session={session} {store} />
+        <!-- The card receives the CALL, not a place to look it up: input, structured data and the
+             result text. It renders those and nothing else, so it still works when the workspace
+             behind the call has expired. `session` only matters if it asks to open a view. -->
+        <ExtCardFrame
+          card={extCard}
+          tool={tool || ''}
+          {input}
+          data={meta}
+          {output}
+          error={toolState?.error ?? ''}
+          {session}
+          {store}
+        />
       </div>
     {:else}
     <div class="min-w-0 space-y-2 px-2.5 pb-2.5">

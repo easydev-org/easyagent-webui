@@ -28,7 +28,7 @@ describe('cardFor', () => {
       { code: 'c1' },
     )
     expect(spec).not.toBeNull()
-    const values = spec!.result.fields.map(f => f.value)
+    const values = spec!.result.fields.map((f: { value: string }) => f.value)
     expect(values).toContain('a.txt')
     expect(values).toContain('text/plain')
     expect(values).toContain('2.0 KB')
@@ -38,12 +38,12 @@ describe('cardFor', () => {
 
   it('omits rows whose value is missing instead of showing blanks', () => {
     const spec = cardFor('file-info', { name: 'only-name' }, { code: 'c1' })
-    expect(spec!.result.fields.map(f => f.label)).toEqual(['tcName'])
+    expect(spec!.result.fields.map((f: { label: string }) => f.label)).toEqual(['tcName'])
   })
 
   it('keeps a numeric zero, which is information', () => {
     const spec = cardFor('file-read', { code: 'c', offset: 0, lines: 0 }, { code: 'c' })
-    const labels = spec!.result.fields.map(f => f.label)
+    const labels = spec!.result.fields.map((f: { label: string }) => f.label)
     expect(labels).toContain('tcLines')
   })
 
@@ -58,7 +58,7 @@ describe('cardFor', () => {
       },
       {},
     )
-    const byLabel = Object.fromEntries(spec!.result.fields.map(f => [f.label, f.value]))
+    const byLabel = Object.fromEntries(spec!.result.fields.map((f: { label: string; value: string }) => [f.label, f.value]))
     expect(byLabel['tcTotal']).toBe('2')
     expect(byLabel['tcDone']).toBe('1')
     expect(byLabel['tcRemaining']).toBe('1')

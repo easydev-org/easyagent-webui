@@ -127,7 +127,9 @@ export function pickString(
 
 /** A human-readable byte size. */
 export function humanBytes(v: number): string {
-  if (!Number.isFinite(v) || v < 0) return ''
+  // Zero and negatives mean "no size known", not "0 bytes": a tool that did not report a size must
+  // produce no row rather than a row claiming the file is empty.
+  if (!Number.isFinite(v) || v <= 0) return ''
   if (v < 1024) return `${v} B`
   const units = ['KB', 'MB', 'GB', 'TB']
   let size = v / 1024
@@ -157,6 +159,9 @@ export function stripLineNumbers(text: string): string {
     .split('\n')
     .map(l => l.replace(/^ *\d+ {2}/, '').replace(/^ *\d+\t/, ''))
     .join('\n')
+    // The producer ends every line with a newline, so the split yields a trailing empty element.
+    // Keeping it adds a blank line to the bottom of every code block.
+    .replace(/\n$/, '')
 }
 
 /**
