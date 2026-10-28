@@ -71,11 +71,42 @@
     return () => io.disconnect()
   })
 
+  /**
+   * Turn a reactive value into something `postMessage` can carry.
+   *
+   * THE PAYLOAD IS A SVELTE PROXY. `input` and `data` come from `$derived` over `$state`, so they are
+   * deep reactive wrappers. `postMessage` uses the structured clone algorithm, which refuses a Proxy
+   * outright — `DataCloneError: could not be cloned` — and the message is never delivered at all.
+   *
+   * That failure is easy to misread: the card sits on "waiting for data" and every other explanation
+   * (a timing race, a missing scope) fits. The browser console is the only place it shows.
+   *
+   * A JSON round-trip strips the proxies and costs one serialisation of a payload that is about to
+   * cross a document boundary anyway. Everything here is plain data by construction — tool results
+   * are JSON — so nothing is lost.
+   */
+  function plain<T>(v: T): T {
+    try {
+      return JSON.parse(JSON.stringify(v)) as T
+    } catch {
+      // A cyclic or otherwise unserialisable value would have failed the clone anyway; send what can
+      // be sent rather than dropping the whole payload.
+      return {} as T
+    }
+  }
+
   /** Send the call. Idempotent: the frame may announce readiness more than once (a reload). */
   function pushData(win: Window | null | undefined): void {
     if (!win) return
     win.postMessage(
-      { type: MSG_CARD_DATA, tool, input, data, output, error },
+      {
+        type: MSG_CARD_DATA,
+        tool,
+        input: plain(input),
+        data: plain(data),
+        output,
+        error,
+      },
       '*',
     )
   }
