@@ -65,6 +65,7 @@ export class AppStore {
   // (Svelte 5 forbids state_unsafe_mutation inside deriveds).
   private stacks = $state<Record<SiderTab, AppPage[]>>({
     chat: [rootPageFor('chat')],
+    extensions: [rootPageFor('extensions')],
     config: [rootPageFor('config')],
   })
 

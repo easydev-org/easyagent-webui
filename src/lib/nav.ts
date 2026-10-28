@@ -2,7 +2,9 @@
 // pushPage/pushSibling/popPage. Kept separate (and tested) so the reset/pop
 // rules are explicit: same-key pages replace at their depth, a sibling drill-in
 // keeps the stack at [root, current], and popping never goes below the root.
-export type SiderTab = 'chat' | 'config'
+// Three tabs, not two. `extensions` is a shelf of the extension UIs this tenant can use — a place to
+// go rather than a setting, so it sits beside Chat rather than inside Config.
+export type SiderTab = 'chat' | 'extensions' | 'config'
 export type SessionOverlay = 'mailbox'
 
 export type AppPage =
@@ -28,6 +30,8 @@ export type AppPage =
       session: string
     }
   | { kind: 'config_root'; key: 'config_root' }
+  // The shelf: every extension that serves a UI, as a list.
+  | { kind: 'ext_list'; key: 'ext_list' }
   | { kind: 'config_sub'; key: string; id: string }
   | { kind: 'providers_list'; key: 'providers_list' }
   | { kind: 'preset_form'; key: 'preset_form_new' }
@@ -35,9 +39,14 @@ export type AppPage =
   | { kind: 'provider_models'; key: string; modelId: string | null }
 
 export function rootPageFor(tab: SiderTab): AppPage {
-  return tab === 'chat'
-    ? { kind: 'chat_list', key: 'chat_list' }
-    : { kind: 'config_root', key: 'config_root' }
+  switch (tab) {
+    case 'chat':
+      return { kind: 'chat_list', key: 'chat_list' }
+    case 'extensions':
+      return { kind: 'ext_list', key: 'ext_list' }
+    case 'config':
+      return { kind: 'config_root', key: 'config_root' }
+  }
 }
 
 /** Push a page; a same-key page replaces at (and truncates from) its depth. */

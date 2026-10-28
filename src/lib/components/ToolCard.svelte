@@ -8,9 +8,12 @@
   import { AppIcons } from '$lib/icons'
   import { cn } from '$lib/utils'
   import type { CardBody, CardSection } from '$lib/tool-cards'
+  import type { AgentApi } from '$lib/api'
   import MediaAttachment from './MediaAttachment.svelte'
 
-  let { section }: { section: CardSection } = $props()
+  // `api` is only needed for media bodies: the attachment component resolves a file code to a URL
+  // through it. Optional so a card with no media renders without one.
+  let { section, api }: { section: CardSection; api?: AgentApi } = $props()
 
   /** Resolve a label: a `tc*` key is localized, anything else is literal data. */
   function lbl(key: string): string {

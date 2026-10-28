@@ -13,6 +13,7 @@
   import Chat from './pages/Chat.svelte'
   import Mailbox from './pages/Mailbox.svelte'
   import ExtPanel from './components/ExtPanel.svelte'
+  import ExtensionsList from './pages/ExtensionsList.svelte'
   import Config from './pages/Config.svelte'
   import ProvidersList from './pages/providers/ProvidersList.svelte'
   import ProviderForm from './pages/providers/ProviderForm.svelte'
@@ -41,6 +42,8 @@
 
   const tabs = [
     { id: 'chat' as const, label: 'tabChat' },
+    // Between the conversation and the settings, because it is neither: a shelf of places to go.
+    { id: 'extensions' as const, label: 'tabExtensions' },
     { id: 'config' as const, label: 'tabConfig' },
   ]
 
@@ -54,6 +57,8 @@
         return Mailbox as Component<PageProps>
       case 'ext_view':
         return ExtPanel as Component<PageProps>
+      case 'ext_list':
+        return ExtensionsList as Component<PageProps>
       case 'config_root':
       case 'config_sub':
         return Config as Component<PageProps>
@@ -95,7 +100,7 @@
           )}
           onclick={() => store.switchTab(tb.id)}
         >
-          {#if tb.id === 'chat'}<AppIcons.chat class="size-[22px]" />{:else}<AppIcons.settings class="size-[22px]" />{/if}
+          {#if tb.id === 'chat'}<AppIcons.chat class="size-[22px]" />{:else if tb.id === 'extensions'}<AppIcons.apps class="size-[22px]" />{:else}<AppIcons.settings class="size-[22px]" />{/if}
           <span class="text-micro">{t(tb.label)}</span>
         </button>
       {/each}
@@ -134,7 +139,7 @@
           )}
           onclick={() => store.switchTab(tb.id)}
         >
-          {#if tb.id === 'chat'}<AppIcons.chat class="size-[22px]" />{:else}<AppIcons.settings class="size-[22px]" />{/if}
+          {#if tb.id === 'chat'}<AppIcons.chat class="size-[22px]" />{:else if tb.id === 'extensions'}<AppIcons.apps class="size-[22px]" />{:else}<AppIcons.settings class="size-[22px]" />{/if}
           <span class="text-micro">{t(tb.label)}</span>
         </button>
       {/each}
