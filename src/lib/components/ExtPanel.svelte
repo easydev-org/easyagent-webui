@@ -36,6 +36,9 @@
   $effect(() => {
     const ext = view?.ext
     if (!ext) return
+    // A frame that asks before the bridge exists would wait forever, and the panel would look
+    // "loaded but empty". Logging the handshake makes that visible instead of silent.
+    console.info('[ext-view] bridge listening for', ext)
     return serveBridge(
       () => store.api.token,
       win => (document.querySelector<HTMLIFrameElement>('iframe[data-ext-frame]')?.contentWindow === win ? ext : null),

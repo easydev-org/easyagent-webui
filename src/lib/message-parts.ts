@@ -207,6 +207,46 @@ export function applyToolOutputTo(
   if (idx < 0) {
     // Output arrived before the tool-call frame. Keep it: a tool that prints
     // immediately would otherwise lose its first lines.
+    //
+    // DIAGNOSTIC: this branch produces a card named literally "tool" with no input, which looks
+    // like a real tool called "tool" and is indistinguishable from a rendering bug. Logging the id
+    // and the parts already present is the difference between "the tool-call never arrived" and
+    // "it arrived under a different id" — and those need opposite fixes.
+    console.warn('[tool-output] no card for this call; creating a placeholder', {
+      partId,
+      presentIds: next.filter(p => p.type === 'tool').map(p => p.id),
+    })
+
+    // BEFORE creating an orphan, adopt the one card that is waiting for exactly this.
+    //
+    // Two events for the same call can arrive with the identifier under DIFFERENT keys (one an
+    // `id`, one a `toolCallId`), which splits one call across two cards: the arguments on one with
+    // an empty body, the output on a second card named "tool". Rather than render that, take over a
+    // tool card that is still RUNNING and has produced no output — there is at most one such card
+    // per message, because a step runs its tools sequentially.
+    const waiting = next.findIndex(
+      p => p.type === 'tool' && (p.state?.status ?? '') === 'running' && (p.state?.output ?? '') === '',
+    )
+    if (waiting >= 0) {
+      const w = next[waiting]!
+      next[waiting] = {
+        ...w,
+        state: {
+          ...(w.state ?? { status: '', title: '' }),
+          status: finished ? (failed ? 'error' : 'complete') : 'running',
+          output: merge(''),
+          data: upd.data ?? null,
+          error: upd.error ?? null,
+          toolState: upd.state ?? null,
+        },
+      }
+      console.warn('[tool-output] adopted a waiting card instead of creating a placeholder', {
+        partId,
+        adopted: w.id,
+      })
+      return next
+    }
+
     next.push({
       id: partId,
       type: 'tool',

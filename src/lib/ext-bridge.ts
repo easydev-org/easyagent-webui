@@ -50,7 +50,18 @@ export function serveBridge(token: () => string, extOf: ExtOf, theme: () => 'lig
     if (!data || typeof data.type !== 'string') return
 
     const ext = extOf(ev.source as Window)
-    if (ext === null) return // not one of our frames
+    if (ext === null) {
+      // Say so rather than dropping it: a frame whose source does not match is indistinguishable
+      // from a frame that never asked, and both look like "the panel loaded but shows nothing".
+      if (data.type === BRIDGE_REQUEST) {
+        console.warn('[ext-bridge] REJECTED a request from an unrecognised frame', {
+          type: data.type,
+          origin: ev.origin,
+          sameAsTop: ev.source === window,
+        })
+      }
+      return
+    }
 
     if (data.type === BRIDGE_HELLO) {
       post(ev.source as Window, { type: 'easyagent:theme', theme: theme() })
