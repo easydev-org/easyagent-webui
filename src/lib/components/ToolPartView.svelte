@@ -18,6 +18,8 @@
   import type { AppStore } from '$lib/store.svelte'
   import TodosPanel from './TodosPanel.svelte'
   import { isTodoWrite, parseTodos } from '$lib/todos'
+  import ToolCard from './ToolCard.svelte'
+  import { cardFor } from '$lib/tool-cards'
 
   let {
     part,
@@ -93,6 +95,26 @@
    * honest thing to show then, because the list is still being written.
    */
   const todoList = $derived(isTodoWrite(tool) ? parseTodos(input) : null)
+
+  /**
+   * The "pretty" description of this call, or null when no handler claims the tool.
+   *
+   * Cheap enough to derive: the handlers are pure lookups over data already in the part. When it is
+   * null the card keeps the raw JSON it always had — which is also what a tool from an extension
+   * this build does not know about will get.
+   */
+  const card = $derived(
+    cardFor(tool || toolState?.title || '', meta, input, output, toolState?.error ?? ''),
+  )
+
+  /**
+   * Pretty is the default WHEN a card exists; raw is always one tap away.
+   *
+   * Derived rather than stateful so a call that starts streaming (no card yet) flips to pretty on its
+   * own once the handler can read it — a user who never touched the toggle should not have to.
+   */
+  let preferPretty = $state(true)
+  const showPretty = $derived(card !== null && preferPretty)
 
   function openPanel(): void {
     if (!view) return
@@ -206,6 +228,18 @@
       {/if}
       {#if open}<AppIcons.chevron_down class="size-3.5 shrink-0 text-muted-foreground" />{:else}<AppIcons.chevron_right class="size-3.5 shrink-0 text-muted-foreground" />{/if}
     </button>
+    {#if card}
+      <!-- Basic / pretty, a SIBLING of the fold button for the same reason "open" is: a button may
+           not contain interactive content, so nesting makes the outer handler swallow the click. -->
+      <button
+        type="button"
+        class="shrink-0 rounded px-1.5 py-0.5 text-micro font-medium text-muted-foreground hover:bg-muted"
+        title={preferPretty ? t('toolViewBasic') : t('toolViewPretty')}
+        onclick={() => (preferPretty = !preferPretty)}
+      >
+        {preferPretty ? t('toolViewPretty') : t('toolViewBasic')}
+      </button>
+    {/if}
     {#if view}
       <button
         type="button"
@@ -233,12 +267,15 @@
             <span>{t('toolInputParams')}</span>
           </button>
           {#if inputOpen}
-            {#if todoList}
-              <!-- A checklist rendered as JSON is the same information with the structure thrown
-                   away. Once the arguments have fully streamed, draw the list itself; while they are
-                   still arriving the raw preview below is what shows progress. -->
-              <div class="max-h-52 overflow-auto px-1 pb-1">
-                <TodosPanel todos={todoList} />
+            {#if showPretty && card}
+              <!-- Pretty: the handler's description of these arguments. A checklist drawn as JSON is
+                   the same information with the structure thrown away, which is why this exists. -->
+              <div class="min-w-0 px-2 pb-2">
+                {#if todoList}
+                  <TodosPanel todos={todoList} />
+                {:else}
+                  <ToolCard section={card.input} {api} />
+                {/if}
               </div>
             {:else}
               <pre class="max-h-52 min-w-0 overflow-auto px-2 pb-2 font-mono text-[11px] wrap-anywhere whitespace-pre-wrap">{prettyJson(input)}</pre>
@@ -287,16 +324,22 @@
         </button>
         {#if contentOpen}
           <div class="px-2 pb-2">
-            <!-- ONE rendering path for every tool.
+            {#if showPretty && card}
+              <!-- The handler's reading of the result: fields plus a typed body (code, diff, image,
+                   list…). The RAW text stays one tap away — this replaces the presentation of the
+                   output, never the output itself. -->
+              <ToolCard section={card.result} {api} />
+            {:else}
+              <!-- ONE rendering path for every tool.
 
-                 The output is the same field whether the call is still running or
-                 finished: the server sends snapshots, so `output` always holds
-                 everything known so far. There is no separate "live transcript"
-                 to reconcile, which is why a partial result stays readable after
-                 an interrupt instead of vanishing. -->
-            {#if output}
-              <pre
-                class="max-h-72 min-w-0 overflow-auto font-mono text-[11px] wrap-anywhere whitespace-pre-wrap">{output}</pre>
+                   The output is the same field whether the call is still running or finished: the
+                   server sends snapshots, so `output` always holds everything known so far. There is
+                   no separate "live transcript" to reconcile, which is why a partial result stays
+                   readable after an interrupt instead of vanishing. -->
+              {#if output}
+                <pre
+                  class="max-h-72 min-w-0 overflow-auto font-mono text-[11px] wrap-anywhere whitespace-pre-wrap">{output}</pre>
+              {/if}
             {/if}
             {#if running}
               <p class="mt-1 text-micro text-muted-foreground italic">{t('running')}</p>
