@@ -17,7 +17,7 @@ const t = (category: string, name: string): ToolInfo => ({
 
 describe('toolValue', () => {
   it('uses the bare name when unique across extensions', () => {
-    const all = [t('bundled', 'todo-write'), t('workspace', 'sandbox-exec')]
+    const all = [t('bundled', 'todo-write'), t('workspace', 'sandbox-job-start')]
     expect(toolValue(all, all[0]!)).toBe('todo-write')
   })
 
@@ -33,14 +33,14 @@ describe('toolValue', () => {
 describe('groupByExtension', () => {
   it('groups by extension id and sorts stably', () => {
     const all = [
-      t('workspace', 'sandbox-exec'),
+      t('workspace', 'sandbox-job-start'),
       t('bundled', 'todo-write'),
       t('bundled', 'time-wait'),
     ]
     const g = groupByExtension(all)
     expect(g.map(x => x.extId)).toEqual(['bundled', 'workspace'])
     expect(g[0]!.tools.map(x => x.name)).toEqual(['time-wait', 'todo-write'])
-    expect(g[1]!.tools.map(x => x.name)).toEqual(['sandbox-exec'])
+    expect(g[1]!.tools.map(x => x.name)).toEqual(['sandbox-job-start'])
   })
 })
 
