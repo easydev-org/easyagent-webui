@@ -716,32 +716,41 @@
       </div>
       <div class="ml-auto flex items-center gap-0.5">
         <!-- Tasks: the session's checklist, derived from the last `todo-write` call.
-             Badge = remaining (not completed, not cancelled), so it counts down as the agent works
-             and disappears when there is nothing left. -->
-        {#if todos.length > 0}
-          <Popover side="bottom" align="end" class="w-80 p-2">
-            {#snippet trigger()}
-              <button
-                type="button"
-                class="relative rounded p-1.5 text-muted-foreground hover:bg-muted"
-                aria-label={t('todos')}
-                title={t('todos')}
-              >
-                <AppIcons.todo class="size-[18px]" />
-                {#if todoRemaining > 0}
-                  <span
-                    class="pointer-events-none absolute top-0.5 right-0.5 flex min-w-[14px] items-center justify-center rounded-full bg-destructive px-1 text-[9px] leading-[14px] font-bold text-destructive-foreground"
-                  >
-                    {todoRemaining}
-                  </span>
-                {/if}
-              </button>
-            {/snippet}
-            <div class="max-h-80 overflow-y-auto">
+             THE BUTTON IS ALWAYS THERE; only the BADGE depends on the list. It used to be wrapped in
+             `{#if todos.length > 0}`, which made the control appear and disappear as the agent worked:
+             a user who had seen it could not find it again once the list emptied, and a user who had
+             never had a todo list never knew the feature existed at all. A control that is sometimes
+             present teaches nothing and, when it vanishes, reads like a bug.
+             Badge = remaining (not completed, not cancelled), so it counts down as the agent works and
+             disappears when there is nothing left — the COUNT is the status, the button is the place. -->
+        <Popover side="bottom" align="end" class="w-80 p-2">
+          {#snippet trigger()}
+            <button
+              type="button"
+              class="relative rounded p-1.5 text-muted-foreground hover:bg-muted"
+              aria-label={t('todos')}
+              title={t('todos')}
+            >
+              <AppIcons.todo class="size-[18px]" />
+              {#if todoRemaining > 0}
+                <span
+                  class="pointer-events-none absolute top-0.5 right-0.5 flex min-w-[14px] items-center justify-center rounded-full bg-destructive px-1 text-[9px] leading-[14px] font-bold text-destructive-foreground"
+                >
+                  {todoRemaining}
+                </span>
+              {/if}
+            </button>
+          {/snippet}
+          <div class="max-h-80 overflow-y-auto">
+            {#if todos.length > 0}
               <TodosPanel {todos} />
-            </div>
-          </Popover>
-        {/if}
+            {:else}
+              <!-- AN EMPTY POPOVER IS A DEAD END. Saying so is what makes the always-present button
+                   useful rather than puzzling: it tells the reader the list exists and why it is empty. -->
+              <p class="px-1 py-2 text-micro text-muted-foreground italic">{t('todosEmpty')}</p>
+            {/if}
+          </div>
+        </Popover>
         <!-- Mailbox, extracted from the ⋯ menu into its own button. The red
              dot (top-right) counts PENDING (unconsumed) mailbox entries. -->
         <div bind:this={mailboxBtnEl} class="relative">
