@@ -16,7 +16,7 @@ export interface PageProps {
   onAddUser?: (() => void) | null
   showBack?: boolean
   initialId?: string
-  overlay?: 'mailbox'
+  overlay?: 'mailbox' | 'permissions'
   /** Present only on an `ext_view` page: which extension UI to mount and where. */
   view?: { ext: string; route: string; title: string; session: string }
   modelId?: string | null

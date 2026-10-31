@@ -60,10 +60,32 @@
   {@const body: CardBody = section.body}
   <div class="mt-1.5 min-w-0">
     {#if body.kind === 'code'}
-      <!-- No line-number gutter here: the payload's own was stripped by the handler, and a second,
-           differently-aligned one is worse than none. The row above says which lines these are. -->
-      <pre
-        class="max-h-64 overflow-auto rounded-sm border border-border/50 bg-card px-2 py-1.5 font-mono text-[11px] leading-[1.45]">{body.text}</pre>
+      <!-- A LINE-NUMBER GUTTER, because this body carries PROGRAM TEXT somebody wrote or is about to
+           run — a sandbox job's script, most of all. "The error is on line 7" is unreadable against
+           unnumbered source, and pasting it somewhere numbered is what people do instead.
+
+           TWO COLUMNS, ONE ROW PER LINE, rather than one <pre> string. The first attempt emitted all
+           the numbers and then all the code, which is not a gutter; a table gives each line its own
+           number and keeps them aligned while the code scrolls sideways, because the number cell is
+           sticky. `startLine` numbers a window as the file it came from. -->
+      {@const lines = body.text.replace(/\n$/, '').split('\n')}
+      {@const first = body.startLine ?? 1}
+      <div
+        class="max-h-64 overflow-auto rounded-sm border border-border/50 bg-card py-1.5 font-mono text-[11px] leading-[1.45]">
+        <table class="border-collapse">
+          <tbody>
+            {#each lines as l, i (i)}
+              <tr>
+                <td
+                  class="sticky left-0 w-px bg-card pr-2 pl-2 text-right align-top text-muted-foreground/60 select-none whitespace-nowrap"
+                  >{first + i}</td
+                >
+                <td class="pr-2 whitespace-pre">{l}</td>
+              </tr>
+            {/each}
+          </tbody>
+        </table>
+      </div>
     {:else if body.kind === 'diff'}
       <pre
         class="max-h-64 overflow-auto rounded-sm border border-border/50 bg-card px-2 py-1.5 font-mono text-[11px] leading-[1.45]">{body.diff}</pre>

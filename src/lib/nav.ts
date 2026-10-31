@@ -5,7 +5,10 @@
 // Three tabs, not two. `extensions` is a shelf of the extension UIs this tenant can use — a place to
 // go rather than a setting, so it sits beside Chat rather than inside Config.
 export type SiderTab = 'chat' | 'extensions' | 'config'
-export type SessionOverlay = 'mailbox'
+// A full-page view that sits ON TOP of the session, reached from the chat header and left with the
+// back button. Both entries are pages, not panels: a panel that covers half the conversation makes
+// the user choose between reading the session and managing it, and neither is a modal decision.
+export type SessionOverlay = 'mailbox' | 'permissions'
 
 export type AppPage =
   | { kind: 'chat_list'; key: 'chat_list' }

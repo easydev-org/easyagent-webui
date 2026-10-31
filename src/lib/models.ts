@@ -491,6 +491,15 @@ export interface SessionGrant {
 
 /** One permission an extension declares, as published in its manifest. */
 export interface PermissionDecl {
+  /**
+   * The extension this declaration belongs to.
+   *
+   * IT WAS MISSING FROM THIS TYPE while api.ts has always populated it, because the panel groups
+   * grants by extId and looks declarations up by (extId, key) — the field was used in three places and
+   * declared in none. Nothing failed until a new caller tried to pass a declaration onward to
+   * createGrant, which needs the extension.
+   */
+  extId: string
   key: string
   label: string
   descriptions: Record<string, string>

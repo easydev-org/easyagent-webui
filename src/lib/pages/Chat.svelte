@@ -24,9 +24,7 @@
   import MessageBubble from '$lib/components/MessageBubble.svelte'
   import MediaAttachment from '$lib/components/MediaAttachment.svelte'
   import ChatInfoDialog from './ChatInfoDialog.svelte'
-  import PermissionsPanel from '$lib/components/PermissionsPanel.svelte'
   
-  import type { PermissionDecl, SessionGrant, ChannelDecl, ChannelSubscription } from '$lib/models'
   import ChatSettingsDialog from './ChatSettingsDialog.svelte'
   import ReconnectBanner from '$lib/components/ReconnectBanner.svelte'
   import TodosPanel from '$lib/components/TodosPanel.svelte'
@@ -596,106 +594,16 @@
 
   // ---- menu actions ----
 
-  // ---- permissions panel ----
+  // ---- permissions and channels ----
   //
-  // The panel is a right-hand drawer rather than a dialog: a user comparing what a session
-  // may do against what it is doing wants the conversation still visible.
-  let permsOpen = $state(false)
-  let permsDecls = $state<PermissionDecl[]>([])
-  let permsGrants = $state<SessionGrant[]>([])
-  let permsBusy = $state(false)
-
-  async function openPermissions() {
+  // THEIR STATE AND LOADERS MOVED TO pages/Permissions.svelte WITH THE PANEL. Granting a permission is
+  // reading a list and deciding, not glancing at something beside the conversation, so it is a page
+  // like the mailbox — and a page owns its own data rather than taking it through the chat component.
+  //
+  // Opening it is the only thing left here, because the button that opens it is in this header.
+  function openPermissions() {
     if (!sid) return
-    permsOpen = true
-    await refreshPermissions()
-    // Declarations come from the extensions, so this is fetched fresh each time: a
-    // newly-deployed extension should appear without a page reload.
-    try {
-      permsDecls = await store.api.listPermissionDecls()
-    } catch (e) {
-      showErrorToast(String(e))
-    }
-    // Channels load with the panel rather than on tab switch: switching tabs should be
-    // instant, and the panel is opened deliberately.
-    await refreshChannels()
-  }
-
-  // ---- channels ----
-  let chDecls = $state<ChannelDecl[]>([])
-  let chSubs = $state<ChannelSubscription[]>([])
-  let chError = $state('')
-
-  async function refreshChannels() {
-    if (!sid) return
-    chError = ''
-    try {
-      const [decls, subs] = await Promise.all([
-        store.api.listChannels(),
-        store.api.listSubscriptions(sid),
-      ])
-      chDecls = decls
-      chSubs = subs
-    } catch (e) {
-      chError = String(e)
-    }
-  }
-
-  async function subscribeChannel(channel: string, pattern: string, wake: boolean) {
-    if (!sid) return
-    try {
-      await store.api.subscribeChannel(sid, channel, pattern, wake)
-      await refreshChannels()
-    } catch (e) {
-      showErrorToast(String(e))
-    }
-  }
-
-  async function unsubscribeChannel(sub: ChannelSubscription) {
-    if (!sid) return
-    try {
-      await store.api.unsubscribeChannel(sid, sub.id)
-      await refreshChannels()
-    } catch (e) {
-      showErrorToast(String(e))
-    }
-  }
-
-  async function refreshPermissions() {
-    if (!sid) return
-    try {
-      permsGrants = await store.api.listGrants(sid)
-    } catch (e) {
-      showErrorToast(String(e))
-    }
-  }
-
-  async function grantPermission(d: PermissionDecl, params: string) {
-    if (!sid || permsBusy) return
-    permsBusy = true
-    try {
-      await store.api.createGrant(sid, d.extId, d.key, params, d.risk)
-      await refreshPermissions()
-    } catch (e) {
-      showErrorToast(String(e))
-    } finally {
-      permsBusy = false
-    }
-  }
-
-  async function revokePermission(g: SessionGrant) {
-    if (!sid || permsBusy) return
-    permsBusy = true
-    try {
-      // No confirmation dialog: revoking is trivially reversible (grant it again), and a
-      // prompt on every click makes cleaning up several permissions tedious.
-      await store.api.revokeGrant(sid, g.id)
-      await refreshPermissions()
-    } catch (e) {
-      showErrorToast(String(e))
-    } finally {
-      permsBusy = false
-    }
+    store.pushPage({ kind: 'chat_overlay', key: 'chat_overlay', overlay: 'permissions' })
   }
 
   async function menuAction(v: string) {
@@ -1135,25 +1043,8 @@
     onSave={() => void applySettings()}
   />
 
-    {#if permsOpen}
-      <!-- Pinned to the right edge of this page's box, on top of the conversation. A
-           sibling in the flex row would need the parent to give up width it does not own. -->
-      <div class="absolute inset-y-0 right-0 z-20">
-        <PermissionsPanel
-          sessionId={sid}
-          decls={permsDecls}
-          grants={permsGrants}
-          locale={locale ?? ''}
-          ongrant={grantPermission}
-          onrevoke={revokePermission}
-          onclose={() => (permsOpen = false)}
-          channels={chDecls}
-          subs={chSubs}
-          chError={chError}
-          onsubscribe={subscribeChannel}
-          onunsubscribe={unsubscribeChannel}
-        />
-      </div>
-    {/if}
+    <!-- THE PERMISSIONS PANEL IS NO LONGER RENDERED HERE. It is a page now — pushed like the mailbox,
+         with its own header and back button — because a 340px column pinned to the right edge is the
+         wrong shape for a list you read and compare. See pages/Permissions.svelte. -->
   </div>
 {/if}

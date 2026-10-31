@@ -10,6 +10,7 @@
 
 import type { AppPage } from './nav'
 import { bundledHandlers } from './tool-cards/bundled'
+import { sandboxHandlers } from './tool-cards/sandbox'
 import { bareToolName, type CardCtx, type CardHandler } from './tool-cards/shared'
 // `export type` below re-exports the names but does not bring them into this file's scope.
 import type { CardSpec } from './tool-cards/shared'
@@ -22,7 +23,10 @@ export type {
 } from './tool-cards/shared'
 export { bareToolName } from './tool-cards/shared'
 
-const HANDLERS: CardHandler[] = [...bundledHandlers]
+// SANDBOX AFTER BUNDLED: a bundled handler that recognises a name wins, which keeps this list from
+// shadowing a card that already works. The sandbox tools share no names with the bundled ones today;
+// the order says what to do when that stops being true.
+const HANDLERS: CardHandler[] = [...bundledHandlers, ...sandboxHandlers]
 
 /**
  * Build a card for a tool, or null to fall back to raw JSON.

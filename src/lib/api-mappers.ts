@@ -216,20 +216,25 @@ export function messageFromPb(m: PbMessage): Message {
         const callId = (d['id'] as string) || p.messageId
         const res = results[callId]
         const content = res?.['content']
+        const meta = (res?.['meta'] as Record<string, unknown> | undefined) ??
+          (res?.['metadata'] as Record<string, unknown> | undefined)
+        // A FAILED CALL HAS `state: "error"` AND ITS REASON IN `meta.error` — not in `content`, which is
+        // the empty string because the tool printed nothing. This used to set status 'complete'
+        // unconditionally and read only `content`, so a refused or crashing tool rendered as a green
+        // card with no body: the user saw that a step failed and could not see why.
+        const failed = res?.['state'] === 'error' || typeof meta?.['error'] === 'string'
         parts.push({
           id: p.id,
           type: 'tool',
           tool: (d['name'] as string) || '',
           toolCallId: callId,
           state: {
-            status: res ? 'complete' : 'running',
+            status: res ? (failed ? 'error' : 'complete') : 'running',
             title: (d['name'] as string) || '',
             input: (d['input'] as Record<string, unknown>) || null,
             output: typeof content === 'string' ? content : null,
-            data:
-              ((res?.['meta'] as Record<string, unknown> | undefined) ??
-                (res?.['metadata'] as Record<string, unknown> | undefined)) ??
-              null,
+            error: typeof meta?.['error'] === 'string' ? (meta['error'] as string) : null,
+            data: meta ?? null,
             // How the call ended, so a rebuilt transcript says "timed out" the same
             // way the live one did.
             toolState: (res?.['state'] as string | undefined) ?? null,
@@ -241,15 +246,21 @@ export function messageFromPb(m: PbMessage): Message {
         const id = (d['tool_use_id'] as string) || p.messageId
         if (results[id] && m.parts.some(q => q.type === 'tool')) break
         const content = d['content']
+        const meta = (d['meta'] as Record<string, unknown> | undefined) ??
+          (d['metadata'] as Record<string, unknown> | undefined)
+        // THE ORPHAN CASE — a result with no tool part to pair with. It has the same shape, and the
+        // same trap: the reason for a failure lives in meta.error while content is empty.
+        const failed = d['state'] === 'error' || typeof meta?.['error'] === 'string'
         parts.push({
           id: p.id,
           type: 'tool',
           tool: '',
           toolCallId: id,
           state: {
-            status: 'complete',
+            status: failed ? 'error' : 'complete',
             title: '',
             output: typeof content === 'string' ? content : null,
+            error: typeof meta?.['error'] === 'string' ? (meta['error'] as string) : null,
           },
         })
         break

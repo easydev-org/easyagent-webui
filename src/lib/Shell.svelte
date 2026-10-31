@@ -12,6 +12,7 @@
   import SessionList from './pages/SessionList.svelte'
   import Chat from './pages/Chat.svelte'
   import Mailbox from './pages/Mailbox.svelte'
+  import Permissions from './pages/Permissions.svelte'
   import ExtPanel from './components/ExtPanel.svelte'
   import ExtensionsList from './pages/ExtensionsList.svelte'
   import Config from './pages/Config.svelte'
@@ -54,7 +55,9 @@
       case 'chat_session':
         return Chat as Component<PageProps>
       case 'chat_overlay':
-        return Mailbox as Component<PageProps>
+        // ONE PLACE PER OVERLAY. The page carries which overlay it is; the component table would
+        // otherwise need an entry per combination of "chat page" and "what is on top of it".
+        return (page.overlay === 'permissions' ? Permissions : Mailbox) as Component<PageProps>
       case 'ext_view':
         return ExtPanel as Component<PageProps>
       case 'ext_list':
