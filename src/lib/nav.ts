@@ -8,7 +8,10 @@ export type SiderTab = 'chat' | 'extensions' | 'config'
 // A full-page view that sits ON TOP of the session, reached from the chat header and left with the
 // back button. Both entries are pages, not panels: a panel that covers half the conversation makes
 // the user choose between reading the session and managing it, and neither is a modal decision.
-export type SessionOverlay = 'mailbox' | 'permissions'
+// `jobs` sits beside `permissions` because it answers the same kind of question: what is going on in
+// this conversation that is not in the transcript. A job outlives the call that started it, so the
+// conversation is the only place it belongs to — and the only place a reader thinks to look.
+export type SessionOverlay = 'mailbox' | 'permissions' | 'jobs'
 
 export type AppPage =
   | { kind: 'chat_list'; key: 'chat_list' }

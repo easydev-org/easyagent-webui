@@ -1,0 +1,9 @@
+version: v2
+# The panel's own copy of the agent contract, generated from the agent repository's .proto so the two
+# cannot disagree about a field name. Run `npm run proto`.
+plugins:
+  - local: protoc-gen-es
+    out: ./src/gen
+    opt:
+      - target=ts
+      - import_extension=js

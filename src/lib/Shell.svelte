@@ -5,6 +5,7 @@
   // of the navigation stack side by side.
   import type { Component } from 'svelte'
   import type { AppPage, AppStore } from './store.svelte'
+  import type { SessionOverlay } from './nav'
   import type { PageProps } from './page-props'
   import { t } from './i18n.svelte'
   import { cn } from './utils'
@@ -13,6 +14,7 @@
   import Chat from './pages/Chat.svelte'
   import Mailbox from './pages/Mailbox.svelte'
   import Permissions from './pages/Permissions.svelte'
+  import Jobs from './pages/Jobs.svelte'
   import ExtPanel from './components/ExtPanel.svelte'
   import ExtensionsList from './pages/ExtensionsList.svelte'
   import Config from './pages/Config.svelte'
@@ -48,6 +50,18 @@
     { id: 'config' as const, label: 'tabConfig' },
   ]
 
+  /**
+   * Every session overlay, by name.
+   *
+   * TYPED AS A Record, so adding a name to SessionOverlay without a component here is a compile
+   * error rather than a blank page — which is what a missing arm of a ternary would give.
+   */
+  const overlays: Record<SessionOverlay, Component<PageProps>> = {
+    mailbox: Mailbox as Component<PageProps>,
+    permissions: Permissions as Component<PageProps>,
+    jobs: Jobs as Component<PageProps>,
+  }
+
   function componentFor(page: AppPage): Component<PageProps> {
     switch (page.kind) {
       case 'chat_list':
@@ -57,7 +71,12 @@
       case 'chat_overlay':
         // ONE PLACE PER OVERLAY. The page carries which overlay it is; the component table would
         // otherwise need an entry per combination of "chat page" and "what is on top of it".
-        return (page.overlay === 'permissions' ? Permissions : Mailbox) as Component<PageProps>
+        //
+        // A LOOKUP RATHER THAN A CHAIN OF TERNARIES, because the third one made the expression read
+        // as a puzzle: the reader had to reconstruct the mapping from the nesting order. Typed as a
+        // Record, so a name added to SessionOverlay without a component here fails to compile
+        // instead of rendering nothing.
+        return overlays[page.overlay] as Component<PageProps>
       case 'ext_view':
         return ExtPanel as Component<PageProps>
       case 'ext_list':

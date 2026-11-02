@@ -3,6 +3,7 @@
 import type { BackendCfg } from './models'
 import type { ThemeMode } from './prefs'
 import type { AppStore } from './store.svelte'
+import type { SessionOverlay } from './nav'
 
 export interface PageProps {
   store: AppStore
@@ -16,7 +17,7 @@ export interface PageProps {
   onAddUser?: (() => void) | null
   showBack?: boolean
   initialId?: string
-  overlay?: 'mailbox' | 'permissions'
+  overlay?: SessionOverlay
   /** Present only on an `ext_view` page: which extension UI to mount and where. */
   view?: { ext: string; route: string; title: string; session: string }
   modelId?: string | null

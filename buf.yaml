@@ -1,0 +1,8 @@
+version: v2
+# THE MODULE ROOT IS `proto/`, not the repository root.
+#
+# With the root here, `paths=source_relative` produces `src/gen/proto/agent/v1/...` — a `proto/`
+# segment that the imports then have to carry. Declaring the module at `proto/` makes the generated
+# path `src/gen/agent/v1/...`, which is where the panel already imports from.
+modules:
+  - path: proto
