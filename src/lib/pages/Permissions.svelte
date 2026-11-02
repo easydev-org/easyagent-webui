@@ -101,6 +101,14 @@
   }
 </script>
 
+<!--
+  ONE COLUMN, TOP TO BOTTOM.
+
+  THE SHELL WRAPS EVERY PAGE IN A ROW (`flex`, no direction), so a page that returns several sibling
+  roots lays them out SIDEWAYS: the header beside the content instead of above it, which is what this
+  page looked like. Chat avoids it by returning a single flex-col root, and so does this now.
+-->
+<div class="flex h-full min-h-0 w-full min-w-0 flex-col">
 <PageHeader title={t('permissionsTitle')} onBack={() => store.popPage()} />
 
 {#if !sid}
@@ -159,3 +167,4 @@
     class="w-full"
   />
 {/if}
+</div>
