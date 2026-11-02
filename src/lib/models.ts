@@ -490,6 +490,26 @@ export interface SessionGrant {
 }
 
 /**
+ * Denial is one capability a session was refused in the last day.
+ *
+ * A REFUSAL IS A FACT ABOUT AN ATTEMPT, not about a permission: the session asked for something it
+ * holds no grant for, and was told so. This row exists so the reader can turn that into a grant
+ * without hunting through a transcript for which capability was missing.
+ */
+export interface Denial {
+  extId: string
+  /** The capability key a grant is made against. */
+  capability: string
+  /** One tool that was refused for it, most recently — easier to recognise than a capability key. */
+  tool: string
+  /** Unix milliseconds. First is the original sighting, not the most recent one. */
+  firstAt: number
+  lastAt: number
+  /** How many refusals folded into this row. */
+  count: number
+}
+
+/**
  * One background job, as the shared list reports it.
  *
  * NO OUTPUT FIELD, AND THAT IS THE CONTRACT. A job's output lives where the work ran; reading it is

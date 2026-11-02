@@ -22,6 +22,7 @@ import {
   type StreamEvent,
 } from './events'
 import type {
+  Denial,
   ExtensionInfo,
   Identity,
   Job,
@@ -371,6 +372,26 @@ export class AgentApi {
   async listGrants(id: string): Promise<SessionGrant[]> {
     const r = await this._guard(() => this._c.listGrants({ id }))
     return (r.grants ?? []).map(grantFromPb)
+  }
+
+  /** The capabilities this session was refused in the last day.
+   *
+   *  A REMINDER, NOT A LOG: rows aggregate by capability and expire after a day. The list exists so a
+   *  reader can turn "that tool said no" into a grant without hunting through the transcript for
+   *  which capability was missing — which is the state they are in precisely because they do not know.
+   *
+   *  A GRANTED CAPABILITY DISAPPEARS FROM HERE: the grant path clears the row, so a list that stayed
+   *  behind would be telling the reader about something they already fixed. */
+  async listDenials(id: string): Promise<Denial[]> {
+    const r = await this._guard(() => this._c.listDenials({ id }))
+    return (r.denials ?? []).map(d => ({
+      extId: d.extId,
+      capability: d.capability,
+      tool: d.tool,
+      firstAt: Number(d.firstAt),
+      lastAt: Number(d.lastAt),
+      count: d.count,
+    }))
   }
 
   /** The background jobs one conversation started.

@@ -18,7 +18,7 @@
   import type { PageProps } from '$lib/page-props'
   import { t } from '$lib/i18n.svelte'
   import { showErrorToast } from '$lib/toast.svelte'
-  import type { PermissionDecl, SessionGrant } from '$lib/models'
+  import type { Denial, PermissionDecl, SessionGrant } from '$lib/models'
   import PageHeader from '$lib/components/layout/PageHeader.svelte'
   import PermissionsPanel from '$lib/components/PermissionsPanel.svelte'
 
@@ -28,6 +28,7 @@
 
   let decls = $state<PermissionDecl[]>([])
   let grants = $state<SessionGrant[]>([])
+  let denials = $state<Denial[]>([])
   let loading = $state(true)
 
   async function refresh() {
@@ -42,6 +43,10 @@
       ])
       decls = d
       grants = g
+      // REFUSALS ARE LOADED SEPARATELY AND MAY FAIL WITHOUT EMPTYING THE PAGE: a deployment without a
+      // runtime bus cannot answer, and losing the grant list because of it would be a worse trade than
+      // showing one section short.
+      denials = await store.api.listDenials(sid).catch(() => [])
     } catch (e) {
       showErrorToast(String(e))
     } finally {
@@ -77,6 +82,23 @@
       showErrorToast(String(e))
     }
   }
+
+  /**
+   * Grant a capability because it was REFUSED, not because it was browsed to.
+   *
+   * NO PARAMS: a refusal records the capability, not a target, because the gate that refused never
+   * interpreted the arguments — it only knew the session held nothing for that key. So this grants the
+   * boolean capability, which is exactly what the refusal was about. A capability that also needs
+   * params is granted from the list below, where the declared shape is known.
+   */
+  async function grantDenied(d: Denial) {
+    try {
+      await store.api.createGrant(sid, d.extId, d.capability, '', '')
+      await refresh()
+    } catch (e) {
+      showErrorToast(String(e))
+    }
+  }
 </script>
 
 <PageHeader title={t('permissionsTitle')} onBack={() => store.popPage()} />
@@ -86,6 +108,44 @@
 {:else if loading && decls.length === 0}
   <p class="p-4 text-meta text-muted-foreground">{t('loading')}</p>
 {:else}
+  <!--
+    REFUSED FIRST, AND ABOVE THE LIST.
+
+    A reader who arrives here because something stopped working is looking for the reason, and the
+    reason is in this block. The full catalogue below is what they browse when nothing is wrong — so
+    the order is "what just broke" then "what could I grant", not the reverse.
+  -->
+  {#if denials.length > 0}
+    <section class="border-b border-border bg-amber-500/5 px-4 py-3">
+      <h2 class="mb-2 text-micro font-semibold tracking-wide text-muted-foreground uppercase">
+        {t('denialsTitle')}
+      </h2>
+      <p class="mb-2 text-micro text-muted-foreground">{t('denialsHint')}</p>
+      <ul class="flex flex-col gap-2">
+        {#each denials as d (d.extId + '/' + d.capability)}
+          <li class="flex items-start justify-between gap-3 rounded border border-amber-600/30 px-2 py-1.5">
+            <div class="min-w-0">
+              <div class="truncate font-mono text-[11px]">
+                {d.extId}<span class="text-muted-foreground">/</span>{d.capability}
+              </div>
+              <!-- THE TOOL, not the capability, is what a reader recognises — and the count says
+                   whether this was a one-off or a wall they kept hitting. -->
+              <div class="truncate text-[11px] text-muted-foreground">
+                {d.tool}{#if d.count > 1}&nbsp;· {t('denialsCount', { n: String(d.count) })}{/if}
+              </div>
+            </div>
+            <button
+              class="shrink-0 rounded border border-border px-2 py-0.5 text-micro hover:border-foreground/40"
+              onclick={() => void grantDenied(d)}
+            >
+              {t('permissionsGrant')}
+            </button>
+          </li>
+        {/each}
+      </ul>
+    </section>
+  {/if}
+
   <!-- FULL WIDTH, FULL HEIGHT. The panel's own `w-[340px]` is overridden rather than removed: the
        component still knows how to be a side panel, and this page is the only caller that wants it
        to be a page. -->
