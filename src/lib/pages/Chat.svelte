@@ -618,6 +618,18 @@
     store.pushPage({ kind: 'chat_overlay', key: 'chat_overlay', overlay: 'jobs' })
   }
 
+  /**
+   * Open the channels page.
+   *
+   * A SEPARATE ENTRY, NOT A TAB INSIDE PERMISSIONS. It lived behind a tab strip there, which meant a
+   * reader who never clicked the second tab did not know subscriptions existed — and the two answer
+   * different questions, so neither is a detail of the other.
+   */
+  function openChannels() {
+    if (!sid) return
+    store.pushPage({ kind: 'chat_overlay', key: 'chat_overlay', overlay: 'channels' })
+  }
+
   async function menuAction(v: string) {
     switch (v) {
       case 'compact': {
@@ -775,6 +787,7 @@
         </div>
         <DropdownMenu label={t('settingsTitle')}>
           <DropdownMenuItem onSelect={() => void openPermissions()}>{t('permissionsMenu')}</DropdownMenuItem>
+          <DropdownMenuItem onSelect={() => void openChannels()}>{t('channelsMenu')}</DropdownMenuItem>
           <DropdownMenuItem onSelect={() => void openJobs()}>{t('jobsMenu')}</DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem onSelect={() => void menuAction('compact')}>{t('compactHistory')}</DropdownMenuItem>

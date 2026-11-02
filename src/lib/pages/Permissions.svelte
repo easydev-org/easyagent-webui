@@ -1,5 +1,10 @@
 <script lang="ts">
-  // Permissions — the session's grants and channel subscriptions, as a PAGE.
+  // Permissions — the session's grants, as a PAGE.
+  //
+  // CHANNELS ARE A SEPARATE PAGE NOW. They shared a tab strip here, which made the second one
+  // undiscoverable: a reader who never clicked the tab did not know subscriptions existed. They are
+  // different questions — what may this session do, versus what does it hear — and each deserves its
+  // own entry in the menu.
   //
   // IT USED TO BE A 340px PANEL PINNED TO THE RIGHT EDGE of the conversation, which is the wrong shape
   // for what it is. Granting a permission is not a glance: it is reading a list of what each extension
@@ -91,7 +96,6 @@
     locale={''}
     ongrant={grant}
     onrevoke={revoke}
-    onclose={() => store.popPage()}
-    class="w-full border-l-0"
+    class="w-full"
   />
 {/if}

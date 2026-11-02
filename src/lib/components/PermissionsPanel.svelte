@@ -9,12 +9,9 @@
   // A session may hold SEVERAL grants of the same key with different params ("merge in
   // this repo" and "merge in that one" are separate authorisations), so grants are listed
   // per instance with their own revoke button, and "grant another" is always offered.
-  import { AppIcons } from '$lib/icons'
   import { t } from '$lib/i18n.svelte'
   import type { PermissionDecl, SessionGrant } from '$lib/models'
   import { cn } from '$lib/utils'
-  import ChannelsTab from './ChannelsTab.svelte'
-  import type { ChannelDecl, ChannelSubscription } from '$lib/models'
 
   interface Props {
     /** Session whose permissions are shown. */
@@ -27,26 +24,21 @@
     locale?: string
     ongrant: (decl: PermissionDecl, params: string) => Promise<void> | void
     onrevoke: (grant: SessionGrant) => Promise<void> | void
-    onclose: () => void
     class?: string
-    // Channel tab data. Passed in already loaded rather than fetched here: this component
-    // is presentational, and the page owns the data so both tabs read one source.
-    channels?: ChannelDecl[]
-    subs?: ChannelSubscription[]
-    chError?: string
-    onsubscribe?: (channel: string, pattern: string, wake: boolean) => Promise<void> | void
-    onunsubscribe?: (sub: ChannelSubscription) => Promise<void> | void
   }
   let {
-    sessionId, decls, grants, locale = '', ongrant, onrevoke, onclose, class: className,
-    channels = [], subs = [], chError = '', onsubscribe, onunsubscribe,
+    sessionId, decls, grants, locale = '', ongrant, onrevoke, class: className,
   }: Props = $props()
 
-  // Two tabs rather than two panels: permissions and channels answer the same question
-  // ("what may this session do, and what does it hear"), so side by side would just hide one
-  // behind the other.
-  type Tab = 'permissions' | 'channels'
-  let tab = $state<Tab>('permissions')
+  // NO TABS AND NO HEADER ANY MORE.
+  //
+  // Both used to live here, because this was a narrow panel pinned to the conversation where a
+  // scroller had to share a column with a tab strip and a close button. As a PAGE it has a PageHeader
+  // above it that says which page you are on and offers the back button — and keeping this file's own
+  // header drew the same title twice.
+  //
+  // The tabs became PAGES. "What may this session do" and "what does it hear" are different questions
+  // with different answers, and hiding one behind the other is a worse trade than a menu entry.
 
   /** Grants grouped by extension, then by capability, so the list mirrors how a user
    *  thinks ("what may this session do to gitea"). */
@@ -133,61 +125,14 @@
   )
 </script>
 
-<aside
-  class={cn(
-    'flex h-full w-[340px] shrink-0 flex-col border-l border-border bg-background',
-    className,
-  )}
->
-  <header class="flex h-12 shrink-0 items-center justify-between border-b border-border px-3">
-    <span class="text-sm font-semibold">{t('permissionsTitle')}</span>
-    <button
-      class="rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
-      aria-label={t('close')}
-      onclick={onclose}
-    >
-      <AppIcons.x class="size-4" />
-    </button>
-  </header>
-
-  <!-- Tabs, not two panels: "what may this session do" and "what does it hear" are the same
-       question asked twice. -->
-  <div class="flex shrink-0 border-b border-border">
-    <button
-      class={cn(
-        'flex-1 py-1.5 text-micro',
-        tab === 'permissions'
-          ? 'border-b-2 border-primary font-semibold text-foreground'
-          : 'text-muted-foreground hover:text-foreground',
-      )}
-      onclick={() => (tab = 'permissions')}
-    >
-      {t('permissionsTab')}
-    </button>
-    <button
-      class={cn(
-        'flex-1 py-1.5 text-micro',
-        tab === 'channels'
-          ? 'border-b-2 border-primary font-semibold text-foreground'
-          : 'text-muted-foreground hover:text-foreground',
-      )}
-      onclick={() => (tab = 'channels')}
-    >
-      {t('channelsTab')}
-    </button>
-  </div>
-
+<!--
+  A PAGE BODY, NOT A PANEL: full width, no fixed size, no border to separate it from anything — the
+  page it lives on is already the whole pane. It used to be `w-[340px] shrink-0 border-l` because it
+  was pinned beside the conversation; as a page that width fought the page's own `w-full`, and which
+  one won depended on stylesheet order.
+-->
+<div class={cn('flex min-h-0 flex-1 flex-col', className)}>
   <div class="min-h-0 flex-1 overflow-y-auto p-3">
-    {#if tab === 'channels'}
-      <ChannelsTab
-        decls={channels}
-        subs={subs}
-        {locale}
-        error={chError}
-        onsubscribe={onsubscribe ?? (() => {})}
-        onunsubscribe={onunsubscribe ?? (() => {})}
-      />
-    {:else}
     {#if grouped.length === 0 && decls.length === 0}
       <p class="text-micro text-muted-foreground italic">{t('permissionsNoneAvailable')}</p>
     {:else}
@@ -290,6 +235,5 @@
         <p class="mt-2 text-micro text-muted-foreground italic">{t('permissionsNoneHeld')}</p>
       {/if}
     {/if}
-    {/if}
   </div>
-</aside>
+</div>

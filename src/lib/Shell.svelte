@@ -14,6 +14,7 @@
   import Chat from './pages/Chat.svelte'
   import Mailbox from './pages/Mailbox.svelte'
   import Permissions from './pages/Permissions.svelte'
+  import Channels from './pages/Channels.svelte'
   import Jobs from './pages/Jobs.svelte'
   import ExtPanel from './components/ExtPanel.svelte'
   import ExtensionsList from './pages/ExtensionsList.svelte'
@@ -59,6 +60,7 @@
   const overlays: Record<SessionOverlay, Component<PageProps>> = {
     mailbox: Mailbox as Component<PageProps>,
     permissions: Permissions as Component<PageProps>,
+    channels: Channels as Component<PageProps>,
     jobs: Jobs as Component<PageProps>,
   }
 

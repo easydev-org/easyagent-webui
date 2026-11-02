@@ -11,7 +11,10 @@ export type SiderTab = 'chat' | 'extensions' | 'config'
 // `jobs` sits beside `permissions` because it answers the same kind of question: what is going on in
 // this conversation that is not in the transcript. A job outlives the call that started it, so the
 // conversation is the only place it belongs to — and the only place a reader thinks to look.
-export type SessionOverlay = 'mailbox' | 'permissions' | 'jobs'
+// `channels` IS NOT A TAB OF `permissions`. They sat behind one tab strip and the second was
+// undiscoverable: "what may this session do" and "what does it hear" are different questions, so
+// each gets its own entry rather than one hiding the other.
+export type SessionOverlay = 'mailbox' | 'permissions' | 'channels' | 'jobs'
 
 export type AppPage =
   | { kind: 'chat_list'; key: 'chat_list' }
