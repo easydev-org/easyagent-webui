@@ -11,6 +11,7 @@
   import { AppIcons } from '$lib/icons'
   import CapabilityIcon from './CapabilityIcon.svelte'
   import PageHeader from '$lib/components/layout/PageHeader.svelte'
+  import ModelTestPanel from './ModelTestPanel.svelte'
 
   let {
     store,
@@ -28,9 +29,6 @@
   // The model's modality IS the draft provider's (semantic grouping): it is
   // read-only here.
   const capability = $derived(store.providerDraft?.capability ?? 'text')
-  let testing = $state(false)
-  let testOk = $state<boolean | null>(null)
-  let testMsg = $state('')
 
   $effect(() => {
     mid = existing?.id ?? ''
@@ -58,32 +56,6 @@
       { id, name: name.trim() || id, contextLimit: c, modelType: capability },
     ]
     store.popPage()
-  }
-
-  async function test() {
-    const d = store.providerDraft
-    if (!d || !mid.trim()) return
-    testing = true
-    testOk = null
-    testMsg = ''
-    try {
-      const r = await store.api.testProvider({
-        apiType: d.apiType,
-        baseUrl: d.baseUrl,
-        apiKey: d.apiKey,
-        providerId: d.id,
-        model: `${d.id}/${mid.trim()}`,
-        capability,
-      })
-      testOk = r.ok
-      testMsg = r.ok
-        ? t('testModelOk', { r: String(r.result ?? '') })
-        : String(r.result ?? t('testFailed'))
-    } catch (e) {
-      testOk = false
-      testMsg = String(e)
-    }
-    testing = false
   }
 
   async function autofill() {
@@ -158,23 +130,19 @@
       {/if}
 
       <div class="pt-2">
-        <button
-          type="button"
-          class="rounded-md border border-border px-3 py-1.5 text-meta hover:bg-muted disabled:opacity-40"
-          disabled={testing || !mid.trim()}
-          onclick={() => void test()}
-          ><AppIcons.flask class="mr-1 inline size-3.5" />{testing
-            ? t('connecting')
-            : t('test')}</button
-        >
-        {#if testOk !== null}
-          <div
-            class="mt-2 rounded-md border {testOk
-              ? 'border-success/40 bg-success/10 text-success'
-              : 'border-destructive/40 bg-destructive/10 text-destructive'} px-3 py-2 text-micro"
-          >
-            {testMsg}
-          </div>
+        {#if draft}
+          <!-- THE TEST PANEL IS PER MODALITY. A text model is asked a question, an image model is
+               given something to draw, a speech model words to say, a transcription model audio to
+               hear. One button for all four could only confirm the provider row parsed. -->
+          <ModelTestPanel
+            {store}
+            {capability}
+            providerId={draft.id}
+            modelId={mid.trim()}
+            apiType={draft.apiType}
+            baseUrl={draft.baseUrl}
+            apiKey={draft.apiKey}
+          />
         {/if}
       </div>
     </div>

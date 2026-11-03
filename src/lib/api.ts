@@ -668,6 +668,13 @@ export class AgentApi {
     await this._c.deleteProvider({ providerId: pid })
   }
 
+  /**
+   * Exercise one model of one modality.
+   *
+   * THE PROMPT IS PART OF THE REQUEST because the modalities are not interchangeable: an image model
+   * needs something to draw, a speech model needs words to say, a transcription model needs recorded
+   * audio. A single "test" button that sent nothing could only tell you the provider row parsed.
+   */
   async testProvider(opts: {
     apiType: string
     baseUrl: string
@@ -675,7 +682,15 @@ export class AgentApi {
     providerId?: string
     model?: string | null
     capability?: string
-  }): Promise<{ ok: boolean; result: unknown }> {
+    prompt?: string
+    voice?: string
+    audio?: Uint8Array
+    audioMediaType?: string
+  }): Promise<{
+    ok: boolean
+    result: string
+    files: { mediaType: string; data: Uint8Array }[]
+  }> {
     const r = await this._c.testProvider({
       apiType: opts.apiType,
       baseUrl: opts.baseUrl,
@@ -683,8 +698,21 @@ export class AgentApi {
       providerId: opts.providerId ?? '',
       model: opts.model ?? '',
       capability: opts.capability ?? 'text',
+      prompt: opts.prompt ?? '',
+      voice: opts.voice ?? '',
+      // BASE64 ON THE WIRE, because the proto field is a string: Connect carries bytes fine, but a
+      // five-second clip as a message field is simpler to log and to replay than a binary frame.
+      audio: opts.audio ? bytesToBase64(opts.audio) : '',
+      audioMediaType: opts.audioMediaType ?? '',
     })
-    return { ok: r.ok, result: r.result }
+    return {
+      ok: r.ok,
+      result: r.result,
+      files: (r.files ?? []).map(f => ({
+        mediaType: f.mediaType,
+        data: f.data,
+      })),
+    }
   }
 
   async models(providerId: string): Promise<ModelInfo[]> {
@@ -880,3 +908,19 @@ export function emptySession(id: string): Session {
 
 export type { ToolState }
 export { modelRefOf }
+
+/**
+ * Base64 for the transcription test's audio.
+ *
+ * `btoa` TAKES A BINARY STRING, so the bytes are built in 8 KiB chunks: `String.fromCharCode(...bytes)`
+ * on a five-second recording overflows the argument limit and throws, which reads as "the microphone
+ * failed" rather than "this function was written for short input".
+ */
+function bytesToBase64(bytes: Uint8Array): string {
+  let binary = ''
+  const chunk = 8192
+  for (let i = 0; i < bytes.length; i += chunk) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + chunk))
+  }
+  return btoa(binary)
+}
