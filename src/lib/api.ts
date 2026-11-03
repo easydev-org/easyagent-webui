@@ -875,6 +875,10 @@ export class AgentApi {
       tenant: r.tenant,
       tenantName: r.tenantName,
       role: r.role === 'admin' ? 'admin' : 'tenant',
+      // MAPPED, not dropped. The server has sent this field all along; an identity without it forces
+      // every caller that needs the scope to re-derive it, and the first one to try (App.svelte, for
+      // the admin console) got a type error instead of a value.
+      scope: r.scope,
     }
   }
 }

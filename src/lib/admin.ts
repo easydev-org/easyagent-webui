@@ -35,8 +35,15 @@ export interface AdminToken {
   revoked: boolean
 }
 
-/** The caller's identity (agent.v1.GetIdentityResponse): role + scope. */
-export interface Identity {
+/**
+ * What `login()` returns: the resolved identity PLUS the session credential.
+ *
+ * NOT THE SAME SHAPE AS `Identity` IN models.ts, and deliberately not merged with it. This one
+ * carries `sessionToken`, which exists only at the moment of a login — `GetIdentity` never returns it
+ * — and `tenantName` is optional here because an admin has none. Sharing one interface would mean
+ * every `GetIdentity` caller inherits a field the server never sends.
+ */
+export interface LoginIdentity {
   role: 'admin' | 'tenant'
   tenant: string
   /** Human-readable tenant name (empty for an admin). */
@@ -91,7 +98,7 @@ export async function login(
   baseUrl: string,
   username: string,
   token: string,
-): Promise<Identity> {
+): Promise<LoginIdentity> {
   const c = createAdminClient(baseUrl, '')
   const r = await c.login({ username, token })
   return {
@@ -100,7 +107,7 @@ export async function login(
     scope: r.scope,
     tenantName: r.tenantName,
     sessionToken: r.sessionToken,
-  } as Identity & { tenantName: string }
+  } as LoginIdentity & { tenantName: string }
 }
 
 /** Thin facade over AdminService (tenants + their tokens). */

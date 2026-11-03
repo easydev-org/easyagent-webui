@@ -389,7 +389,7 @@
             {#if expanded === 'dom:' + dom.id}<AppIcons.chevron_down
                 class="size-4 shrink-0 text-muted-foreground"
               />{:else}<AppIcons.chevron_right class="size-4 shrink-0 text-muted-foreground" />{/if}
-            <AppIcons.jobs class="size-4 shrink-0 text-primary" />
+            <AppIcons.users class="size-4 shrink-0 text-primary" />
             <span class="min-w-0 flex-1">
               <span class="block truncate text-body font-semibold">{dom.name || dom.id}</span>
               <span class="block truncate font-mono text-micro text-muted-foreground"
@@ -551,7 +551,8 @@
           <span class="mb-1 block text-meta text-muted-foreground">{t('adminTokenLabel')}</span>
           <Input bind:value={newAdminLabel} placeholder="ops" />
         </label>
-        <Button size="sm" onclick={() => void createAdmin()}>{t('adminCreateSubAdmin')}</Button>
+        <Button size="sm" onclick={() => void createAdmin(scope)}>{t('adminCreateSubAdmin')}</Button
+        >
       </div>
       <div class="px-4 text-micro text-muted-foreground">{t('adminTokenLabelHint')}</div>
       {#each adminTokens as at (at.tokenId)}
