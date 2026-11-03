@@ -32,8 +32,21 @@
        viewport). Per-app differences live in tools/web-shell/apps/<name>.json.
            python3 tools/web-shell/gen.py
            python3 tools/web-shell/gen.py --check   # drift guard */
+    /* THE PRE-BOOT BACKDROP, AND WHY IT HAS TO BE HERE AT ALL: it paints before any stylesheet has
+       loaded, so it cannot read a token. It is the ONE place a palette value is duplicated — and it
+       used to consult ONLY `prefers-color-scheme`, so a user who chose dark in the app's own settings
+       got a white flash on every load, then a dark app. The `data-theme` rules below win over the
+       media query because an explicit choice must beat the OS default.
+
+       VALUES MUST MATCH --background / --foreground in @easydev-org/ext-ui/styles/tokens.css. That is
+       the cost of an inline style; it is two colours, and the drift guard in gen.py is what keeps it
+       honest. */
     html, body { margin: 0; height: 100%; background: #ffffff; }
-    @media (prefers-color-scheme: dark) { html, body { background: #0a0a0a; } }
+    html[data-theme='light'], html[data-theme='light'] body { background: #ffffff; }
+    html[data-theme='dark'], html[data-theme='dark'] body { background: #0a0a0a; }
+    @media (prefers-color-scheme: dark) {
+      html:not([data-theme='light']), html:not([data-theme='light']) body { background: #0a0a0a; }
+    }
     body { overflow: hidden; }
 
     /* Pre-boot splash: shown until the app paints its first frame, then removed
@@ -45,7 +58,10 @@
       background: #ffffff; color: #1a1a1a;
       font-family: system-ui, -apple-system, 'Noto Sans SC', sans-serif;
     }
-    @media (prefers-color-scheme: dark) { #agent-splash { background: #0a0a0a; color: #eeeeee; } }
+    html[data-theme='dark'] #agent-splash { background: #0a0a0a; color: #eeeeee; }
+    @media (prefers-color-scheme: dark) {
+      html:not([data-theme='light']) #agent-splash { background: #0a0a0a; color: #eeeeee; }
+    }
     /* The splash mark is the SAME artwork as the app icon
        (public/icon.svg + the PNGs): an orange tile, a white bot, a blue sparkle.
        It used to be a violet square with the letters "AW", which matched
