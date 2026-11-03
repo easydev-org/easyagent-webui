@@ -128,14 +128,17 @@ describe('SessionStream resume anchor', () => {
   })
 })
 
-
 describe('SessionStream run boundary across reconnects', () => {
   it('a SAME-PAGE reconnect does NOT add a run boundary (keeps a running card)', async () => {
     const { api, push } = stubApi()
     let boundaries = 0
     const s = new SessionStream(
       api,
-      handlers({ onRunBoundary: () => { boundaries++ } }),
+      handlers({
+        onRunBoundary: () => {
+          boundaries++
+        },
+      }),
     )
     s.connect('s1')
     await flush()
@@ -152,5 +155,4 @@ describe('SessionStream run boundary across reconnects', () => {
     expect(boundaries).toBe(afterFirst)
     s.dispose()
   })
-
 })

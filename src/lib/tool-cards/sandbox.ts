@@ -14,18 +14,12 @@
 // one thing a reader most needs to check: the same text means different things in bash and PowerShell,
 // and the engine deliberately refuses to guess.
 
-import {
-  field,
-  fields,
-  n,
-  s,
-  type CardHandler,
-} from './shared'
+import { type CardHandler, field, fields, n, s } from './shared'
 
 /** The first line of the tool's text, for a header that says what happened at a glance. */
 function firstLine(text: string): string {
   const line = (text.split('\n')[0] ?? '').trim()
-  return line.length > 90 ? line.slice(0, 90) + '…' : line
+  return line.length > 90 ? `${line.slice(0, 90)}…` : line
 }
 
 const jobStart: CardHandler = ({ tool, data, input, output, error }) => {
@@ -48,7 +42,9 @@ const jobStart: CardHandler = ({ tool, data, input, output, error }) => {
       ),
       // THE PROGRAM, NUMBERED. A window's start line is 1 here because this is the whole program the
       // caller sent — there is no larger file it came from.
-      body: program ? { kind: 'code', name: '', text: program, startLine: 1 } : undefined,
+      body: program
+        ? { kind: 'code', name: '', text: program, startLine: 1 }
+        : undefined,
     },
     result: {
       fields: fields(
@@ -108,7 +104,9 @@ const jobKill: CardHandler = ({ tool, data }) => {
   if (tool !== 'sandbox-job-kill') return null
   return {
     subtitle: 'sandbox',
-    input: { fields: fields(field('check', 'tcJob', s(data, 'jobId'), { mono: true })) },
+    input: {
+      fields: fields(field('check', 'tcJob', s(data, 'jobId'), { mono: true })),
+    },
     result: { fields: fields(field('info', 'tcState', s(data, 'state'))) },
   }
 }
@@ -142,7 +140,9 @@ const filePatch: CardHandler = ({ tool, input, output, error }) => {
       fields: [],
       // A PATCH IS CODE, and its shape IS its meaning: the `+`/`-` prefixes and the `***` markers are
       // what a reader checks. Numbers let a "hunk 2 failed" message be found.
-      body: patch ? { kind: 'code', name: '', text: patch, startLine: 1 } : undefined,
+      body: patch
+        ? { kind: 'code', name: '', text: patch, startLine: 1 }
+        : undefined,
     },
     result: {
       fields: [],
@@ -155,4 +155,11 @@ const filePatch: CardHandler = ({ tool, input, output, error }) => {
   }
 }
 
-export const sandboxHandlers = [info, jobStart, jobOutput, jobWait, jobKill, filePatch]
+export const sandboxHandlers = [
+  info,
+  jobStart,
+  jobOutput,
+  jobWait,
+  jobKill,
+  filePatch,
+]

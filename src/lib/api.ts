@@ -6,8 +6,8 @@
 import type { AgentClient } from './agent'
 import { createAgentClient } from './agent'
 import {
-  encodeIngestRequest,
   emptyGrant,
+  encodeIngestRequest,
   grantFromPb,
   messageFromPb,
   n,
@@ -22,6 +22,8 @@ import {
   type StreamEvent,
 } from './events'
 import type {
+  ChannelDecl,
+  ChannelSubscription,
   Denial,
   ExtensionInfo,
   Identity,
@@ -29,10 +31,8 @@ import type {
   MailboxEntry,
   Message,
   ModelInfo,
-  Preset,
   PermissionDecl,
-  ChannelSubscription,
-  ChannelDecl,
+  Preset,
   ProviderInfo,
   Session,
   SessionGrant,
@@ -43,7 +43,7 @@ import type {
   UploadedFile,
   UploadedFileSource,
 } from './models'
-import { modelRefOf, type ConfigFieldSchema } from './models'
+import { type ConfigFieldSchema, modelRefOf } from './models'
 
 /**
  * mapConfigFields converts a structured knob's wire shape into the local type.
@@ -73,7 +73,8 @@ function mapConfigFields(
     kind: f.kind || 'value',
     format: f.format,
     enumValues: [...f.enumValues],
-    defaultValue: f.default == null ? null : String(valueToJson(f.default) ?? ''),
+    defaultValue:
+      f.default == null ? null : String(valueToJson(f.default) ?? ''),
     required: f.required,
     description: f.description,
     fields: mapConfigFields(f.fields as Parameters<typeof mapConfigFields>[0]),
@@ -854,7 +855,8 @@ export class AgentApi {
   }> {
     const r = await this._c.getExtensionConfig({ extId })
     const values: Record<string, unknown> = {}
-    for (const [k, v] of Object.entries(r.values ?? {})) values[k] = valueToJson(v)
+    for (const [k, v] of Object.entries(r.values ?? {}))
+      values[k] = valueToJson(v)
     // A secret knob's value is NEVER returned by the server; `secretSet` names
     // the ones that are set (the UI renders "set / not set" + a write-only
     // field, never the credential).

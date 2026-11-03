@@ -145,11 +145,16 @@ export function applyStreamEvent(
       // result permanently the first time one went missing.
       const tcId = (params['toolCallId'] ?? params['id']) as string | undefined
       if (tcId == null) break
-      const mid = typeof params['message_id'] === 'string' ? (params['message_id'] as string) : undefined
-      const out = (params['output'] as Record<string, unknown> | undefined) ?? {}
+      const mid =
+        typeof params['message_id'] === 'string'
+          ? (params['message_id'] as string)
+          : undefined
+      const out =
+        (params['output'] as Record<string, unknown> | undefined) ?? {}
       // `content` (terminal, authoritative) or `delta` (live, appended). Exactly one is
       // present per frame; the store merges accordingly.
-      const content = typeof out['content'] === 'string' ? out['content'] : undefined
+      const content =
+        typeof out['content'] === 'string' ? out['content'] : undefined
       const delta = typeof out['delta'] === 'string' ? out['delta'] : undefined
       // `state` distinguishes a clean finish from a tool that stopped early with
       // real output in hand — the difference between "done" and "stopped after N
@@ -160,10 +165,13 @@ export function applyStreamEvent(
         content,
         delta,
         state,
-        changeId: typeof out['change_id'] === 'string' ? out['change_id'] : undefined,
+        changeId:
+          typeof out['change_id'] === 'string' ? out['change_id'] : undefined,
         diff: typeof out['diff'] === 'string' ? out['diff'] : undefined,
-        additions: typeof out['additions'] === 'number' ? out['additions'] : undefined,
-        deletions: typeof out['deletions'] === 'number' ? out['deletions'] : undefined,
+        additions:
+          typeof out['additions'] === 'number' ? out['additions'] : undefined,
+        deletions:
+          typeof out['deletions'] === 'number' ? out['deletions'] : undefined,
         data: out,
         preliminary,
       })
@@ -174,7 +182,10 @@ export function applyStreamEvent(
       // timeout (ran, produced output, stopped early).
       const tcId = (params['toolCallId'] ?? params['id']) as string | undefined
       if (tcId == null) break
-      const mid = typeof params['message_id'] === 'string' ? (params['message_id'] as string) : undefined
+      const mid =
+        typeof params['message_id'] === 'string'
+          ? (params['message_id'] as string)
+          : undefined
       const text = params['errorText'] ?? params['error'] ?? 'tool error'
       store.applyToolOutput(mid, tcId, {
         // No `content`/`delta`: an error frame carries no output of its own, and

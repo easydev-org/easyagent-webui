@@ -36,15 +36,24 @@ describe('applyToolOutput', () => {
     const s = freshStore()
     s.messages = [persistedMsg('msg-1', 'call-1')]
 
-    s.applyToolOutput('msg-1', 'call-1', { content: 'line1', preliminary: true })
+    s.applyToolOutput('msg-1', 'call-1', {
+      content: 'line1',
+      preliminary: true,
+    })
     expect(s.messages[0]!.parts[0]!.state?.output).toBe('line1')
     // Provisional frames leave the card running.
     expect(s.messages[0]!.parts[0]!.state?.status).toBe('running')
 
-    s.applyToolOutput('msg-1', 'call-1', { content: 'line1\nline2', preliminary: true })
+    s.applyToolOutput('msg-1', 'call-1', {
+      content: 'line1\nline2',
+      preliminary: true,
+    })
     expect(s.messages[0]!.parts[0]!.state?.output).toBe('line1\nline2')
 
-    s.applyToolOutput('msg-1', 'call-1', { content: 'line1\nline2', state: 'ok' })
+    s.applyToolOutput('msg-1', 'call-1', {
+      content: 'line1\nline2',
+      state: 'ok',
+    })
     expect(s.messages[0]!.parts[0]!.state?.status).toBe('complete')
   })
 
@@ -76,8 +85,14 @@ describe('applyToolOutput', () => {
   it('terminal content replaces accumulated deltas', () => {
     const s = freshStore()
     s.messages = [persistedMsg('msg-1', 'call-1')]
-    s.applyToolOutput('msg-1', 'call-1', { delta: 'partial', preliminary: true })
-    s.applyToolOutput('msg-1', 'call-1', { content: 'the whole truth', state: 'ok' })
+    s.applyToolOutput('msg-1', 'call-1', {
+      delta: 'partial',
+      preliminary: true,
+    })
+    s.applyToolOutput('msg-1', 'call-1', {
+      content: 'the whole truth',
+      state: 'ok',
+    })
     expect(s.messages[0]!.parts[0]!.state?.output).toBe('the whole truth')
     expect(s.messages[0]!.parts[0]!.state?.status).toBe('complete')
   })
@@ -86,7 +101,10 @@ describe('applyToolOutput', () => {
   it('error frame keeps earlier output', () => {
     const s = freshStore()
     s.messages = [persistedMsg('msg-1', 'call-1')]
-    s.applyToolOutput('msg-1', 'call-1', { delta: 'printed before failing', preliminary: true })
+    s.applyToolOutput('msg-1', 'call-1', {
+      delta: 'printed before failing',
+      preliminary: true,
+    })
     s.applyToolOutput('msg-1', 'call-1', { state: 'error', error: 'boom' })
     const st = s.messages[0]!.parts[0]!.state!
     expect(st.output).toBe('printed before failing')
@@ -101,7 +119,10 @@ describe('applyToolOutput', () => {
     s.messages = [persistedMsg('msg-1', 'call-1')]
     s.applyToolOutput('msg-1', 'call-1', { delta: 'tick1', preliminary: true })
     s.applyToolOutput('msg-1', 'call-1', { delta: 'tick2', preliminary: true })
-    s.applyToolOutput('msg-1', 'call-1', { content: 'tick1\ntick2', state: 'timeout' })
+    s.applyToolOutput('msg-1', 'call-1', {
+      content: 'tick1\ntick2',
+      state: 'timeout',
+    })
 
     const st = s.messages[0]!.parts[0]!.state!
     expect(st.output).toBe('tick1\ntick2')
@@ -121,7 +142,10 @@ describe('applyToolOutput', () => {
 
   it('creates the bubble when output beats the step', () => {
     const s = freshStore()
-    s.applyToolOutput('msg-new', 'call-9', { delta: 'early', preliminary: true })
+    s.applyToolOutput('msg-new', 'call-9', {
+      delta: 'early',
+      preliminary: true,
+    })
     const msg = s.messages.find(m => m.id === 'msg-new')
     expect(msg).toBeTruthy()
     expect(msg?.parts.find(p => p.id === 'call-9')?.state?.output).toBe('early')

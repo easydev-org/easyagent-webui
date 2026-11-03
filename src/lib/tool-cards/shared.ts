@@ -27,9 +27,18 @@ export type CardBody =
   | { kind: 'diff'; diff: string }
   | { kind: 'kv'; rows: Array<{ k: string; v: string; mono?: boolean }> }
   | { kind: 'markdown'; text: string }
-  | { kind: 'media'; code: string; mime?: string; name?: string; caption?: string }
+  | {
+      kind: 'media'
+      code: string
+      mime?: string
+      name?: string
+      caption?: string
+    }
   | { kind: 'audio'; code: string; caption?: string }
-  | { kind: 'files'; files: Array<{ code: string; mime?: string; name?: string }> }
+  | {
+      kind: 'files'
+      files: Array<{ code: string; mime?: string; name?: string }>
+    }
   | {
       kind: 'messages'
       entries: Array<{
@@ -83,14 +92,20 @@ export function bareToolName(tool: string): string {
 // ---- readers ----
 
 /** A string field, or '' when absent or of another type. */
-export function s(o: Record<string, unknown> | null | undefined, k: string): string {
+export function s(
+  o: Record<string, unknown> | null | undefined,
+  k: string,
+): string {
   if (!o) return ''
   const v = o[k]
   return typeof v === 'string' ? v : ''
 }
 
 /** A number field, or 0. Accepts a numeric string, which is how JSON sub-objects often arrive. */
-export function n(o: Record<string, unknown> | null | undefined, k: string): number {
+export function n(
+  o: Record<string, unknown> | null | undefined,
+  k: string,
+): number {
   if (!o) return 0
   const v = o[k]
   if (typeof v === 'number') return Number.isFinite(v) ? v : 0
@@ -144,7 +159,7 @@ export function humanBytes(v: number): string {
 /** First line of a multi-line string, truncated — for a subtitle. */
 export function firstLine(text: string, max = 80): string {
   const line = (text.split('\n')[0] ?? '').trim()
-  return line.length > max ? line.slice(0, max) + '…' : line
+  return line.length > max ? `${line.slice(0, max)}…` : line
 }
 
 /**
@@ -155,13 +170,15 @@ export function firstLine(text: string, max = 80): string {
  * indentation, which silently re-indents the code being read.
  */
 export function stripLineNumbers(text: string): string {
-  return text
-    .split('\n')
-    .map(l => l.replace(/^ *\d+ {2}/, '').replace(/^ *\d+\t/, ''))
-    .join('\n')
-    // The producer ends every line with a newline, so the split yields a trailing empty element.
-    // Keeping it adds a blank line to the bottom of every code block.
-    .replace(/\n$/, '')
+  return (
+    text
+      .split('\n')
+      .map(l => l.replace(/^ *\d+ {2}/, '').replace(/^ *\d+\t/, ''))
+      .join('\n')
+      // The producer ends every line with a newline, so the split yields a trailing empty element.
+      // Keeping it adds a blank line to the bottom of every code block.
+      .replace(/\n$/, '')
+  )
 }
 
 /**
