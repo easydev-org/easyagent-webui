@@ -1,5 +1,3 @@
-# syntax=docker/dockerfile:1
-
 # Static host + same-origin API aggregator for the webui.
 #
 # Stage 1 builds the Svelte SPA from source (no committed dist). Stage 2 serves it
@@ -17,12 +15,13 @@ COPY package-lock.json ./
 # lock does not already pin, so the image is reproducible and the build fails
 # loudly when package.json and the lock have drifted.
 #
-# THE TOKEN IS A BUILD SECRET, NOT AN ARG. `@easydev-org/ext-ui` is private on
-# npm.pkg.github.com, so the install needs a read token. Passing it as a build ARG
-# would bake it into the image's history — readable by anyone who can pull — which
-# is why it goes in as a secret mount and never becomes a layer.
-RUN --mount=type=secret,id=node_auth_token \
-    NODE_AUTH_TOKEN="$(cat /run/secrets/node_auth_token)" npm ci --no-audit --no-fund
+# NODE_AUTH_TOKEN IS AN ARG, and the reason it is acceptable here is that the token a CI build passes
+# is GITHUB_TOKEN, which expires with the job: an ARG is recorded in the image history, so a
+# long-lived credential must never be passed this way. A `--mount=type=secret` would hide it, but it
+# also makes the Dockerfile depend on BuildKit-only syntax to protect a credential that is already
+# dead by the time the image is pulled.
+ARG NODE_AUTH_TOKEN
+RUN NODE_AUTH_TOKEN="$NODE_AUTH_TOKEN" npm ci --no-audit --no-fund
 COPY . ./
 RUN npm run build
 

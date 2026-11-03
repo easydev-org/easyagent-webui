@@ -55,10 +55,11 @@ jobs:
           push: false
           load: true
           tags: webui:ci
-          # Same reason as the release workflow: the private package needs a token, and it goes in
-          # as a build secret so it never becomes part of a layer.
-          secrets: |
-            node_auth_token=${{ secrets.GITHUB_TOKEN }}
+          # Same reason as the release workflow: the private package needs a token at install time.
+          # GITHUB_TOKEN expires with the job, which is what makes an ARG acceptable here — see the
+          # comment in the Dockerfile.
+          build-args: |
+            NODE_AUTH_TOKEN=${{ secrets.GITHUB_TOKEN }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
       - name: it must serve the SPA
