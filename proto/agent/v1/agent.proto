@@ -422,6 +422,30 @@ message Grant {
 message ListGrantsRequest { string id = 1; }
 message ListGrantsResponse { repeated Grant grants = 1; }
 
+/**
+ * PermissionState is one capability's whole story for a session: what is held, and what was refused.
+ *
+ * THE TWO HALVES LIVE IN DIFFERENT STORES AND THAT IS CORRECT — a grant is permanent and belongs in the
+ * relational store, a refusal is a 24-hour reminder and belongs in a TTL bucket. What was wrong was
+ * making every client join them: the panel called two RPCs and matched rows by hand, and any future
+ * client would have to rediscover that `granted` and `refused` are the same question asked twice.
+ *
+ * ONE ROW PER (extension, capability). `refused` is nil when the session holds the grant, because a
+ * refusal that has been granted is cleared — a row that kept both would be describing a problem the
+ * reader already fixed.
+ */
+message PermissionState {
+  string ext_id = 1;
+  string capability = 2;
+  // What the session holds. Absent when the capability was only ever refused.
+  Grant granted = 3;
+  // What was refused in the last day, when nothing is held. Absent otherwise.
+  Denial refused = 4;
+}
+
+message ListPermissionStatesRequest { string id = 1; }
+message ListPermissionStatesResponse { repeated PermissionState states = 1; }
+
 message ListDenialsRequest { string id = 1; }
 message ListDenialsResponse { repeated Denial denials = 1; }
 
@@ -444,41 +468,6 @@ message Denial {
   int32 count = 6;
 }
 
-message ListJobsRequest {
-  // The conversation whose jobs to report. A job belongs to the session that started it — the
-  // worker address lives in the extension, but the QUESTION "what did I start" belongs here.
-  string id = 1;
-}
-message ListJobsResponse { repeated Job jobs = 1; }
-
-/**
- * Job is one background job, as the shared list reports it.
- *
- * NO OUTPUT FIELD. A job's output lives where the work ran, and reading it is that extension's own
- * tool — `sandbox-job-output`, `gh-run-log`. Carrying bytes here would duplicate the tool-output
- * stream and would need a truncation policy beside the one the agent already applies.
- */
-message Job {
-  string id = 1;
-  // The extension's word for the kind of work: "sandbox-job", "ci-run".
-  string kind = 2;
-  string title = 3;
-  // running | done | cancelled | lost
-  //
-  // NO "failed": a job that exited 1 is `done` with exit_code 1. The state says why it stopped; the
-  // code says what the ending was worth, and only the caller knows what it wanted.
-  string state = 4;
-  // Absent while running, and absent for a cancelled or lost job — neither produced one.
-  optional int32 exit_code = 5;
-  // Unix milliseconds.
-  int64 started_at = 6;
-  int64 finished_at = 7;
-  // "kill" ends a process this extension owns; "request" only asks a remote system, which may finish
-  // its current step first; empty means there is nothing to cancel.
-  string cancel_mode = 8;
-  // Explains a terminal state that needs one — why it was lost, or what the ending was.
-  string reason = 9;
-}
 
 message CreateGrantRequest {
   string id = 1;           // session name
@@ -631,16 +620,45 @@ message TestProviderRequest {
   string api_type = 2;
   string base_url = 3;
   string api_key = 4;
+  // The model to exercise: a bare id or a `provider_id/model_id` reference. The server strips the
+  // prefix, because the gateway only knows the bare id.
   string model = 5;
   // Optional reasoning variant id to exercise in the test generation.
   string variant = 6;
-  // What the model under test generates: "text" (default). Only text models
-  // are testable today; image/video/speech are rejected with a clear message.
+  /**
+   * The modality to exercise: text | image | video | speech | transcription.
+   *
+   * EACH ONE HAS ITS OWN CALL, because a chat completion cannot test a TTS model. The server routes
+   * on this value; empty means text.
+   */
   string capability = 7;
+  // The prompt: a question for text, the prompt for image/video, the words for speech.
+  string prompt = 8;
+  // Recorded audio for transcription, base64. Ignored by the other modalities.
+  string audio = 9;
+  // The recording's media type, e.g. "audio/webm". Transcription only.
+  string audio_media_type = 10;
+  // Voice for speech synthesis: empty for a preset-voice model, or a `data:` URL for cloning.
+  string voice = 11;
 }
 message TestProviderResponse {
   bool ok = 1;
+  // Text the caller should show as-is: the reply, the transcript, or the error.
   string result = 2;
+  /**
+   * Produced media, for the modalities that generate a file rather than text.
+   *
+   * ONE LIST RATHER THAN ONE FIELD PER MODALITY: the caller renders whatever comes back by its
+   * `media_type`, which is also what makes an image-EDIT that returns several images work without a
+   * second shape.
+   */
+  repeated GeneratedFile files = 3;
+}
+
+// GeneratedFile is one produced artifact: an image, a clip, a spoken line.
+message GeneratedFile {
+  string media_type = 1;
+  bytes data = 2;
 }
 
 // ListModels returns the models of ONE provider. provider_id is required: the
@@ -854,6 +872,16 @@ service AgentService {
   rpc ListGrants(ListGrantsRequest) returns (ListGrantsResponse);
 
   /**
+   * ListPermissionStates returns what a session holds AND what it was refused, already joined.
+   *
+   * THE JOIN BELONGS HERE, NOT IN EVERY CLIENT. A grant is permanent and lives in the relational store;
+   * a refusal is a 24-hour reminder and lives in a TTL bucket. That split is right. What was wrong was
+   * that the panel called two RPCs and matched rows by (extension, capability) itself — and any second
+   * client would have to rediscover that the two are one question asked twice.
+   */
+  rpc ListPermissionStates(ListPermissionStatesRequest) returns (ListPermissionStatesResponse);
+
+  /**
    * ListDenials reports the capabilities this session was REFUSED in the last day.
    *
    * A REFUSAL IS CORRECT AND INVISIBLE TO THE PERSON WHO COULD FIX IT. The model reads the error at
@@ -865,19 +893,6 @@ service AgentService {
    */
   rpc ListDenials(ListDenialsRequest) returns (ListDenialsResponse);
 
-  /**
-   * ListJobs reports the background jobs a conversation started.
-   *
-   * A JOB OUTLIVES THE CALL THAT STARTED IT, so there is no moment at which the caller can read the
-   * answer from a tool result. This is how a page shows what is still running — and how a reader sees
-   * what finished while they were looking elsewhere.
-   *
-   * THE LIST IS NOT THE TRUTH ABOUT THE WORK: it is a cache every extension writes to, and a job
-   * whose owner stopped renewing is recorded as `lost` by a sweeper rather than reported as running
-   * forever. `cancel_mode` says whether the action is worth offering at all — `kill` ends a process,
-   * `request` only asks a remote system, and empty means there is nothing to stop.
-   */
-  rpc ListJobs(ListJobsRequest) returns (ListJobsResponse);
   rpc CreateGrant(CreateGrantRequest) returns (CreateGrantResponse);
   rpc RevokeGrant(RevokeGrantRequest) returns (RevokeGrantResponse);
   // ListPermissionDecls publishes what the discovered extensions can require.
