@@ -43,8 +43,8 @@
       <div class="mt-1 flex justify-end gap-2">
         <AlertDialogPrimitive.Cancel
           class="rounded-md px-3 py-1.5 text-sm hover:bg-muted"
-          onclick={() => onCancel?.()}
-        >{cancelLabel}</AlertDialogPrimitive.Cancel>
+          onclick={() => onCancel?.()}>{cancelLabel}</AlertDialogPrimitive.Cancel
+        >
         <AlertDialogPrimitive.Action
           class={cn(
             'rounded-md px-3 py-1.5 text-sm',
@@ -52,8 +52,8 @@
               ? 'bg-destructive text-white hover:bg-destructive/80'
               : 'bg-primary text-primary-foreground hover:bg-primary/80',
           )}
-          onclick={() => onConfirm?.()}
-        >{confirmLabel}</AlertDialogPrimitive.Action>
+          onclick={() => onConfirm?.()}>{confirmLabel}</AlertDialogPrimitive.Action
+        >
       </div>
     </AlertDialogPrimitive.Content>
   </AlertDialogPrimitive.Portal>

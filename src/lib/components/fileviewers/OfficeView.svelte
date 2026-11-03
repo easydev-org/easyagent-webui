@@ -6,11 +6,7 @@
   import { AppIcons } from '$lib/icons'
   import type { PreviewKind } from '$lib/media'
 
-  let {
-    src,
-    kind,
-    name,
-  }: { src: string; kind: PreviewKind; name: string } = $props()
+  let { src, kind, name }: { src: string; kind: PreviewKind; name: string } = $props()
 
   let host: HTMLDivElement | null = $state(null)
   let loading = $state(true)
@@ -73,13 +69,15 @@
 <div class="max-h-[82vh] w-[min(94vw,1000px)] overflow-auto rounded-md bg-white p-3 text-black">
   {#if loading}
     <div class="flex flex-col items-center gap-2 p-6 text-meta text-muted-foreground">
-      <span class="size-7 animate-spin rounded-full border-2 border-black/10 border-t-black/50"></span>
+      <span class="size-7 animate-spin rounded-full border-2 border-black/10 border-t-black/50"
+      ></span>
       <span>{t('loading')}</span>
     </div>
   {/if}
   {#if error}
     <div class="flex items-center justify-center gap-2 p-6 text-meta text-muted-foreground">
-      <AppIcons.error class="size-4" /> {t('fileUnsupported')} — {name}
+      <AppIcons.error class="size-4" />
+      {t('fileUnsupported')} — {name}
     </div>
   {/if}
   <div bind:this={host} class="office-host"></div>

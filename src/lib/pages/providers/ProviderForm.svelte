@@ -136,7 +136,9 @@
 
 {#if !draft}
   <div class="flex h-full items-center justify-center">
-    <span class="size-6 animate-spin rounded-full border-2 border-muted-foreground/30 border-t-muted-foreground"></span>
+    <span
+      class="size-6 animate-spin rounded-full border-2 border-muted-foreground/30 border-t-muted-foreground"
+    ></span>
   </div>
 {:else}
   <div class="flex h-full w-full flex-col">
@@ -167,7 +169,10 @@
 
       <label class="block">
         <span class="mb-1 block text-meta text-muted-foreground">{t('apiType')}</span>
-        <Select bind:value={apiType} items={availableApiTypes.map(ty => ({ value: ty, label: t(apiTypeLabelKey(ty)) }))} />
+        <Select
+          bind:value={apiType}
+          items={availableApiTypes.map(ty => ({ value: ty, label: t(apiTypeLabelKey(ty)) }))}
+        />
       </label>
 
       <label class="block">
@@ -186,8 +191,10 @@
           type="button"
           class="rounded p-1.5 text-primary hover:bg-muted"
           title={t('addModel')}
-          onclick={() => store.pushPage({ kind: 'provider_models', key: 'provider_model_new', modelId: null })}
-        ><AppIcons.add class="size-4" /></button>
+          onclick={() =>
+            store.pushPage({ kind: 'provider_models', key: 'provider_model_new', modelId: null })}
+          ><AppIcons.add class="size-4" /></button
+        >
       </div>
       {#if draft.models.length === 0}
         <p class="py-1 text-micro text-muted-foreground">{t('providerTemplateHint')}</p>
@@ -195,7 +202,12 @@
       {#each draft.models as m (m.id)}
         <ModelRow
           model={m}
-          onTap={() => store.pushPage({ kind: 'provider_models', key: `provider_model_${m.id}`, modelId: m.id })}
+          onTap={() =>
+            store.pushPage({
+              kind: 'provider_models',
+              key: `provider_model_${m.id}`,
+              modelId: m.id,
+            })}
           onRemove={() => removeModel(m.id)}
         />
       {/each}
@@ -215,17 +227,31 @@
 {/if}
 
 {#if templateOpen}
-  <div class="fixed inset-0 z-[70] flex items-end justify-center bg-black/50 p-4 sm:items-center" role="presentation" onclick={() => (templateOpen = false)}>
-    <div class="flex h-[70vh] w-[min(92vw,520px)] flex-col rounded-lg border border-border bg-card shadow-xl" onclick={e => e.stopPropagation()} role="presentation">
+  <div
+    class="fixed inset-0 z-[70] flex items-end justify-center bg-black/50 p-4 sm:items-center"
+    role="presentation"
+    onclick={() => (templateOpen = false)}
+  >
+    <div
+      class="flex h-[70vh] w-[min(92vw,520px)] flex-col rounded-lg border border-border bg-card shadow-xl"
+      onclick={e => e.stopPropagation()}
+      role="presentation"
+    >
       <div class="border-b border-border p-3">
         <Input bind:value={templateQuery} placeholder={t('search')} />
       </div>
       <div class="min-h-0 flex-1 overflow-y-auto py-1">
         {#each filteredTemplates as p (p.npm)}
-          <button type="button" class="flex w-full items-center gap-3 px-4 py-2.5 text-left hover:bg-muted" onclick={() => pickTemplate(p)}>
+          <button
+            type="button"
+            class="flex w-full items-center gap-3 px-4 py-2.5 text-left hover:bg-muted"
+            onclick={() => pickTemplate(p)}
+          >
             <span class="min-w-0 flex-1">
               <span class="block truncate text-body">{p.name}</span>
-              <span class="block truncate text-micro text-muted-foreground">{p.npm} · {p.models.length}</span>
+              <span class="block truncate text-micro text-muted-foreground"
+                >{p.npm} · {p.models.length}</span
+              >
             </span>
           </button>
         {/each}

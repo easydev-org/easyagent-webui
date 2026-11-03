@@ -42,7 +42,9 @@
   })
 
   const isCompact = $derived(width < 640)
-  const hideBottomBar = $derived(isCompact && store.siderTab === 'chat' && store.activeSessionId != null)
+  const hideBottomBar = $derived(
+    isCompact && store.siderTab === 'chat' && store.activeSessionId != null,
+  )
 
   const tabs = [
     { id: 'chat' as const, label: 'tabChat' },
@@ -102,13 +104,11 @@
     const stack = store.currentStack
     const n = isCompact ? 1 : 2
     const start = Math.max(0, Math.min(stack.length - n, stack.length - 1))
-    return stack
-      .slice(start)
-      .map((page, i, arr) => ({
-        page,
-        isTop: i === arr.length - 1,
-        C: componentFor(page),
-      }))
+    return stack.slice(start).map((page, i, arr) => ({
+      page,
+      isTop: i === arr.length - 1,
+      C: componentFor(page),
+    }))
   })
 </script>
 
@@ -120,11 +120,17 @@
           type="button"
           class={cn(
             'flex w-16 flex-col items-center gap-1 rounded-lg py-2.5',
-            store.siderTab === tb.id ? 'bg-primary/15 text-primary' : 'text-muted-foreground hover:bg-muted',
+            store.siderTab === tb.id
+              ? 'bg-primary/15 text-primary'
+              : 'text-muted-foreground hover:bg-muted',
           )}
           onclick={() => store.switchTab(tb.id)}
         >
-          {#if tb.id === 'chat'}<AppIcons.chat class="size-[22px]" />{:else if tb.id === 'extensions'}<AppIcons.apps class="size-[22px]" />{:else}<AppIcons.settings class="size-[22px]" />{/if}
+          {#if tb.id === 'chat'}<AppIcons.chat
+              class="size-[22px]"
+            />{:else if tb.id === 'extensions'}<AppIcons.apps
+              class="size-[22px]"
+            />{:else}<AppIcons.settings class="size-[22px]" />{/if}
           <span class="text-micro">{t(tb.label)}</span>
         </button>
       {/each}
@@ -163,7 +169,11 @@
           )}
           onclick={() => store.switchTab(tb.id)}
         >
-          {#if tb.id === 'chat'}<AppIcons.chat class="size-[22px]" />{:else if tb.id === 'extensions'}<AppIcons.apps class="size-[22px]" />{:else}<AppIcons.settings class="size-[22px]" />{/if}
+          {#if tb.id === 'chat'}<AppIcons.chat
+              class="size-[22px]"
+            />{:else if tb.id === 'extensions'}<AppIcons.apps
+              class="size-[22px]"
+            />{:else}<AppIcons.settings class="size-[22px]" />{/if}
           <span class="text-micro">{t(tb.label)}</span>
         </button>
       {/each}

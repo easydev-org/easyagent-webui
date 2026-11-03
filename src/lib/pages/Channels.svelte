@@ -77,15 +77,22 @@
   page looked like. Chat avoids it by returning a single flex-col root, and so does this now.
 -->
 <div class="flex h-full min-h-0 w-full min-w-0 flex-col">
-<PageHeader title={t('channelsTitle')} onBack={() => store.popPage()} />
+  <PageHeader title={t('channelsTitle')} onBack={() => store.popPage()} />
 
-{#if !sid}
-  <p class="p-4 text-meta text-muted-foreground">{t('permissionsNoSession')}</p>
-{:else if loading && decls.length === 0 && subs.length === 0}
-  <p class="p-4 text-meta text-muted-foreground">{t('loading')}</p>
-{:else}
-  <div class="min-h-0 flex-1 overflow-y-auto p-3">
-    <ChannelsTab {decls} {subs} locale={''} {error} onsubscribe={subscribe} onunsubscribe={unsubscribe} />
-  </div>
-{/if}
+  {#if !sid}
+    <p class="p-4 text-meta text-muted-foreground">{t('permissionsNoSession')}</p>
+  {:else if loading && decls.length === 0 && subs.length === 0}
+    <p class="p-4 text-meta text-muted-foreground">{t('loading')}</p>
+  {:else}
+    <div class="min-h-0 flex-1 overflow-y-auto p-3">
+      <ChannelsTab
+        {decls}
+        {subs}
+        locale={''}
+        {error}
+        onsubscribe={subscribe}
+        onunsubscribe={unsubscribe}
+      />
+    </div>
+  {/if}
 </div>

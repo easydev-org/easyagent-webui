@@ -50,7 +50,9 @@
             label={item.label}
             class="flex w-full cursor-default items-start gap-2 rounded-sm px-2 py-1.5 text-sm break-all whitespace-normal outline-none select-none data-[highlighted]:bg-muted data-[disabled]:opacity-50"
           >
-            <AppIcons.check class="mt-0.5 size-3.5 shrink-0 opacity-0 group-data-[state=checked]:opacity-100" />
+            <AppIcons.check
+              class="mt-0.5 size-3.5 shrink-0 opacity-0 group-data-[state=checked]:opacity-100"
+            />
             <span class="min-w-0 flex-1 break-all whitespace-normal">{item.label}</span>
           </SelectPrimitive.Item>
         {/each}

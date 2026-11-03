@@ -47,7 +47,10 @@
           <span class="mb-1 block text-meta text-muted-foreground">{t('variantLabel')}</span>
           <Select
             bind:value={variant}
-            items={[{ value: '', label: t('variantNone') }, ...variants.map(v => ({ value: v.id, label: v.name || v.id }))]}
+            items={[
+              { value: '', label: t('variantNone') },
+              ...variants.map(v => ({ value: v.id, label: v.name || v.id })),
+            ]}
           />
         </label>
       {/if}
@@ -70,7 +73,15 @@
     </div>
   {/snippet}
   {#snippet footer()}
-    <button type="button" class="rounded-md px-3 py-1.5 text-sm hover:bg-muted" onclick={() => (open = false)}>{t('cancel')}</button>
-    <button type="button" class="rounded-md bg-primary px-3 py-1.5 text-sm text-primary-foreground hover:bg-primary/80" onclick={onSave}>{t('save')}</button>
+    <button
+      type="button"
+      class="rounded-md px-3 py-1.5 text-sm hover:bg-muted"
+      onclick={() => (open = false)}>{t('cancel')}</button
+    >
+    <button
+      type="button"
+      class="rounded-md bg-primary px-3 py-1.5 text-sm text-primary-foreground hover:bg-primary/80"
+      onclick={onSave}>{t('save')}</button
+    >
   {/snippet}
 </Dialog>

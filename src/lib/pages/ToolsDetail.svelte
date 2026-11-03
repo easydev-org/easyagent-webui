@@ -77,14 +77,20 @@
 <div class="h-full w-full p-4">
   {#if loading}
     <div class="flex justify-center py-8">
-      <span class="size-6 animate-spin rounded-full border-2 border-muted-foreground/30 border-t-muted-foreground"></span>
+      <span
+        class="size-6 animate-spin rounded-full border-2 border-muted-foreground/30 border-t-muted-foreground"
+      ></span>
     </div>
   {:else if tools.length === 0}
     <p class="py-2 text-center text-meta text-muted-foreground">{t('noTools')}</p>
   {:else}
     <p class="mb-2 text-micro text-muted-foreground">{t('toolsReadOnlyHint')}</p>
     {#each categories as [cat, list] (cat)}
-      <div class="mt-3 first:mt-0 mb-1 text-micro font-semibold tracking-wider text-muted-foreground uppercase">{cat}</div>
+      <div
+        class="mt-3 first:mt-0 mb-1 text-micro font-semibold tracking-wider text-muted-foreground uppercase"
+      >
+        {cat}
+      </div>
       {#each list as tl (tl.name)}
         {@const knobs = tl.config ?? []}
         {@const hasConfig = hasAnyConfig(tl)}
@@ -99,11 +105,21 @@
             {#if knobs.length === 0}
               <span class="text-micro text-muted-foreground">{t('noConfig')}</span>
             {:else}
-              <span class="text-micro {req ? 'text-destructive' : hasConfig ? 'text-success' : 'text-warning'}">
+              <span
+                class="text-micro {req
+                  ? 'text-destructive'
+                  : hasConfig
+                    ? 'text-success'
+                    : 'text-warning'}"
+              >
                 {req ? t('requiredConfig') : hasConfig ? t('configured') : t('needsConfig')}
               </span>
             {/if}
-            <span class="text-micro text-muted-foreground">{#if expanded === tl.name}<AppIcons.chevron_down class="size-3" />{:else}<AppIcons.chevron_right class="size-3" />{/if}</span>
+            <span class="text-micro text-muted-foreground"
+              >{#if expanded === tl.name}<AppIcons.chevron_down
+                  class="size-3"
+                />{:else}<AppIcons.chevron_right class="size-3" />{/if}</span
+            >
           </button>
 
           {#if expanded === tl.name}
@@ -114,13 +130,21 @@
 
               {#if knobs.length > 0}
                 <div>
-                  <div class="mb-1 text-micro font-semibold text-muted-foreground">{t('requiredConfigTitle')}</div>
+                  <div class="mb-1 text-micro font-semibold text-muted-foreground">
+                    {t('requiredConfigTitle')}
+                  </div>
                   <div class="space-y-1">
                     {#each knobs as knob (knob.name)}
                       {@const set = knobSet(tl, knob)}
                       {@const required = tl.requiredConfig.includes(knob.name)}
                       <div class="flex items-center gap-2 text-micro">
-                        <AppIcons.circle class="size-2.5 shrink-0 {set ? 'text-success' : required ? 'text-destructive' : 'text-muted-foreground'}" />
+                        <AppIcons.circle
+                          class="size-2.5 shrink-0 {set
+                            ? 'text-success'
+                            : required
+                              ? 'text-destructive'
+                              : 'text-muted-foreground'}"
+                        />
                         <span class="shrink-0 font-mono">{knob.name}</span>
                         {#if required}<span class="shrink-0 text-destructive">*</span>{/if}
                         <span class="min-w-0 flex-1 truncate text-muted-foreground">
@@ -138,14 +162,18 @@
 
               {#if tl.parameters && Object.keys(tl.parameters).length}
                 <div class="rounded-sm border border-border/40 p-2">
-                  <div class="mb-1 text-micro font-semibold text-muted-foreground">{t('toolParams')}</div>
+                  <div class="mb-1 text-micro font-semibold text-muted-foreground">
+                    {t('toolParams')}
+                  </div>
                   <div class="space-y-1">
                     {#each parseToolParams(tl.parameters) as p (p.name)}
                       <div class="flex gap-2 text-micro">
                         <span class="font-mono">{p.name}{p.required ? ' *' : ''}</span>
                         <span class="text-muted-foreground">{p.type}</span>
                         {#if p.description}
-                          <span class="min-w-0 flex-1 truncate text-muted-foreground">{p.description}</span>
+                          <span class="min-w-0 flex-1 truncate text-muted-foreground"
+                            >{p.description}</span
+                          >
                         {/if}
                       </div>
                     {/each}

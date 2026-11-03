@@ -5,10 +5,7 @@
   import type { AgentApi } from '$lib/api'
   import type { FileRef } from '$lib/models'
   import { t } from '$lib/i18n.svelte'
-  import {
-    isTextMime,
-    type PreviewKind,
-  } from '$lib/media'
+  import { isTextMime, type PreviewKind } from '$lib/media'
   import CodeView from './CodeView.svelte'
   import CsvView from './CsvView.svelte'
   import HtmlView from './HtmlView.svelte'
@@ -16,21 +13,24 @@
   import PdfView from './PdfView.svelte'
   import OfficeView from './OfficeView.svelte'
 
-  let {
-    file,
-    kind,
-    src,
-  }: { api: AgentApi; file: FileRef; kind: PreviewKind; src: string } = $props()
+  let { file, kind, src }: { api: AgentApi; file: FileRef; kind: PreviewKind; src: string } =
+    $props()
 
   const textKind = $derived(
-    kind === 'text' || kind === 'code' || kind === 'json' || kind === 'csv' || kind === 'html' || kind === 'markdown' || isTextMime(file.mime ?? ''),
+    kind === 'text' ||
+      kind === 'code' ||
+      kind === 'json' ||
+      kind === 'csv' ||
+      kind === 'html' ||
+      kind === 'markdown' ||
+      isTextMime(file.mime ?? ''),
   )
 </script>
 
 {#if kind === 'pdf'}
   <PdfView {src} />
 {:else if kind === 'docx' || kind === 'xlsx' || kind === 'pptx'}
-  <OfficeView {src} kind={kind} name={file.name ?? ''} />
+  <OfficeView {src} {kind} name={file.name ?? ''} />
 {:else if kind === 'markdown'}
   <MarkdownView {src} />
 {:else if kind === 'html'}
@@ -38,7 +38,7 @@
 {:else if kind === 'csv'}
   <CsvView {src} />
 {:else if kind === 'json' || kind === 'code' || kind === 'text' || textKind}
-  <CodeView {src} kind={kind} name={file.name ?? ''} />
+  <CodeView {src} {kind} name={file.name ?? ''} />
 {:else}
   <div class="rounded-md bg-white/5 px-4 py-3 text-meta text-white/70">
     {t('fileUnsupported')}

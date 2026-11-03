@@ -27,7 +27,15 @@
     /** Emitted with the new value on every edit. */
     onchange: (next: unknown) => void
   }
-  let { fields, itemType = 'object', minItems = 0, maxItems = 0, mode, value, onchange }: Props = $props()
+  let {
+    fields,
+    itemType = 'object',
+    minItems = 0,
+    maxItems = 0,
+    mode,
+    value,
+    onchange,
+  }: Props = $props()
 
   /** Rows are always objects here: a scalar list still becomes {value: "..."}. */
   type Row = Record<string, unknown>
@@ -42,7 +50,21 @@
   }
 
   /** Effective fields: for a scalar list, one synthetic "value" field. */
-  const schema = $derived<ConfigFieldSchema[]>(fields.length ? fields : [{ name: 'value', type: itemType || 'string', kind: 'value', format: '', enumValues: [], required: false, description: '' }])
+  const schema = $derived<ConfigFieldSchema[]>(
+    fields.length
+      ? fields
+      : [
+          {
+            name: 'value',
+            type: itemType || 'string',
+            kind: 'value',
+            format: '',
+            enumValues: [],
+            required: false,
+            description: '',
+          },
+        ],
+  )
 
   function emit(rows: Row[]) {
     onchange(mode === 'object' ? (rows[0] ?? {}) : rows)
@@ -104,14 +126,16 @@
     <div class="rounded-md border border-border bg-card/40 p-2.5">
       {#if mode === 'list'}
         <div class="mb-1.5 flex items-center justify-between">
-          <span class="text-micro text-muted-foreground">{t('structItem').replace('N', String(i + 1))}</span>
+          <span class="text-micro text-muted-foreground"
+            >{t('structItem').replace('N', String(i + 1))}</span
+          >
           {#if canRemove}
             <button
               type="button"
               class="text-destructive hover:opacity-70"
               title={t('structRemove')}
-              onclick={() => removeRow(i)}
-            ><AppIcons.delete class="size-3.5" /></button>
+              onclick={() => removeRow(i)}><AppIcons.delete class="size-3.5" /></button
+            >
           {/if}
         </div>
       {/if}
@@ -164,7 +188,12 @@
                 class="h-8 w-full rounded-md border border-input bg-transparent px-2 text-sm outline-none"
                 value={String(row[f.name] ?? '')}
                 placeholder={f.defaultValue ?? formatHint(f.format)}
-                oninput={e => setField(i, f.name, f.type === 'number' ? Number(e.currentTarget.value) : e.currentTarget.value)}
+                oninput={e =>
+                  setField(
+                    i,
+                    f.name,
+                    f.type === 'number' ? Number(e.currentTarget.value) : e.currentTarget.value,
+                  )}
               />
             {/if}
           </label>
@@ -177,8 +206,7 @@
     <button
       type="button"
       class="flex w-full items-center justify-center gap-1 rounded-md border border-dashed border-border py-1.5 text-meta text-muted-foreground hover:bg-muted"
-      onclick={addRow}
-    ><AppIcons.add class="size-3.5" />{t('structAdd')}</button>
+      onclick={addRow}><AppIcons.add class="size-3.5" />{t('structAdd')}</button
+    >
   {/if}
 </div>
-

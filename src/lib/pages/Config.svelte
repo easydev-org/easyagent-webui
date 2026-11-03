@@ -36,11 +36,14 @@
   let pickAgentLocaleOpen = $state(false)
   let pickThemeOpen = $state(false)
 
-  const themeOptions = $derived.by(() => [
-    ['system', t('followSystem')],
-    ['light', t('themeLight')],
-    ['dark', t('themeDark')],
-  ] as const)
+  const themeOptions = $derived.by(
+    () =>
+      [
+        ['system', t('followSystem')],
+        ['light', t('themeLight')],
+        ['dark', t('themeDark')],
+      ] as const,
+  )
 
   // Agent language is an explicit zh/en (no "follow UI language" mode).
   const agentLocaleOptions = [
@@ -102,27 +105,56 @@
 
   const sections = $derived.by(() => {
     const appearance: Row[] = [
-      { icon: AppIcons.palette, label: t('appearance'), onTap: () => store.pushSibling({ kind: 'config_sub', key: 'config_sub_appearance', id: 'appearance' }) },
+      {
+        icon: AppIcons.palette,
+        label: t('appearance'),
+        onTap: () =>
+          store.pushSibling({ kind: 'config_sub', key: 'config_sub_appearance', id: 'appearance' }),
+      },
     ]
     const backend: Row[] = [
       {
         icon: AppIcons.swap,
         label: t('switchBackend'),
-        onTap: () => store.pushSibling({ kind: 'config_sub', key: 'config_sub_backends', id: 'backends' }),
+        onTap: () =>
+          store.pushSibling({ kind: 'config_sub', key: 'config_sub_backends', id: 'backends' }),
         destructive: true,
       },
     ]
     const llm: Row[] = [
-      { icon: AppIcons.server, label: t('llmProviders'), onTap: () => store.pushSibling({ kind: 'providers_list', key: 'providers_list' }) },
-      { icon: AppIcons.sparkles, label: t('presets'), onTap: () => store.pushSibling({ kind: 'config_sub', key: 'config_sub_presets', id: 'presets' }) },
+      {
+        icon: AppIcons.server,
+        label: t('llmProviders'),
+        onTap: () => store.pushSibling({ kind: 'providers_list', key: 'providers_list' }),
+      },
+      {
+        icon: AppIcons.sparkles,
+        label: t('presets'),
+        onTap: () =>
+          store.pushSibling({ kind: 'config_sub', key: 'config_sub_presets', id: 'presets' }),
+      },
     ]
     const workspace: Row[] = [
-      { icon: AppIcons.tools, label: t('tools'), onTap: () => store.pushSibling({ kind: 'config_sub', key: 'config_sub_tools', id: 'tools' }) },
-      { icon: AppIcons.server, label: t('extensions'), onTap: () => store.pushSibling({ kind: 'config_sub', key: 'config_sub_extensions', id: 'extensions' }) },
+      {
+        icon: AppIcons.tools,
+        label: t('tools'),
+        onTap: () =>
+          store.pushSibling({ kind: 'config_sub', key: 'config_sub_tools', id: 'tools' }),
+      },
+      {
+        icon: AppIcons.server,
+        label: t('extensions'),
+        onTap: () =>
+          store.pushSibling({ kind: 'config_sub', key: 'config_sub_extensions', id: 'extensions' }),
+      },
     ]
     const language: Row[] = [
       { icon: AppIcons.globe, label: t('language'), onTap: () => (pickLocaleOpen = true) },
-      { icon: AppIcons.language, label: t('agentLocale'), onTap: () => (pickAgentLocaleOpen = true) },
+      {
+        icon: AppIcons.language,
+        label: t('agentLocale'),
+        onTap: () => (pickAgentLocaleOpen = true),
+      },
     ]
     return [
       { title: t('appearance'), rows: appearance },
@@ -135,9 +167,18 @@
 </script>
 
 <div class="flex h-full w-full flex-col">
-  <PageHeader title={titleOf(initialId)} onBack={isDetail && showBack ? () => store.popPage() : null}>
+  <PageHeader
+    title={titleOf(initialId)}
+    onBack={isDetail && showBack ? () => store.popPage() : null}
+  >
     {#if isDetail && initialId === 'presets'}
-      <IconButton icon={AppIcons.add} label={t('newPreset')} variant="primary" class="ml-auto" onclick={() => store.pushPage({ kind: 'preset_form', key: 'preset_form_new' })} />
+      <IconButton
+        icon={AppIcons.add}
+        label={t('newPreset')}
+        variant="primary"
+        class="ml-auto"
+        onclick={() => store.pushPage({ kind: 'preset_form', key: 'preset_form_new' })}
+      />
     {/if}
   </PageHeader>
 
@@ -150,10 +191,14 @@
         {#each s.rows as r (r.label)}
           <button
             type="button"
-            class="flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-muted {r.destructive ? 'text-destructive font-semibold' : ''}"
+            class="flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-muted {r.destructive
+              ? 'text-destructive font-semibold'
+              : ''}"
             onclick={r.onTap}
           >
-            <r.icon class="size-5 shrink-0 {r.destructive ? 'text-destructive' : 'text-muted-foreground'}" />
+            <r.icon
+              class="size-5 shrink-0 {r.destructive ? 'text-destructive' : 'text-muted-foreground'}"
+            />
             <span class="flex-1 text-body">{r.label}</span>
             <AppIcons.chevron_right class="size-4 text-muted-foreground" />
           </button>
@@ -219,7 +264,10 @@
               pickThemeOpen = false
             }}
           >
-            {#if themeMode === code}<AppIcons.target class="size-4 text-primary" />{:else}<span class="size-4 rounded-full border border-muted-foreground/50"></span>{/if} {label}
+            {#if themeMode === code}<AppIcons.target class="size-4 text-primary" />{:else}<span
+                class="size-4 rounded-full border border-muted-foreground/50"
+              ></span>{/if}
+            {label}
           </button>
         {/each}
       </div>
@@ -240,7 +288,11 @@
               pickLocaleOpen = false
             }}
           >
-            {#if localStorage.getItem('agent.uiLocale') === code}<AppIcons.target class="size-4 text-primary" />{:else}<span class="size-4 rounded-full border border-muted-foreground/50"></span>{/if} {label}
+            {#if localStorage.getItem('agent.uiLocale') === code}<AppIcons.target
+                class="size-4 text-primary"
+              />{:else}<span class="size-4 rounded-full border border-muted-foreground/50"
+              ></span>{/if}
+            {label}
           </button>
         {/each}
       </div>
@@ -258,7 +310,11 @@
             class="flex w-full items-center gap-3 rounded-sm px-3 py-2.5 text-left text-body hover:bg-muted"
             onclick={() => void pickAgentLocale(code)}
           >
-            {#if Prefs.loadAgentLocale() === code}<AppIcons.target class="size-4 text-primary" />{:else}<span class="size-4 rounded-full border border-muted-foreground/50"></span>{/if} {label}
+            {#if Prefs.loadAgentLocale() === code}<AppIcons.target
+                class="size-4 text-primary"
+              />{:else}<span class="size-4 rounded-full border border-muted-foreground/50"
+              ></span>{/if}
+            {label}
           </button>
         {/each}
       </div>

@@ -36,9 +36,7 @@
   } = $props()
 </script>
 
-<header
-  class={cn('flex h-12 shrink-0 items-center gap-2 border-b border-border px-2', className)}
->
+<header class={cn('flex h-12 shrink-0 items-center gap-2 border-b border-border px-2', className)}>
   {#if left}{@render left()}{/if}
   {#if onBack}
     <button type="button" class="rounded p-1.5 hover:bg-muted" aria-label="back" onclick={onBack}>

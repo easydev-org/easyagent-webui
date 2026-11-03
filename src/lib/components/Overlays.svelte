@@ -5,7 +5,13 @@
   import { AlertDialog } from '$lib/components/ui/alert-dialog'
   import { Input } from '$lib/components/ui/input'
   import { Textarea } from '$lib/components/ui/textarea'
-  import { actionSheet as actionSheetStore, overlays, resolveConfirm, resolveDialog, resolveSheet } from '$lib/overlays.svelte'
+  import {
+    actionSheet as actionSheetStore,
+    overlays,
+    resolveConfirm,
+    resolveDialog,
+    resolveSheet,
+  } from '$lib/overlays.svelte'
   import { cn } from '$lib/utils'
 
   let promptValue = $state('')
@@ -37,13 +43,14 @@
     <button
       type="button"
       class="rounded-md px-3 py-1.5 text-sm hover:bg-muted"
-      onclick={() => resolveDialog(null)}
-    >{overlays.dialog?.cancelLabel ?? 'Cancel'}</button>
+      onclick={() => resolveDialog(null)}>{overlays.dialog?.cancelLabel ?? 'Cancel'}</button
+    >
     <button
       type="button"
       class="rounded-md bg-primary px-3 py-1.5 text-sm text-primary-foreground hover:bg-primary/80"
       onclick={() => resolveDialog(promptValue.trim())}
-    >{overlays.dialog?.confirmLabel ?? 'OK'}</button>
+      >{overlays.dialog?.confirmLabel ?? 'OK'}</button
+    >
   {/snippet}
 </Dialog>
 
@@ -65,11 +72,15 @@
   title={overlays.sheet?.title ?? ''}
   cancelLabel=""
   onCancel={() => resolveSheet(null)}
->
-</AlertDialog>
+></AlertDialog>
 
 {#if overlays.sheet}
-  <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" role="presentation" onclick={() => resolveSheet(null)} onkeydown={e => e.key === 'Escape' && resolveSheet(null)}>
+  <div
+    class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+    role="presentation"
+    onclick={() => resolveSheet(null)}
+    onkeydown={e => e.key === 'Escape' && resolveSheet(null)}
+  >
     <div
       class="w-[min(92vw,360px)] rounded-lg border border-border bg-card p-2 shadow-xl"
       role="presentation"
@@ -79,16 +90,21 @@
       {#each overlays.sheet.actions as a (a.value)}
         <button
           type="button"
-          class={cn('flex w-full items-center rounded-sm px-3 py-2.5 text-left text-body hover:bg-muted', a.destructive && 'text-destructive')}
-          onclick={() => resolveSheet(a.value)}
-        >{a.label}</button>
+          class={cn(
+            'flex w-full items-center rounded-sm px-3 py-2.5 text-left text-body hover:bg-muted',
+            a.destructive && 'text-destructive',
+          )}
+          onclick={() => resolveSheet(a.value)}>{a.label}</button
+        >
       {/each}
     </div>
   </div>
 {/if}
 
 <!-- toasts -->
-<div class="pointer-events-none fixed inset-x-0 bottom-4 z-[100] flex flex-col items-center gap-2 px-4">
+<div
+  class="pointer-events-none fixed inset-x-0 bottom-4 z-[100] flex flex-col items-center gap-2 px-4"
+>
   {#each overlays.toasts as toast (toast.id)}
     <button
       class={cn(
@@ -98,6 +114,7 @@
           : 'border-border bg-popover text-popover-foreground',
       )}
       onclick={() => (overlays.toasts = overlays.toasts.filter(t => t.id !== toast.id))}
-    >{toast.text}</button>
+      >{toast.text}</button
+    >
   {/each}
 </div>

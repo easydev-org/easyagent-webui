@@ -29,9 +29,7 @@
       try {
         const pdfjs = await import('pdfjs-dist/legacy/build/pdf.mjs')
         if (sharedPdfWorker === null) {
-          const workerUrl = (
-            await import('pdfjs-dist/legacy/build/pdf.worker.min.mjs?url')
-          ).default
+          const workerUrl = (await import('pdfjs-dist/legacy/build/pdf.worker.min.mjs?url')).default
           sharedPdfWorker = new Worker(workerUrl, { type: 'module' })
         }
         pdfjs.GlobalWorkerOptions.workerPort = sharedPdfWorker
@@ -71,13 +69,15 @@
 <div class="max-h-[82vh] w-[min(94vw,900px)] overflow-auto rounded-md bg-black/30 p-3">
   {#if loading}
     <div class="flex flex-col items-center gap-2 p-6 text-meta text-white/70">
-      <span class="size-7 animate-spin rounded-full border-2 border-white/20 border-t-white/80"></span>
+      <span class="size-7 animate-spin rounded-full border-2 border-white/20 border-t-white/80"
+      ></span>
       <span>{t('loading')}{pages > 0 ? ` ${progress}/${pages}` : ''}</span>
     </div>
   {/if}
   {#if error}
     <div class="flex items-center justify-center gap-2 p-6 text-meta text-white/70">
-      <AppIcons.error class="size-4" /> {t('fileUnsupported')}
+      <AppIcons.error class="size-4" />
+      {t('fileUnsupported')}
     </div>
   {/if}
   <div bind:this={host}></div>
