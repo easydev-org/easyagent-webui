@@ -17,7 +17,8 @@
 
   const RE = /\[附件\s+(.+?)\s*\|\s*file:([0-9a-zA-Z]+)\s*\|\s*([^|\]]*)\s*\|\s*([^\]|]*)\]/g
 
-  type Seg = { kind: 'md'; text: string } | { kind: 'file'; label: string; code: string; mime: string }
+  type Seg =
+    { kind: 'md'; text: string } | { kind: 'file'; label: string; code: string; mime: string }
 
   const segments = $derived.by<Seg[]>(() => {
     RE.lastIndex = 0

@@ -175,13 +175,18 @@
       <AppIcons.inbox class="size-[18px] text-muted-foreground" />
     {/snippet}
     {#if entries.length}
-      <span class="ml-auto rounded-full bg-muted px-2 py-0.5 text-micro text-muted-foreground tabular-nums">{entries.length}</span>
+      <span
+        class="ml-auto rounded-full bg-muted px-2 py-0.5 text-micro text-muted-foreground tabular-nums"
+        >{entries.length}</span
+      >
     {/if}
   </PageHeader>
   <div bind:this={scrollEl} class="min-h-0 flex-1 overflow-y-auto p-3" onscroll={onScroll}>
     {#if loading}
       <div class="flex justify-center py-8">
-        <span class="size-6 animate-spin rounded-full border-2 border-muted-foreground/30 border-t-muted-foreground"></span>
+        <span
+          class="size-6 animate-spin rounded-full border-2 border-muted-foreground/30 border-t-muted-foreground"
+        ></span>
       </div>
     {:else if error}
       <p class="text-meta text-destructive">{error}</p>
@@ -202,19 +207,23 @@
           <div class="overflow-hidden rounded-lg border border-border/60 bg-card">
             <!-- card header: type icon + label + status pill -->
             <div class="flex items-center gap-2 border-b border-border/40 px-3 py-2">
-              <span class={cn('flex size-6 shrink-0 items-center justify-center rounded-md', m.cls)}>
+              <span
+                class={cn('flex size-6 shrink-0 items-center justify-center rounded-md', m.cls)}
+              >
                 <TypeIcon class="size-3.5" />
               </span>
               <span class="text-meta font-semibold">{m.label}</span>
               {#if m.origin}
-                <span class="max-w-40 truncate text-micro text-muted-foreground" title={m.origin}>· {m.origin}</span>
+                <span class="max-w-40 truncate text-micro text-muted-foreground" title={m.origin}
+                  >· {m.origin}</span
+                >
               {/if}
               <span
                 class={cn(
                   'ml-auto rounded-full px-1.5 py-px text-[10px] font-medium',
                   pending ? 'bg-warning/20 text-warning' : 'bg-success/20 text-success',
-                )}
-              >{pending ? t('mailboxPending') : t('consumed')}</span>
+                )}>{pending ? t('mailboxPending') : t('consumed')}</span
+              >
             </div>
 
             <!-- body: decoded text (never JSON) -->
@@ -229,7 +238,9 @@
               {#if v.attachmentCount}
                 <div class="mt-2 flex flex-wrap gap-1.5">
                   {#each v.attachments as a (a.code)}
-                    <span class="inline-flex max-w-full items-center gap-1 rounded-md border border-border/60 bg-muted/40 px-1.5 py-0.5 text-micro">
+                    <span
+                      class="inline-flex max-w-full items-center gap-1 rounded-md border border-border/60 bg-muted/40 px-1.5 py-0.5 text-micro"
+                    >
                       <AppIcons.attach class="size-3 shrink-0 text-muted-foreground" />
                       <span class="truncate">{a.name || a.code}</span>
                     </span>
@@ -239,7 +250,9 @@
             </div>
 
             <!-- footer: timestamps -->
-            <div class="flex flex-wrap items-center gap-x-3 gap-y-0.5 border-t border-border/40 px-3 py-1.5 text-micro text-muted-foreground">
+            <div
+              class="flex flex-wrap items-center gap-x-3 gap-y-0.5 border-t border-border/40 px-3 py-1.5 text-micro text-muted-foreground"
+            >
               <span class="inline-flex items-center gap-1">
                 <AppIcons.clock class="size-3" />
                 {t('mailboxSentAt', { arg1: fmt(e.createdAt) })}
@@ -262,7 +275,9 @@
         <!-- Scroll-down load-more: older entries append below. -->
         {#if loadingMore}
           <div class="flex justify-center py-3">
-            <span class="size-5 animate-spin rounded-full border-2 border-muted-foreground/30 border-t-muted-foreground"></span>
+            <span
+              class="size-5 animate-spin rounded-full border-2 border-muted-foreground/30 border-t-muted-foreground"
+            ></span>
           </div>
         {:else if !hasMore}
           <p class="py-3 text-center text-micro text-muted-foreground">{t('noMoreMessages')}</p>

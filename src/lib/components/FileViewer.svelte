@@ -17,12 +17,7 @@
     thumbhashPlaceholder,
     type PreviewKind,
   } from '$lib/media'
-  import {
-    closeViewer,
-    viewer,
-    viewerNext,
-    viewerPrev,
-  } from '$lib/fileviewer.svelte'
+  import { closeViewer, viewer, viewerNext, viewerPrev } from '$lib/fileviewer.svelte'
   import { AppIcons } from '$lib/icons'
   import { cn } from '$lib/utils'
 
@@ -139,12 +134,29 @@
         <span class="hidden text-micro opacity-60 sm:inline">{formatBytes(current.size)}</span>
       {/if}
       {#if current.durationMs}
-        <span class="hidden text-micro opacity-60 sm:inline">{formatDuration(current.durationMs)}</span>
+        <span class="hidden text-micro opacity-60 sm:inline"
+          >{formatDuration(current.durationMs)}</span
+        >
       {/if}
-      <button type="button" class="rounded p-1.5 hover:bg-white/10" title={t('download')} aria-label={t('download')} onclick={() => void downloadWithFeedback(api, current.code, current.name ?? current.code, { mime: current.mime })}>
+      <button
+        type="button"
+        class="rounded p-1.5 hover:bg-white/10"
+        title={t('download')}
+        aria-label={t('download')}
+        onclick={() =>
+          void downloadWithFeedback(api, current.code, current.name ?? current.code, {
+            mime: current.mime,
+          })}
+      >
         <AppIcons.download class="size-4" />
       </button>
-      <button type="button" class="rounded p-1.5 hover:bg-white/10" title={t('close')} aria-label={t('close')} onclick={closeViewer}>
+      <button
+        type="button"
+        class="rounded p-1.5 hover:bg-white/10"
+        title={t('close')}
+        aria-label={t('close')}
+        onclick={closeViewer}
+      >
         <AppIcons.close class="size-4" />
       </button>
     </div>
@@ -174,7 +186,8 @@
 
       {#if loading && kind !== 'image'}
         <div class="flex flex-col items-center gap-3 text-white/70">
-          <span class="size-8 animate-spin rounded-full border-2 border-white/20 border-t-white/80"></span>
+          <span class="size-8 animate-spin rounded-full border-2 border-white/20 border-t-white/80"
+          ></span>
           <span class="text-meta">{t('loading')}{progress > 0 ? ` ${progress}%` : ''}</span>
         </div>
       {/if}
@@ -192,7 +205,11 @@
           onwheel={wheel}
         >
           {#if placeholder && !url}
-            <img src={placeholder} alt="" class="max-h-full max-w-full scale-110 object-contain blur-xl" />
+            <img
+              src={placeholder}
+              alt=""
+              class="max-h-full max-w-full scale-110 object-contain blur-xl"
+            />
           {/if}
           {#if url}
             <img
@@ -206,7 +223,9 @@
         </div>
       {:else if kind === 'video'}
         {#if url}
-          <video src={url} controls autoplay class="max-h-full max-w-full rounded"><track kind="captions" /></video>
+          <video src={url} controls autoplay class="max-h-full max-w-full rounded"
+            ><track kind="captions" /></video
+          >
         {/if}
       {:else if kind === 'audio'}
         {#if url}
@@ -214,18 +233,44 @@
         {/if}
       {:else if url}
         {#await import('./fileviewers/ViewerBody.svelte') then { default: ViewerBody }}
-          <ViewerBody {api} file={current} kind={kind} src={url} />
+          <ViewerBody {api} file={current} {kind} src={url} />
         {/await}
       {/if}
     </div>
 
     <!-- zoom controls (image) -->
     {#if kind === 'image' && url}
-      <div class="absolute right-3 bottom-3 flex items-center gap-1 rounded-full bg-white/10 p-1 text-white">
-        <button type="button" class="rounded-full p-1.5 hover:bg-white/20" title={t('zoomOut')} aria-label={t('zoomOut')} onclick={() => (zoom = Math.max(0.25, zoom / 1.25))}><AppIcons.zoom_out class="size-4" /></button>
+      <div
+        class="absolute right-3 bottom-3 flex items-center gap-1 rounded-full bg-white/10 p-1 text-white"
+      >
+        <button
+          type="button"
+          class="rounded-full p-1.5 hover:bg-white/20"
+          title={t('zoomOut')}
+          aria-label={t('zoomOut')}
+          onclick={() => (zoom = Math.max(0.25, zoom / 1.25))}
+          ><AppIcons.zoom_out class="size-4" /></button
+        >
         <span class="min-w-10 text-center text-micro tabular-nums">{Math.round(zoom * 100)}%</span>
-        <button type="button" class="rounded-full p-1.5 hover:bg-white/20" title={t('zoomIn')} aria-label={t('zoomIn')} onclick={() => (zoom = Math.min(8, zoom * 1.25))}><AppIcons.zoom_in class="size-4" /></button>
-        <button type="button" class="rounded-full p-1.5 hover:bg-white/20" title={t('zoomReset')} aria-label={t('zoomReset')} onclick={() => { zoom = 1; panX = 0; panY = 0 }}><AppIcons.reset class="size-4" /></button>
+        <button
+          type="button"
+          class="rounded-full p-1.5 hover:bg-white/20"
+          title={t('zoomIn')}
+          aria-label={t('zoomIn')}
+          onclick={() => (zoom = Math.min(8, zoom * 1.25))}
+          ><AppIcons.zoom_in class="size-4" /></button
+        >
+        <button
+          type="button"
+          class="rounded-full p-1.5 hover:bg-white/20"
+          title={t('zoomReset')}
+          aria-label={t('zoomReset')}
+          onclick={() => {
+            zoom = 1
+            panX = 0
+            panY = 0
+          }}><AppIcons.reset class="size-4" /></button
+        >
       </div>
     {/if}
   </div>

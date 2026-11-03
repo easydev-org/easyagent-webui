@@ -42,6 +42,16 @@ jobs:
       # runner nobody reads; the author has to run `npm run format:fix` and see it in their own diff.
       - name: format
         run: npm run format:check
+
+      # SVELTE FILES, BECAUSE BIOME CANNOT FORMAT THEM. It parses the <script> block as a standalone
+      # TypeScript file — rewriting that block's indentation while leaving the markup and <style>
+      # untouched — which produces a HALF-FORMATTED file, worse than none. Prettier with
+      # prettier-plugin-svelte understands all three blocks and their relationship.
+      #
+      # THIS IS NOT A DUPLICATE OF THE STEP ABOVE. Biome owns .ts and .json; prettier owns .svelte.
+      # Splitting by file type is why the two tools do not fight.
+      - name: format (svelte)
+        run: npm run format:svelte
       # `npm run build` is the type check too: svelte-check runs inside it, so a
       # type error fails here rather than at runtime in the browser.
       - run: npm run build

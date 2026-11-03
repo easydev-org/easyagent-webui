@@ -51,18 +51,12 @@
     onTap?: () => void
   } = $props()
 
-  const ref = $derived<FileRef>(
-    fileProp ?? { code: code ?? '', name, mime, size },
-  )
-  const viewRef = $derived<FileRef>(
-    localUrl ? { ...ref, localUrl } : ref,
-  )
+  const ref = $derived<FileRef>(fileProp ?? { code: code ?? '', name, mime, size })
+  const viewRef = $derived<FileRef>(localUrl ? { ...ref, localUrl } : ref)
   const codeVal = $derived(ref.code)
   // A not-yet-uploaded attachment has a synthetic `tmp-` code; never ask the
   // server for it (it would 500). Only server codes are fetchable.
-  const serverCode = $derived(
-    codeVal && !codeVal.startsWith('tmp-') ? codeVal : '',
-  )
+  const serverCode = $derived(codeVal && !codeVal.startsWith('tmp-') ? codeVal : '')
   const nameVal = $derived(ref.name || name || ref.code)
   const mimeVal = $derived(ref.mime ?? mime ?? null)
 
@@ -180,8 +174,7 @@
 
   /** Stream the file to disk, showing progress in the chip. */
   async function download() {
-    if (dlPct !== null)
-      return // already running
+    if (dlPct !== null) return // already running
     dlPct = -1
     await downloadWithFeedback(api, codeVal, nameVal, {
       mime: mimeVal,
@@ -204,9 +197,7 @@
   const WAVE_BARS_WIDE = [5, 9, 13, 7, 11, 15, 6, 12, 8, 14, 10, 16, 9, 13, 5, 11] as const
 
   /** Short type label for the document tile (extension, upper-cased). */
-  const extLabel = $derived(
-    (nameVal.split('.').pop() ?? '').toUpperCase().slice(0, 5) || 'FILE',
-  )
+  const extLabel = $derived((nameVal.split('.').pop() ?? '').toUpperCase().slice(0, 5) || 'FILE')
 </script>
 
 {#snippet FileGlyph(cls: string)}
@@ -237,7 +228,12 @@
       {#if imgError}
         <AppIcons.image_off class="m-auto size-5 text-muted-foreground" />
       {:else if preview}
-        <img src={preview} alt={nameVal} class="size-full object-cover" onerror={() => (imgError = true)} />
+        <img
+          src={preview}
+          alt={nameVal}
+          class="size-full object-cover"
+          onerror={() => (imgError = true)}
+        />
       {:else}
         <AppIcons.image class="m-auto size-5 text-muted-foreground" />
       {/if}
@@ -254,7 +250,9 @@
         <AppIcons.play_round class="size-6 text-white/90 drop-shadow" />
       </span>
       {#if meta.durationMs}
-        <span class="absolute right-0.5 bottom-0.5 rounded bg-black/65 px-1 text-[9px] leading-[13px] font-medium text-white tabular-nums">
+        <span
+          class="absolute right-0.5 bottom-0.5 rounded bg-black/65 px-1 text-[9px] leading-[13px] font-medium text-white tabular-nums"
+        >
           {badgeDuration(meta.durationMs)}
         </span>
       {/if}
@@ -266,15 +264,21 @@
           {/each}
         </span>
         {#if meta.durationMs}
-          <span class="text-[9px] leading-none text-muted-foreground tabular-nums">{formatDuration(meta.durationMs)}</span>
+          <span class="text-[9px] leading-none text-muted-foreground tabular-nums"
+            >{formatDuration(meta.durationMs)}</span
+          >
         {/if}
       </span>
     {:else}
       <!-- document / archive / other: the type's own glyph + extension, so
            zip / pdf / docx / xlsx are distinguishable at a glance. -->
-      <span class="flex size-full flex-col items-center justify-center gap-0.5 text-muted-foreground">
+      <span
+        class="flex size-full flex-col items-center justify-center gap-0.5 text-muted-foreground"
+      >
         {@render FileGlyph('size-5 text-primary')}
-        <span class="max-w-full truncate px-0.5 text-[9px] leading-none font-medium">{extLabel}</span>
+        <span class="max-w-full truncate px-0.5 text-[9px] leading-none font-medium"
+          >{extLabel}</span
+        >
       </span>
     {/if}
   </button>
@@ -283,30 +287,52 @@
   <div class="flex flex-wrap gap-2">
     {#if kind === 'image'}
       {#if imgError}
-        <button type="button" class="flex items-center gap-2 rounded-md border border-border/40 px-2.5 py-1.5 text-meta text-muted-foreground" onclick={() => (openViewer(viewRef), onTap?.())}>
-          <AppIcons.image_off class="size-4" /> {nameVal}
+        <button
+          type="button"
+          class="flex items-center gap-2 rounded-md border border-border/40 px-2.5 py-1.5 text-meta text-muted-foreground"
+          onclick={() => (openViewer(viewRef), onTap?.())}
+        >
+          <AppIcons.image_off class="size-4" />
+          {nameVal}
         </button>
       {:else}
         <button
           type="button"
           bind:this={tile}
           class="relative overflow-hidden rounded-md border border-border/50 bg-muted"
-          style={ratio ? `aspect-ratio:${ratio};max-height:16rem` : 'min-width:8rem;min-height:6rem'}
+          style={ratio
+            ? `aspect-ratio:${ratio};max-height:16rem`
+            : 'min-width:8rem;min-height:6rem'}
           onclick={open}
           aria-label={nameVal}
           title={nameVal}
         >
           {#if placeholder && !preview}
-            <img src={placeholder} alt="" class="absolute inset-0 size-full scale-110 object-cover blur-lg" />
+            <img
+              src={placeholder}
+              alt=""
+              class="absolute inset-0 size-full scale-110 object-cover blur-lg"
+            />
           {/if}
           {#if preview}
-            <img src={preview} onerror={() => (imgError = true)} alt={nameVal} class="max-h-64 cursor-zoom-in rounded-md" />
+            <img
+              src={preview}
+              onerror={() => (imgError = true)}
+              alt={nameVal}
+              class="max-h-64 cursor-zoom-in rounded-md"
+            />
           {/if}
         </button>
       {/if}
     {:else if kind === 'video'}
       {#if shown}
-        <video src={shown} controls preload="metadata" poster={thumbUrl} class="max-h-72 rounded-md border border-border/50"><track kind="captions" /></video>
+        <video
+          src={shown}
+          controls
+          preload="metadata"
+          poster={thumbUrl}
+          class="max-h-72 rounded-md border border-border/50"><track kind="captions" /></video
+        >
       {:else}
         <button
           type="button"
@@ -317,7 +343,11 @@
           title={nameVal}
         >
           {#if placeholder && !thumbUrl}
-            <img src={placeholder} alt="" class="absolute inset-0 size-full scale-110 object-cover blur-lg" />
+            <img
+              src={placeholder}
+              alt=""
+              class="absolute inset-0 size-full scale-110 object-cover blur-lg"
+            />
           {/if}
           {#if thumbUrl}
             <img src={thumbUrl} alt={nameVal} class="absolute inset-0 size-full object-cover" />
@@ -325,7 +355,9 @@
           <AppIcons.play_round class="relative size-10 text-white/90 drop-shadow" />
           {#if meta.durationMs}
             <!-- Duration badge, IM-standard (bottom-right of the poster). -->
-            <span class="absolute right-1.5 bottom-1.5 rounded bg-black/65 px-1.5 py-0.5 text-[10px] leading-none font-medium text-white tabular-nums">
+            <span
+              class="absolute right-1.5 bottom-1.5 rounded bg-black/65 px-1.5 py-0.5 text-[10px] leading-none font-medium text-white tabular-nums"
+            >
               {badgeDuration(meta.durationMs)}
             </span>
           {/if}
@@ -335,17 +367,26 @@
       {#if shown}
         <audio src={shown} controls class="w-full min-w-56"></audio>
       {:else}
-        <button type="button" bind:this={tile} class="flex h-9 w-full min-w-56 items-center gap-2 rounded-md border border-border/50 bg-muted/50 px-3 text-meta" onclick={open} title={nameVal}>
+        <button
+          type="button"
+          bind:this={tile}
+          class="flex h-9 w-full min-w-56 items-center gap-2 rounded-md border border-border/50 bg-muted/50 px-3 text-meta"
+          onclick={open}
+          title={nameVal}
+        >
           <AppIcons.play_round class="size-5 shrink-0" />
           <!-- Decorative pseudo-waveform: a fixed, deterministic bar pattern
                (no audio analysis available) so an audio card reads as audio at
                a glance and keeps the same height as every other chip. -->
           <span class="flex h-4 flex-1 items-center gap-px overflow-hidden" aria-hidden="true">
             {#each WAVE_BARS_WIDE as h, i (i)}
-              <span class="w-0.5 shrink-0 rounded-full bg-muted-foreground/40" style="height:{h}px"></span>
+              <span class="w-0.5 shrink-0 rounded-full bg-muted-foreground/40" style="height:{h}px"
+              ></span>
             {/each}
           </span>
-          {#if meta.durationMs}<span class="shrink-0 text-micro text-muted-foreground tabular-nums">{formatDuration(meta.durationMs)}</span>{/if}
+          {#if meta.durationMs}<span class="shrink-0 text-micro text-muted-foreground tabular-nums"
+              >{formatDuration(meta.durationMs)}</span
+            >{/if}
         </button>
       {/if}
     {:else}
@@ -365,7 +406,8 @@
       >
         {@render FileGlyph('size-4 shrink-0 text-primary')}
         <span class="max-w-56 truncate">{nameVal}</span>
-        {#if size}<span class="shrink-0 text-micro text-muted-foreground">{formatBytes(size)}</span>{/if}
+        {#if size}<span class="shrink-0 text-micro text-muted-foreground">{formatBytes(size)}</span
+          >{/if}
         {#if dlPct !== null}
           <!-- Streaming to disk: percent when the total is known, otherwise a
                spinner. Shown IN PLACE of the affordance so the width (and thus
@@ -373,7 +415,9 @@
           {#if dlPct >= 0}
             <span class="shrink-0 text-micro text-muted-foreground tabular-nums">{dlPct}%</span>
           {:else}
-            <span class="block size-3.5 shrink-0 animate-spin rounded-full border-2 border-muted-foreground/30 border-t-muted-foreground"></span>
+            <span
+              class="block size-3.5 shrink-0 animate-spin rounded-full border-2 border-muted-foreground/30 border-t-muted-foreground"
+            ></span>
           {/if}
         {:else if canView}
           <AppIcons.eye class="size-3.5 shrink-0 text-muted-foreground" />

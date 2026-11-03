@@ -30,13 +30,7 @@
   <rect width="128" height="128" rx="28" fill="#f97316" />
 
   <!-- lucide `bot`: head, antenna, ears, eyes — stroked in white. -->
-  <g
-    fill="none"
-    stroke="#ffffff"
-    stroke-width="8"
-    stroke-linecap="round"
-    stroke-linejoin="round"
-  >
+  <g fill="none" stroke="#ffffff" stroke-width="8" stroke-linecap="round" stroke-linejoin="round">
     <!-- head: x4 y8 w16 h12 r2, mapped into 128-space around the centre -->
     <rect x="34" y="44" width="60" height="44" rx="7" />
     <!-- antenna: M12 8 V4 H8 -->

@@ -26,13 +26,10 @@
         <AppIcons.chat class="size-4 text-primary" />
         <span class="truncate text-meta font-bold">{session?.id}</span>
       </div>
-      {#each [
-        [t('modelLabel'), session?.model || t('none')],
-        [t('variantLabel'), session?.variant || t('variantNone')],
-        [t('presetLabel'), session?.preset || t('none')],
-        [t('agentLocale'), session?.locale || Prefs.loadAgentLocale()],
-      ] as [label, value] (label)}
-        <div class="flex items-start gap-3 border-t border-border/40 pt-2 first:border-t-0 first:pt-0">
+      {#each [[t('modelLabel'), session?.model || t('none')], [t('variantLabel'), session?.variant || t('variantNone')], [t('presetLabel'), session?.preset || t('none')], [t('agentLocale'), session?.locale || Prefs.loadAgentLocale()]] as [label, value] (label)}
+        <div
+          class="flex items-start gap-3 border-t border-border/40 pt-2 first:border-t-0 first:pt-0"
+        >
           <span class="w-24 shrink-0 text-micro text-muted-foreground">{label}</span>
           <span class="min-w-0 flex-1 text-meta font-semibold">{value}</span>
         </div>
@@ -40,14 +37,18 @@
     </div>
   {/snippet}
   {#snippet footer()}
-    <button type="button" class="rounded-md px-3 py-1.5 text-sm hover:bg-muted" onclick={() => (open = false)}>{t('close')}</button>
+    <button
+      type="button"
+      class="rounded-md px-3 py-1.5 text-sm hover:bg-muted"
+      onclick={() => (open = false)}>{t('close')}</button
+    >
     <button
       type="button"
       class="rounded-md bg-primary px-3 py-1.5 text-sm text-primary-foreground hover:bg-primary/80"
       onclick={() => {
         open = false
         onEdit()
-      }}
-    >{t('edit')}</button>
+      }}>{t('edit')}</button
+    >
   {/snippet}
 </Dialog>

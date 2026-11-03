@@ -54,9 +54,7 @@
   // UI language: an explicit zh/en pref, or follow the system language (the
   // four-client default). zh for any Chinese system locale, en otherwise.
   const savedLocalePref = localStorage.getItem('agent.uiLocale')
-  setLocale(
-    savedLocalePref === 'zh' || savedLocalePref === 'en' ? savedLocalePref : systemLocale(),
-  )
+  setLocale(savedLocalePref === 'zh' || savedLocalePref === 'en' ? savedLocalePref : systemLocale())
 
   // Apply the resolved theme to <html> (the CSS custom properties flip on it).
   $effect(() => {
@@ -250,7 +248,12 @@
       // presented directly.)
       const effective = id.sessionToken || tok
       Prefs.save(base, effective)
-      Prefs.upsertBackend({ name: username || backendNameFor(base), username: username || user, baseUrl: base, token: effective })
+      Prefs.upsertBackend({
+        name: username || backendNameFor(base),
+        username: username || user,
+        baseUrl: base,
+        token: effective,
+      })
       baseUrl = base
       token = effective
       await enterApp()
@@ -315,7 +318,12 @@
 {:else if phase === 'backends'}
   <div class="flex h-full flex-col">
     <header class="flex h-12 shrink-0 items-center gap-2 border-b border-border px-3">
-      <button type="button" class="rounded p-1.5 hover:bg-muted" onclick={() => phase = token ? 'app' : 'setup'}><AppIcons.back class="size-[18px]" /></button>
+      <button
+        type="button"
+        class="rounded p-1.5 hover:bg-muted"
+        onclick={() => (phase = token ? 'app' : 'setup')}
+        ><AppIcons.back class="size-[18px]" /></button
+      >
       <span class="text-sm font-semibold">{t('backendsTitle')}</span>
     </header>
     <div class="flex-1 overflow-y-auto p-4">
@@ -325,18 +333,34 @@
       <div class="space-y-2">
         {#each backends as b (b.token)}
           <div class="flex items-center gap-3 rounded-md border border-border bg-card px-3 py-2.5">
-            {#if b.token === token}<AppIcons.target class="size-4 text-primary" />{:else}<AppIcons.server class="size-4 text-muted-foreground" />{/if}
+            {#if b.token === token}<AppIcons.target
+                class="size-4 text-primary"
+              />{:else}<AppIcons.server class="size-4 text-muted-foreground" />{/if}
             <span class="min-w-0 flex-1">
-              <span class="block truncate text-body">{b.username || b.name || t('tokenLabel')}</span>
-              <span class="block truncate text-micro text-muted-foreground">{maskToken(b.token)}</span>
+              <span class="block truncate text-body">{b.username || b.name || t('tokenLabel')}</span
+              >
+              <span class="block truncate text-micro text-muted-foreground"
+                >{maskToken(b.token)}</span
+              >
             </span>
-            <button type="button" class="rounded p-1.5 text-muted-foreground hover:bg-muted" title={t('deleteBackend')} onclick={() => void deleteBackend(b)}><AppIcons.delete class="size-4" /></button>
-            <Button size="sm" variant="outline" onclick={() => void switchBackend(b)}>{t('connect')}</Button>
+            <button
+              type="button"
+              class="rounded p-1.5 text-muted-foreground hover:bg-muted"
+              title={t('deleteBackend')}
+              onclick={() => void deleteBackend(b)}><AppIcons.delete class="size-4" /></button
+            >
+            <Button size="sm" variant="outline" onclick={() => void switchBackend(b)}
+              >{t('connect')}</Button
+            >
           </div>
         {/each}
       </div>
       <div class="mt-4 border-t border-border pt-2">
-        <button type="button" class="flex w-full items-center gap-2 rounded-md px-3 py-2.5 text-left hover:bg-muted" onclick={logout}>
+        <button
+          type="button"
+          class="flex w-full items-center gap-2 rounded-md px-3 py-2.5 text-left hover:bg-muted"
+          onclick={logout}
+        >
           <AppIcons.add class="size-4" />
           <span class="text-body">{t('addBackend')}</span>
         </button>
@@ -368,7 +392,10 @@
             type="button"
             class="absolute top-1/2 right-2 -translate-y-1/2 text-muted-foreground"
             onclick={() => (showToken = !showToken)}
-          >{#if showToken}<AppIcons.eye_off class="size-4" />{:else}<AppIcons.eye class="size-4" />{/if}</button>
+            >{#if showToken}<AppIcons.eye_off class="size-4" />{:else}<AppIcons.eye
+                class="size-4"
+              />{/if}</button
+          >
         </span>
       </label>
       <Button class="w-full" disabled={!canConnect} onclick={() => void connect()}>
@@ -378,8 +405,8 @@
         <button
           type="button"
           class="mt-3 w-full rounded-md px-3 py-2 text-meta text-muted-foreground hover:bg-muted"
-          onclick={openBackends}
-        >{t('backendsTitle')}</button>
+          onclick={openBackends}>{t('backendsTitle')}</button
+        >
       {/if}
     </div>
   </div>

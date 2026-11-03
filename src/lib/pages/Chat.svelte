@@ -19,12 +19,16 @@
   import { VoiceRecorder } from '$lib/voice'
   import { cn } from '$lib/utils'
   import IconButton from '$lib/components/layout/IconButton.svelte'
-  import { DropdownMenu, DropdownMenuItem, DropdownMenuSeparator } from '$lib/components/ui/dropdown-menu'
+  import {
+    DropdownMenu,
+    DropdownMenuItem,
+    DropdownMenuSeparator,
+  } from '$lib/components/ui/dropdown-menu'
   import { AppIcons } from '$lib/icons'
   import MessageBubble from '$lib/components/MessageBubble.svelte'
   import MediaAttachment from '$lib/components/MediaAttachment.svelte'
   import ChatInfoDialog from './ChatInfoDialog.svelte'
-  
+
   import ChatSettingsDialog from './ChatSettingsDialog.svelte'
   import ReconnectBanner from '$lib/components/ReconnectBanner.svelte'
   import TodosPanel from '$lib/components/TodosPanel.svelte'
@@ -124,9 +128,7 @@
     const seen = new Set<string>()
     attachments = (d?.attachments ?? [])
       .filter(a => (seen.has(a.code) ? false : (seen.add(a.code), true)))
-      .map(a =>
-        a.localPath?.startsWith('blob:') ? { ...a, localPath: '' } : a,
-      )
+      .map(a => (a.localPath?.startsWith('blob:') ? { ...a, localPath: '' } : a))
   })
 
   async function loadMeta() {
@@ -261,10 +263,7 @@
     composerAction({
       awaitingSend: ctrl?.awaitingSend ?? false,
       sending: ctrl?.sending ?? false,
-      canDeliver: !!(
-        ctrl?.sending &&
-        (text.trim() || attachments.length)
-      ),
+      canDeliver: !!(ctrl?.sending && (text.trim() || attachments.length)),
       submitting,
       canSend: hasContent && !!ctrl && !ctrl.sending && !ctrl.awaitingSend,
     }),
@@ -331,7 +330,9 @@
     try {
       // Wait for every in-flight upload before sending (never a partial batch).
       if (inflightUploads.size) await Promise.allSettled([...inflightUploads])
-      const failed = attachments.filter(a => a.uploadState === 'error' || !a.code || a.code.startsWith('tmp-'))
+      const failed = attachments.filter(
+        a => a.uploadState === 'error' || !a.code || a.code.startsWith('tmp-'),
+      )
       if (failed.length) {
         showErrorToast(t('uploadFailedRetry', { arg1: failed.length }))
         return
@@ -366,7 +367,9 @@
   async function uploadOne(src: { name: string; mimeType: string; bytes: Uint8Array }) {
     if (!sid) return
     const localKey = `tmp-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
-    localUrls[localKey] = URL.createObjectURL(new Blob([new Uint8Array(src.bytes)], { type: src.mimeType }))
+    localUrls[localKey] = URL.createObjectURL(
+      new Blob([new Uint8Array(src.bytes)], { type: src.mimeType }),
+    )
     const pending: UploadedFile = {
       code: localKey,
       name: src.name,
@@ -391,9 +394,7 @@
           (d, total) => {
             const pct = total > 0 ? Math.round((d / total) * 100) : -1
             attachments = attachments.map(a =>
-              a.code === localKey && a.uploadState === 'uploading'
-                ? { ...a, uploadPct: pct }
-                : a,
+              a.code === localKey && a.uploadState === 'uploading' ? { ...a, uploadPct: pct } : a,
             )
           },
         )
@@ -418,7 +419,11 @@
       schedulePersist()
     })()
     inflightUploads.add(job)
-    try { await job } finally { inflightUploads.delete(job) }
+    try {
+      await job
+    } finally {
+      inflightUploads.delete(job)
+    }
   }
 
   function removeAttachment(a: UploadedFile) {
@@ -457,7 +462,11 @@
     input.onchange = () => {
       for (const f of input.files ?? []) {
         void f.arrayBuffer().then(buf =>
-          uploadOne({ name: f.name, mimeType: f.type || guessMime(f.name), bytes: new Uint8Array(buf) }),
+          uploadOne({
+            name: f.name,
+            mimeType: f.type || guessMime(f.name),
+            bytes: new Uint8Array(buf),
+          }),
         )
       }
     }
@@ -480,7 +489,11 @@
         if (!f) continue
         e.preventDefault()
         void f.arrayBuffer().then(buf =>
-          uploadOne({ name: f.name || 'pasted.png', mimeType: f.type || guessMime(f.name), bytes: new Uint8Array(buf) }),
+          uploadOne({
+            name: f.name || 'pasted.png',
+            mimeType: f.type || guessMime(f.name),
+            bytes: new Uint8Array(buf),
+          }),
         )
       }
     }
@@ -503,14 +516,20 @@
     if (!ok) {
       // Roll the optimistic UI state back so a denied mic does not leave the
       // button stuck in "recording".
-      if (voiceTimer) { clearInterval(voiceTimer); voiceTimer = null }
+      if (voiceTimer) {
+        clearInterval(voiceTimer)
+        voiceTimer = null
+      }
       recording = false
       showErrorToast(t('voicePermission'))
     }
   }
 
   async function stopRecording() {
-    if (voiceTimer) { clearInterval(voiceTimer); voiceTimer = null }
+    if (voiceTimer) {
+      clearInterval(voiceTimer)
+      voiceTimer = null
+    }
     if (!recording) return
     recordToken++ // invalidate the pending start() error path
     recording = false
@@ -530,7 +549,11 @@
     input.onchange = () => {
       for (const f of input.files ?? []) {
         void f.arrayBuffer().then(buf =>
-          uploadOne({ name: f.name || 'photo.jpg', mimeType: f.type || guessMime(f.name), bytes: new Uint8Array(buf) }),
+          uploadOne({
+            name: f.name || 'photo.jpg',
+            mimeType: f.type || guessMime(f.name),
+            bytes: new Uint8Array(buf),
+          }),
         )
       }
     }
@@ -633,7 +656,11 @@
   async function menuAction(v: string) {
     switch (v) {
       case 'compact': {
-        const ok = await confirmDialog({ title: t('compactHistory'), body: t('compactConfirm'), confirmLabel: t('apply') })
+        const ok = await confirmDialog({
+          title: t('compactHistory'),
+          body: t('compactConfirm'),
+          confirmLabel: t('apply'),
+        })
         if (ok && sid) {
           try {
             // The server QUEUES the compaction on the mailbox and returns
@@ -659,7 +686,12 @@
         break
       }
       case 'delete': {
-        const ok = await confirmDialog({ title: t('deleteSession'), body: session ? t('deleteSessionBody', { arg1: sessionName(session) }) : '', confirmLabel: t('delete'), destructive: true })
+        const ok = await confirmDialog({
+          title: t('deleteSession'),
+          body: session ? t('deleteSessionBody', { arg1: sessionName(session) }) : '',
+          confirmLabel: t('delete'),
+          destructive: true,
+        })
         if (ok && sid) {
           try {
             await store.deleteSession(sid)
@@ -672,7 +704,9 @@
     }
   }
 
-  const ctxLabel = $derived(fmtContext((session?.lastInputTokens ?? 0) + (session?.lastOutputTokens ?? 0)))
+  const ctxLabel = $derived(
+    fmtContext((session?.lastInputTokens ?? 0) + (session?.lastOutputTokens ?? 0)),
+  )
   const presetOptions = $derived([
     ...presets.map(p => p.id),
     ...(preset && !presets.some(p => p.id === preset) ? [preset] : []),
@@ -685,7 +719,9 @@
 </script>
 
 {#if !sid}
-  <div class="flex h-full items-center justify-center text-meta text-muted-foreground">{t('noSessions')}</div>
+  <div class="flex h-full items-center justify-center text-meta text-muted-foreground">
+    {t('noSessions')}
+  </div>
 {:else if ctrl}
   <!-- The permissions drawer OVERLAYS the conversation rather than sharing its flex row.
        Sharing the row was the first attempt and it broke the page: Chat's parent already
@@ -694,52 +730,62 @@
        panel rendered but no pointer event could reach it. An overlay needs no cooperation
        from the layout it covers. -->
   <div class="relative flex h-full w-full min-h-0 flex-col">
-  <div
-    class="relative flex h-full w-full min-h-0 flex-col" role="application"
-    ondragover={e => {
-      e.preventDefault()
-      dragging = true
-    }}
-    ondragleave={e => {
-      // Only clear when the pointer actually leaves the container, not when it
-      // crosses an inner child (which also fires dragleave).
-      if (e.relatedTarget && (e.currentTarget as HTMLElement).contains(e.relatedTarget as Node)) return
-      dragging = false
-    }}
-    ondrop={e => void onDrop(e)}
-  >
-    <!-- top bar -->
-    <header class="relative flex h-12 shrink-0 items-center gap-2 border-b border-border px-2">
-      <div class="flex min-w-0 items-center gap-2">
-        <IconButton icon={AppIcons.back} label={t('back')} onclick={() => store.popPage()} />
-        <span
-          class={cn(
-            'size-2 rounded-full',
-            ctrl.runtimeStatus === 'busy'
-              ? 'animate-pulse bg-success'
+    <div
+      class="relative flex h-full w-full min-h-0 flex-col"
+      role="application"
+      ondragover={e => {
+        e.preventDefault()
+        dragging = true
+      }}
+      ondragleave={e => {
+        // Only clear when the pointer actually leaves the container, not when it
+        // crosses an inner child (which also fires dragleave).
+        if (e.relatedTarget && (e.currentTarget as HTMLElement).contains(e.relatedTarget as Node))
+          return
+        dragging = false
+      }}
+      ondrop={e => void onDrop(e)}
+    >
+      <!-- top bar -->
+      <header class="relative flex h-12 shrink-0 items-center gap-2 border-b border-border px-2">
+        <div class="flex min-w-0 items-center gap-2">
+          <IconButton icon={AppIcons.back} label={t('back')} onclick={() => store.popPage()} />
+          <span
+            class={cn(
+              'size-2 rounded-full',
+              ctrl.runtimeStatus === 'busy'
+                ? 'animate-pulse bg-success'
+                : ctrl.runtimeStatus === 'unknown'
+                  ? 'bg-warning'
+                  : 'bg-muted-foreground',
+            )}
+            title={ctrl.runtimeStatus === 'busy'
+              ? t('running')
               : ctrl.runtimeStatus === 'unknown'
-                ? 'bg-warning'
-                : 'bg-muted-foreground',
-          )}
-          title={ctrl.runtimeStatus === 'busy' ? t('running') : ctrl.runtimeStatus === 'unknown' ? t('statusUnknown') : t('idle')}
-          aria-label={ctrl.runtimeStatus === 'busy' ? t('running') : ctrl.runtimeStatus === 'unknown' ? t('statusUnknown') : t('idle')}
-        ></span>
-        {#if ctxLabel}
-          <span class="text-micro text-muted-foreground tabular-nums">{ctxLabel}</span>
-        {/if}
-      </div>
-      <div class="pointer-events-none absolute inset-x-0 flex justify-center">
-        <button
-          type="button"
-          class="pointer-events-auto min-w-24 max-w-40 truncate rounded-full bg-primary/14 px-3 py-1 text-center text-meta font-semibold text-primary"
-          onclick={() => (infoOpen = true)}
-          title={t('settingsTitle')}
-        >
-          {session?.id}
-        </button>
-      </div>
-      <div class="ml-auto flex items-center gap-0.5">
-        <!-- Tasks: the session's checklist, derived from the last `todo-write` call.
+                ? t('statusUnknown')
+                : t('idle')}
+            aria-label={ctrl.runtimeStatus === 'busy'
+              ? t('running')
+              : ctrl.runtimeStatus === 'unknown'
+                ? t('statusUnknown')
+                : t('idle')}
+          ></span>
+          {#if ctxLabel}
+            <span class="text-micro text-muted-foreground tabular-nums">{ctxLabel}</span>
+          {/if}
+        </div>
+        <div class="pointer-events-none absolute inset-x-0 flex justify-center">
+          <button
+            type="button"
+            class="pointer-events-auto min-w-24 max-w-40 truncate rounded-full bg-primary/14 px-3 py-1 text-center text-meta font-semibold text-primary"
+            onclick={() => (infoOpen = true)}
+            title={t('settingsTitle')}
+          >
+            {session?.id}
+          </button>
+        </div>
+        <div class="ml-auto flex items-center gap-0.5">
+          <!-- Tasks: the session's checklist, derived from the last `todo-write` call.
              THE BUTTON IS ALWAYS THERE; only the BADGE depends on the list. It used to be wrapped in
              `{#if todos.length > 0}`, which made the control appear and disappear as the agent worked:
              a user who had seen it could not find it again once the list emptied, and a user who had
@@ -747,159 +793,196 @@
              present teaches nothing and, when it vanishes, reads like a bug.
              Badge = remaining (not completed, not cancelled), so it counts down as the agent works and
              disappears when there is nothing left — the COUNT is the status, the button is the place. -->
-        <Popover side="bottom" align="end" class="w-80 p-2">
-          {#snippet trigger()}
-            <button
-              type="button"
-              class="relative rounded p-1.5 text-muted-foreground hover:bg-muted"
-              aria-label={t('todos')}
-              title={t('todos')}
-            >
-              <AppIcons.todo class="size-[18px]" />
-              {#if todoRemaining > 0}
-                <span
-                  class="pointer-events-none absolute top-0.5 right-0.5 flex min-w-[14px] items-center justify-center rounded-full bg-destructive px-1 text-[9px] leading-[14px] font-bold text-destructive-foreground"
-                >
-                  {todoRemaining}
-                </span>
-              {/if}
-            </button>
-          {/snippet}
-          <div class="max-h-80 overflow-y-auto">
-            {#if todos.length > 0}
-              <TodosPanel {todos} />
-            {:else}
-              <!-- AN EMPTY POPOVER IS A DEAD END. Saying so is what makes the always-present button
-                   useful rather than puzzling: it tells the reader the list exists and why it is empty. -->
-              <p class="px-1 py-2 text-micro text-muted-foreground italic">{t('todosEmpty')}</p>
-            {/if}
-          </div>
-        </Popover>
-        <!-- Mailbox, extracted from the ⋯ menu into its own button. The red
-             dot (top-right) counts PENDING (unconsumed) mailbox entries. -->
-        <div bind:this={mailboxBtnEl} class="relative">
-          <IconButton icon={AppIcons.inbox} label={t('mailbox')} onclick={() => void menuAction('mailbox')} />
-          {#if (ctrl?.pendingMailbox ?? 0) > 0}
-            <span class="pointer-events-none absolute top-0.5 right-0.5 flex min-w-[14px] items-center justify-center rounded-full bg-destructive px-1 text-[9px] leading-[14px] font-bold text-destructive-foreground">
-              {ctrl?.pendingMailbox}
-            </span>
-          {/if}
-        </div>
-        <DropdownMenu label={t('settingsTitle')}>
-          <DropdownMenuItem onSelect={() => void openPermissions()}>{t('permissionsMenu')}</DropdownMenuItem>
-          <DropdownMenuItem onSelect={() => void openChannels()}>{t('channelsMenu')}</DropdownMenuItem>
-          <DropdownMenuItem onSelect={() => void openJobs()}>{t('jobsMenu')}</DropdownMenuItem>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem onSelect={() => void menuAction('compact')}>{t('compactHistory')}</DropdownMenuItem>
-          <DropdownMenuItem onSelect={() => void menuAction('fork')}>{t('fork')}</DropdownMenuItem>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem class="text-destructive" onSelect={() => void menuAction('delete')}>{t('deleteSession')}</DropdownMenuItem>
-        </DropdownMenu>
-      </div>
-    </header>
-
-    <!-- reconnecting strip (below the header, in-page, not app-wide) -->
-    <ReconnectBanner />
-
-    <!-- messages -->
-    <div bind:this={listEl} class="min-h-0 flex-1 overflow-y-auto px-3 py-3" onscroll={onScroll}>
-      <div bind:this={contentEl}>
-      {#if ctrl.loading && ctrl.messages.length === 0}
-        <div class="flex h-full items-center justify-center">
-          <span class="size-6 animate-spin rounded-full border-2 border-muted-foreground/30 border-t-muted-foreground"></span>
-        </div>
-      {:else}
-        {#if ctrl.hasMore}
-          <div class="mb-2 flex justify-center">
-            <button
-              type="button"
-              class="rounded px-2 py-1 text-sm text-primary hover:bg-muted disabled:opacity-50"
-              disabled={ctrl.loading}
-              onclick={() => void ctrl!.loadMore()}
-            >{ctrl.loading ? t('loading') : t('loadEarlier')}</button>
-          </div>
-        {/if}
-        {#each ctrl.sorted as msg (msg.id)}
-          <MessageBubble
-            {msg}
-            {store}
-            sessionId={sid}
-            api={store.api}
-            onUndo={id => void ctrl!.revert(id)}
-            onResend={txt => void ctrl!.resendFrom(ctrl!.messages.find(m => m.id === msg.id)!, txt)}
-            onEdit={txt => void ctrl!.resendFrom(ctrl!.messages.find(m => m.id === msg.id)!, txt)}
-            onRegenerate={msg.role === 'assistant' ? () => void ctrl!.regenerateFrom(ctrl!.messages.find(m => m.id === msg.id)!) : null}
-            onOpenSession={name => store.pickSession(name)}
-            sessionExists={name => store.sessionById(name) !== null}
-          />
-        {/each}
-      {/if}
-      </div>
-    </div>
-
-    <!-- composer -->
-    <div class="shrink-0 border-t border-border bg-card px-3 pt-1 pb-1">
-      {#if attachments.length}
-        <div class="mb-2 flex flex-wrap gap-1 pt-1">
-          {#each attachments as a (a.code)}
-            <div class="relative">
-              <MediaAttachment
-                api={store.api}
-                code={a.code}
-                name={a.name ?? ''}
-                mime={a.mime}
-                size={a.size ?? null}
-                dimension={tileDim}
-                localUrl={isLocalPreview(a)}
-              />
+          <Popover side="bottom" align="end" class="w-80 p-2">
+            {#snippet trigger()}
               <button
                 type="button"
-                class={cn(
-                  'absolute top-0.5 flex size-4 items-center justify-center rounded-full text-[10px] text-white',
-                  a.uploadState === 'uploading' ? 'right-0.5 bg-muted-foreground/70'
-                  : a.uploadState === 'error' ? 'right-5 bg-destructive'
-                  : 'right-0.5 bg-muted-foreground/70 hover:bg-destructive',
-                )}
-                onclick={() => (a.uploadState === 'error' ? void retryUpload(a) : removeAttachment(a))}
-                title={a.uploadState === 'error' ? t('retry') : t('delete')}
+                class="relative rounded p-1.5 text-muted-foreground hover:bg-muted"
+                aria-label={t('todos')}
+                title={t('todos')}
               >
-                {#if a.uploadState === 'uploading' && a.uploadPct != null && a.uploadPct >= 0}
-                  <!-- True byte progress beats an indeterminate spinner. -->
-                  <span class="text-[9px] font-semibold tabular-nums">{a.uploadPct}%</span>
-                {:else if a.uploadState === 'uploading'}<span class="block size-2.5 animate-spin rounded-full border border-white/40 border-t-white"></span>{:else if a.uploadState === 'error'}<AppIcons.refresh class="size-2.5" />{:else}<AppIcons.close class="size-2.5" />{/if}
+                <AppIcons.todo class="size-[18px]" />
+                {#if todoRemaining > 0}
+                  <span
+                    class="pointer-events-none absolute top-0.5 right-0.5 flex min-w-[14px] items-center justify-center rounded-full bg-destructive px-1 text-[9px] leading-[14px] font-bold text-destructive-foreground"
+                  >
+                    {todoRemaining}
+                  </span>
+                {/if}
               </button>
-              {#if a.uploadState === 'error'}
-                <!-- A failed upload MUST stay removable: retry needs the local
-                     blob (gone after a reload), so without this the tile could
-                     neither retry nor be deleted. -->
-                <button
-                  type="button"
-                  class="absolute top-0.5 right-0.5 flex size-4 items-center justify-center rounded-full bg-muted-foreground/70 text-[10px] text-white hover:bg-destructive"
-                  onclick={() => removeAttachment(a)}
-                  title={t('delete')}
-                >
-                  <AppIcons.close class="size-2.5" />
-                </button>
+            {/snippet}
+            <div class="max-h-80 overflow-y-auto">
+              {#if todos.length > 0}
+                <TodosPanel {todos} />
+              {:else}
+                <!-- AN EMPTY POPOVER IS A DEAD END. Saying so is what makes the always-present button
+                   useful rather than puzzling: it tells the reader the list exists and why it is empty. -->
+                <p class="px-1 py-2 text-micro text-muted-foreground italic">{t('todosEmpty')}</p>
               {/if}
             </div>
-          {/each}
+          </Popover>
+          <!-- Mailbox, extracted from the ⋯ menu into its own button. The red
+             dot (top-right) counts PENDING (unconsumed) mailbox entries. -->
+          <div bind:this={mailboxBtnEl} class="relative">
+            <IconButton
+              icon={AppIcons.inbox}
+              label={t('mailbox')}
+              onclick={() => void menuAction('mailbox')}
+            />
+            {#if (ctrl?.pendingMailbox ?? 0) > 0}
+              <span
+                class="pointer-events-none absolute top-0.5 right-0.5 flex min-w-[14px] items-center justify-center rounded-full bg-destructive px-1 text-[9px] leading-[14px] font-bold text-destructive-foreground"
+              >
+                {ctrl?.pendingMailbox}
+              </span>
+            {/if}
+          </div>
+          <DropdownMenu label={t('settingsTitle')}>
+            <DropdownMenuItem onSelect={() => void openPermissions()}
+              >{t('permissionsMenu')}</DropdownMenuItem
+            >
+            <DropdownMenuItem onSelect={() => void openChannels()}
+              >{t('channelsMenu')}</DropdownMenuItem
+            >
+            <DropdownMenuItem onSelect={() => void openJobs()}>{t('jobsMenu')}</DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onSelect={() => void menuAction('compact')}
+              >{t('compactHistory')}</DropdownMenuItem
+            >
+            <DropdownMenuItem onSelect={() => void menuAction('fork')}>{t('fork')}</DropdownMenuItem
+            >
+            <DropdownMenuSeparator />
+            <DropdownMenuItem class="text-destructive" onSelect={() => void menuAction('delete')}
+              >{t('deleteSession')}</DropdownMenuItem
+            >
+          </DropdownMenu>
         </div>
-      {/if}
+      </header>
 
-      <div class="flex items-center gap-2">
-        <!-- Left: mic/keyboard toggle. Same 42px slot as the action circle on
+      <!-- reconnecting strip (below the header, in-page, not app-wide) -->
+      <ReconnectBanner />
+
+      <!-- messages -->
+      <div bind:this={listEl} class="min-h-0 flex-1 overflow-y-auto px-3 py-3" onscroll={onScroll}>
+        <div bind:this={contentEl}>
+          {#if ctrl.loading && ctrl.messages.length === 0}
+            <div class="flex h-full items-center justify-center">
+              <span
+                class="size-6 animate-spin rounded-full border-2 border-muted-foreground/30 border-t-muted-foreground"
+              ></span>
+            </div>
+          {:else}
+            {#if ctrl.hasMore}
+              <div class="mb-2 flex justify-center">
+                <button
+                  type="button"
+                  class="rounded px-2 py-1 text-sm text-primary hover:bg-muted disabled:opacity-50"
+                  disabled={ctrl.loading}
+                  onclick={() => void ctrl!.loadMore()}
+                  >{ctrl.loading ? t('loading') : t('loadEarlier')}</button
+                >
+              </div>
+            {/if}
+            {#each ctrl.sorted as msg (msg.id)}
+              <MessageBubble
+                {msg}
+                {store}
+                sessionId={sid}
+                api={store.api}
+                onUndo={id => void ctrl!.revert(id)}
+                onResend={txt =>
+                  void ctrl!.resendFrom(
+                    ctrl!.messages.find(m => m.id === msg.id)!,
+                    txt,
+                  )}
+                onEdit={txt =>
+                  void ctrl!.resendFrom(
+                    ctrl!.messages.find(m => m.id === msg.id)!,
+                    txt,
+                  )}
+                onRegenerate={msg.role === 'assistant'
+                  ? () => void ctrl!.regenerateFrom(ctrl!.messages.find(m => m.id === msg.id)!)
+                  : null}
+                onOpenSession={name => store.pickSession(name)}
+                sessionExists={name => store.sessionById(name) !== null}
+              />
+            {/each}
+          {/if}
+        </div>
+      </div>
+
+      <!-- composer -->
+      <div class="shrink-0 border-t border-border bg-card px-3 pt-1 pb-1">
+        {#if attachments.length}
+          <div class="mb-2 flex flex-wrap gap-1 pt-1">
+            {#each attachments as a (a.code)}
+              <div class="relative">
+                <MediaAttachment
+                  api={store.api}
+                  code={a.code}
+                  name={a.name ?? ''}
+                  mime={a.mime}
+                  size={a.size ?? null}
+                  dimension={tileDim}
+                  localUrl={isLocalPreview(a)}
+                />
+                <button
+                  type="button"
+                  class={cn(
+                    'absolute top-0.5 flex size-4 items-center justify-center rounded-full text-[10px] text-white',
+                    a.uploadState === 'uploading'
+                      ? 'right-0.5 bg-muted-foreground/70'
+                      : a.uploadState === 'error'
+                        ? 'right-5 bg-destructive'
+                        : 'right-0.5 bg-muted-foreground/70 hover:bg-destructive',
+                  )}
+                  onclick={() =>
+                    a.uploadState === 'error' ? void retryUpload(a) : removeAttachment(a)}
+                  title={a.uploadState === 'error' ? t('retry') : t('delete')}
+                >
+                  {#if a.uploadState === 'uploading' && a.uploadPct != null && a.uploadPct >= 0}
+                    <!-- True byte progress beats an indeterminate spinner. -->
+                    <span class="text-[9px] font-semibold tabular-nums">{a.uploadPct}%</span>
+                  {:else if a.uploadState === 'uploading'}<span
+                      class="block size-2.5 animate-spin rounded-full border border-white/40 border-t-white"
+                    ></span>{:else if a.uploadState === 'error'}<AppIcons.refresh
+                      class="size-2.5"
+                    />{:else}<AppIcons.close class="size-2.5" />{/if}
+                </button>
+                {#if a.uploadState === 'error'}
+                  <!-- A failed upload MUST stay removable: retry needs the local
+                     blob (gone after a reload), so without this the tile could
+                     neither retry nor be deleted. -->
+                  <button
+                    type="button"
+                    class="absolute top-0.5 right-0.5 flex size-4 items-center justify-center rounded-full bg-muted-foreground/70 text-[10px] text-white hover:bg-destructive"
+                    onclick={() => removeAttachment(a)}
+                    title={t('delete')}
+                  >
+                    <AppIcons.close class="size-2.5" />
+                  </button>
+                {/if}
+              </div>
+            {/each}
+          </div>
+        {/if}
+
+        <div class="flex items-center gap-2">
+          <!-- Left: mic/keyboard toggle. Same 42px slot as the action circle on
              the right so the three slots share one center and symmetric gaps. -->
-        <button
-          type="button"
-          class="flex size-[42px] shrink-0 items-center justify-center rounded-full border border-border bg-card text-muted-foreground hover:bg-muted disabled:opacity-40"
-          title={voiceMode ? t('keyboardMode') : t('voiceMode')}
-          aria-label={voiceMode ? t('keyboardMode') : t('voiceMode')}
-          onclick={() => (voiceMode = !voiceMode)}
-        >
-          {#if voiceMode}<AppIcons.keyboard class="size-[22px]" />{:else}<AppIcons.mic class="size-[22px]" />{/if}
-        </button>
+          <button
+            type="button"
+            class="flex size-[42px] shrink-0 items-center justify-center rounded-full border border-border bg-card text-muted-foreground hover:bg-muted disabled:opacity-40"
+            title={voiceMode ? t('keyboardMode') : t('voiceMode')}
+            aria-label={voiceMode ? t('keyboardMode') : t('voiceMode')}
+            onclick={() => (voiceMode = !voiceMode)}
+          >
+            {#if voiceMode}<AppIcons.keyboard class="size-[22px]" />{:else}<AppIcons.mic
+                class="size-[22px]"
+              />{/if}
+          </button>
 
-        <!-- Field shell: SHARED by both modes and never replaced, so the
+          <!-- Field shell: SHARED by both modes and never replaced, so the
              geometry cannot drift between keyboard and voice. Border, radius,
              background and the minimum height live HERE (one place), and the
              recording tint is applied to this same box.
@@ -917,166 +1000,227 @@
              it discarded the inline height the auto-grow handler had set, so
              returning from voice collapsed a multi-line draft back to one
              line. -->
-        <div
-          class={cn(
-            'relative min-h-[44px] flex-1 rounded-md border',
-            recording
-              ? 'border-destructive bg-destructive/12'
-              : 'border-border/60 bg-muted',
-          )}
-        >
-          <textarea
-            bind:this={taEl}
-            bind:value={text}
-            rows="1"
+          <div
             class={cn(
-              INNER_FIELD,
-              'max-h-40 resize-none outline-none placeholder:text-muted-foreground',
-              voiceMode && 'invisible',
+              'relative min-h-[44px] flex-1 rounded-md border',
+              recording ? 'border-destructive bg-destructive/12' : 'border-border/60 bg-muted',
             )}
-            placeholder={attachments.length ? '' : t('typeMessage')}
-            onkeydown={onKeydown}
-            onpaste={onPaste}
-            oninput={e => {
-              schedulePersist()
-              autoGrow(e.currentTarget)
-            }}
-          ></textarea>
-
-          {#if voiceMode}
-            <button
-              type="button"
+          >
+            <textarea
+              bind:this={taEl}
+              bind:value={text}
+              rows="1"
               class={cn(
                 INNER_FIELD,
-                // `touch-none` + no text selection + no iOS long-press callout:
-                // a press-and-hold must NOT open the browser's native context /
-                // copy-paste panel, which would cancel the recording.
-                // `items-start` is load-bearing: a <button>'s UA style
-                // vertically CENTRES its content box, so the label landed at
-                // (42-21)/2 = 10.5px while the textarea anchored it at
-                // padding-top: 10px. Top-aligning makes both text origins
-                // compute from the same padding (sub-pixel identical) instead
-                // of relying on two coincidentally-close numbers.
-                'absolute inset-0 flex items-start justify-center touch-none select-none [-webkit-touch-callout:none]',
-                recording
-                  ? 'font-semibold text-destructive'
-                  : 'text-muted-foreground',
+                'max-h-40 resize-none outline-none placeholder:text-muted-foreground',
+                voiceMode && 'invisible',
               )}
-              oncontextmenu={e => e.preventDefault()}
-              onpointerdown={e => {
-                // Capture the pointer so pointerup fires even if the finger
-                // drifts off the button; suppress the native long-press menu.
-                e.preventDefault()
-                try {
-                  e.currentTarget.setPointerCapture(e.pointerId)
-                } catch {
-                  /* unsupported */
-                }
-                void startRecording()
-              }}
-              onpointerup={() => void stopRecording()}
-              onpointercancel={() => void stopRecording()}
-            >
-              {recording ? `${t('releaseToSend')} · ${fmtElapsed(voiceElapsed)}` : t('holdToTalk')}
-            </button>
-          {/if}
-        </div>
+              placeholder={attachments.length ? '' : t('typeMessage')}
+              onkeydown={onKeydown}
+              onpaste={onPaste}
+              oninput={e => {
+                schedulePersist()
+                autoGrow(e.currentTarget)
+              }}></textarea>
 
-        <!-- Right: one morphing action circle — WHITE fill with a colored
+            {#if voiceMode}
+              <button
+                type="button"
+                class={cn(
+                  INNER_FIELD,
+                  // `touch-none` + no text selection + no iOS long-press callout:
+                  // a press-and-hold must NOT open the browser's native context /
+                  // copy-paste panel, which would cancel the recording.
+                  // `items-start` is load-bearing: a <button>'s UA style
+                  // vertically CENTRES its content box, so the label landed at
+                  // (42-21)/2 = 10.5px while the textarea anchored it at
+                  // padding-top: 10px. Top-aligning makes both text origins
+                  // compute from the same padding (sub-pixel identical) instead
+                  // of relying on two coincidentally-close numbers.
+                  'absolute inset-0 flex items-start justify-center touch-none select-none [-webkit-touch-callout:none]',
+                  recording ? 'font-semibold text-destructive' : 'text-muted-foreground',
+                )}
+                oncontextmenu={e => e.preventDefault()}
+                onpointerdown={e => {
+                  // Capture the pointer so pointerup fires even if the finger
+                  // drifts off the button; suppress the native long-press menu.
+                  e.preventDefault()
+                  try {
+                    e.currentTarget.setPointerCapture(e.pointerId)
+                  } catch {
+                    /* unsupported */
+                  }
+                  void startRecording()
+                }}
+                onpointerup={() => void stopRecording()}
+                onpointercancel={() => void stopRecording()}
+              >
+                {recording
+                  ? `${t('releaseToSend')} · ${fmtElapsed(voiceElapsed)}`
+                  : t('holdToTalk')}
+              </button>
+            {/if}
+          </div>
+
+          <!-- Right: one morphing action circle — WHITE fill with a colored
              outline + colored glyph. While a turn RUNS the circle keeps its
              STOP form; the moment the user types/records, it morphs into the
              ENVELOPE (deliver to mailbox). Otherwise: blue send / muted
              attach, never a solid colored fill. -->
-        {#if action === 'awaiting-send'}
-          <!-- A prompt is en route to the mailbox (RPC then server confirm):
+          {#if action === 'awaiting-send'}
+            <!-- A prompt is en route to the mailbox (RPC then server confirm):
                the composer is locked and shows a spinner until the user
                bubble appears from the server's message-added event. -->
-          <button type="button" class="flex size-[42px] shrink-0 items-center justify-center rounded-full border border-primary bg-card text-primary" title={t('connecting')} aria-label={t('connecting')} disabled><span class="block size-5 animate-spin rounded-full border-2 border-primary/30 border-t-primary"></span></button>
-        {:else if action === 'deliver'}
-          <button
-            type="button"
-            bind:this={envelopeBtnEl}
-            class="flex size-[42px] shrink-0 items-center justify-center rounded-full border border-primary bg-card text-primary"
-            title={t('deliver')}
-            aria-label={t('deliver')}
-            onclick={() => void submit()}
-          ><AppIcons.mail class="size-5" /></button>
-        {:else if action === 'stop'}
-          <button type="button" class="flex size-[42px] shrink-0 items-center justify-center rounded-full border border-destructive bg-card text-destructive" title={t('abort')} aria-label={t('abort')} onclick={() => ctrl!.stop()}><AppIcons.stop class="size-5" /></button>
-        {:else if action === 'submitting'}
-          <button type="button" class="flex size-[42px] shrink-0 items-center justify-center rounded-full border border-primary bg-card text-primary" title={t('connecting')} aria-label={t('connecting')} disabled><span class="block size-5 animate-spin rounded-full border-2 border-primary/30 border-t-primary"></span></button>
-        {:else if action === 'send'}
-          <button type="button" class="flex size-[42px] shrink-0 items-center justify-center rounded-full border border-primary bg-card text-primary disabled:opacity-40" title={t('send')} aria-label={t('send')} onclick={() => void submit()}><AppIcons.send class="size-5" /></button>
-        {:else}
-          <button type="button" class="flex size-[42px] shrink-0 items-center justify-center rounded-full border border-border bg-card text-muted-foreground" title={t('attach')} aria-label={t('attach')} onclick={() => (attachOpen = true)}><AppIcons.add class="size-5" /></button>
-        {/if}
+            <button
+              type="button"
+              class="flex size-[42px] shrink-0 items-center justify-center rounded-full border border-primary bg-card text-primary"
+              title={t('connecting')}
+              aria-label={t('connecting')}
+              disabled
+              ><span
+                class="block size-5 animate-spin rounded-full border-2 border-primary/30 border-t-primary"
+              ></span></button
+            >
+          {:else if action === 'deliver'}
+            <button
+              type="button"
+              bind:this={envelopeBtnEl}
+              class="flex size-[42px] shrink-0 items-center justify-center rounded-full border border-primary bg-card text-primary"
+              title={t('deliver')}
+              aria-label={t('deliver')}
+              onclick={() => void submit()}><AppIcons.mail class="size-5" /></button
+            >
+          {:else if action === 'stop'}
+            <button
+              type="button"
+              class="flex size-[42px] shrink-0 items-center justify-center rounded-full border border-destructive bg-card text-destructive"
+              title={t('abort')}
+              aria-label={t('abort')}
+              onclick={() => ctrl!.stop()}><AppIcons.stop class="size-5" /></button
+            >
+          {:else if action === 'submitting'}
+            <button
+              type="button"
+              class="flex size-[42px] shrink-0 items-center justify-center rounded-full border border-primary bg-card text-primary"
+              title={t('connecting')}
+              aria-label={t('connecting')}
+              disabled
+              ><span
+                class="block size-5 animate-spin rounded-full border-2 border-primary/30 border-t-primary"
+              ></span></button
+            >
+          {:else if action === 'send'}
+            <button
+              type="button"
+              class="flex size-[42px] shrink-0 items-center justify-center rounded-full border border-primary bg-card text-primary disabled:opacity-40"
+              title={t('send')}
+              aria-label={t('send')}
+              onclick={() => void submit()}><AppIcons.send class="size-5" /></button
+            >
+          {:else}
+            <button
+              type="button"
+              class="flex size-[42px] shrink-0 items-center justify-center rounded-full border border-border bg-card text-muted-foreground"
+              title={t('attach')}
+              aria-label={t('attach')}
+              onclick={() => (attachOpen = true)}><AppIcons.add class="size-5" /></button
+            >
+          {/if}
+        </div>
       </div>
+
+      <!-- attach bottom sheet (flutter `_openAttachSheet`) -->
+      {#if attachOpen}
+        <div
+          class="fixed inset-0 z-[70] flex items-end bg-black/50"
+          role="presentation"
+          onclick={e => {
+            // Close on backdrop tap only (not when the tap lands on the sheet).
+            if (e.target === e.currentTarget) attachOpen = false
+          }}
+        >
+          <div class="w-full rounded-t-xl border-t border-border bg-card pb-3" role="presentation">
+            <div class="mx-auto mt-2 mb-1 h-1 w-10 rounded-full bg-muted-foreground/30"></div>
+            <button
+              type="button"
+              class="flex w-full items-center gap-4 px-4 py-3 text-left text-body hover:bg-muted"
+              onclick={() => {
+                attachOpen = false
+                takePhoto()
+              }}
+            >
+              <AppIcons.camera class="size-[22px]" />
+              {t('takePhoto')}
+            </button>
+            <button
+              type="button"
+              class="flex w-full items-center gap-4 px-4 py-3 text-left text-body hover:bg-muted"
+              onclick={() => {
+                attachOpen = false
+                pickFiles('image/*')
+              }}
+            >
+              <AppIcons.image class="size-[22px]" />
+              {t('chooseImage')}
+            </button>
+            <button
+              type="button"
+              class="flex w-full items-center gap-4 px-4 py-3 text-left text-body hover:bg-muted"
+              onclick={() => {
+                attachOpen = false
+                pickFiles('')
+              }}
+            >
+              <AppIcons.attach class="size-[22px]" />
+              {t('chooseFile')}
+            </button>
+          </div>
+        </div>
+      {/if}
+
+      <!-- drop overlay -->
+      {#if dragging}
+        <div
+          class="pointer-events-none absolute inset-0 z-40 flex items-center justify-center bg-primary/8"
+        >
+          <div
+            class="flex items-center gap-2 rounded-lg border-2 border-primary bg-card px-4 py-3 text-body"
+          >
+            <AppIcons.download class="size-6" />
+            {t('dropToAttach')}
+          </div>
+        </div>
+      {/if}
+
+      <!-- flying letter: the envelope glyph animates from the composer button to
+         the top-bar mailbox button after a delivery. -->
+      {#if flyFrom && flyTo}
+        <div
+          bind:this={flyEl}
+          class="pointer-events-none fixed z-[80] flex size-7 items-center justify-center rounded-full border border-primary bg-card text-primary shadow-md"
+          style="left: {flyFrom.x}px; top: {flyFrom.y}px; transform: translate(-50%,-50%)"
+        >
+          <AppIcons.mail class="size-4" />
+        </div>
+      {/if}
     </div>
 
-    <!-- attach bottom sheet (flutter `_openAttachSheet`) -->
-    {#if attachOpen}
-      <div
-        class="fixed inset-0 z-[70] flex items-end bg-black/50"
-        role="presentation"
-        onclick={e => {
-          // Close on backdrop tap only (not when the tap lands on the sheet).
-          if (e.target === e.currentTarget) attachOpen = false
-        }}
-      >
-        <div class="w-full rounded-t-xl border-t border-border bg-card pb-3" role="presentation">
-          <div class="mx-auto mt-2 mb-1 h-1 w-10 rounded-full bg-muted-foreground/30"></div>
-          <button type="button" class="flex w-full items-center gap-4 px-4 py-3 text-left text-body hover:bg-muted" onclick={() => { attachOpen = false; takePhoto() }}>
-            <AppIcons.camera class="size-[22px]" /> {t('takePhoto')}
-          </button>
-          <button type="button" class="flex w-full items-center gap-4 px-4 py-3 text-left text-body hover:bg-muted" onclick={() => { attachOpen = false; pickFiles('image/*') }}>
-            <AppIcons.image class="size-[22px]" /> {t('chooseImage')}
-          </button>
-          <button type="button" class="flex w-full items-center gap-4 px-4 py-3 text-left text-body hover:bg-muted" onclick={() => { attachOpen = false; pickFiles('') }}>
-            <AppIcons.attach class="size-[22px]" /> {t('chooseFile')}
-          </button>
-        </div>
-      </div>
-    {/if}
+    <!-- session info dialog -->
+    <ChatInfoDialog bind:open={infoOpen} {session} onEdit={() => void showSettings()} />
 
-    <!-- drop overlay -->
-    {#if dragging}
-      <div class="pointer-events-none absolute inset-0 z-40 flex items-center justify-center bg-primary/8">
-        <div class="flex items-center gap-2 rounded-lg border-2 border-primary bg-card px-4 py-3 text-body">
-          <AppIcons.download class="size-6" />
-          {t('dropToAttach')}
-        </div>
-      </div>
-    {/if}
-
-    <!-- flying letter: the envelope glyph animates from the composer button to
-         the top-bar mailbox button after a delivery. -->
-    {#if flyFrom && flyTo}
-      <div
-        bind:this={flyEl}
-        class="pointer-events-none fixed z-[80] flex size-7 items-center justify-center rounded-full border border-primary bg-card text-primary shadow-md"
-        style="left: {flyFrom.x}px; top: {flyFrom.y}px; transform: translate(-50%,-50%)"
-      >
-        <AppIcons.mail class="size-4" />
-      </div>
-    {/if}
-  </div>
-
-  <!-- session info dialog -->
-  <ChatInfoDialog bind:open={infoOpen} {session} onEdit={() => void showSettings()} />
-
-  <!-- settings dialog -->
-  <ChatSettingsDialog
-    bind:open={settingsOpen}
-    bind:selectedRef
-    bind:variant
-    bind:preset
-    bind:locale
-    {loadingModels}
-    {modelOptions}
-    variants={variantsForModel}
-    {presetOptions}
-    onSave={() => void applySettings()}
-  />
+    <!-- settings dialog -->
+    <ChatSettingsDialog
+      bind:open={settingsOpen}
+      bind:selectedRef
+      bind:variant
+      bind:preset
+      bind:locale
+      {loadingModels}
+      {modelOptions}
+      variants={variantsForModel}
+      {presetOptions}
+      onSave={() => void applySettings()}
+    />
 
     <!-- THE PERMISSIONS PANEL IS NO LONGER RENDERED HERE. It is a page now — pushed like the mailbox,
          with its own header and back button — because a 340px column pinned to the right edge is the

@@ -64,7 +64,12 @@
 
 <div class="flex h-full w-full flex-col">
   <PageHeader title={t('newPreset')} onBack={showBack ? () => store.popPage() : null}>
-    <button type="button" class="ml-auto text-sm text-primary disabled:opacity-40" disabled={!canSave} onclick={() => void save()}>{t('save')}</button>
+    <button
+      type="button"
+      class="ml-auto text-sm text-primary disabled:opacity-40"
+      disabled={!canSave}
+      onclick={() => void save()}>{t('save')}</button
+    >
   </PageHeader>
 
   <div class="min-h-0 flex-1 space-y-4 overflow-y-auto p-4">
@@ -88,8 +93,8 @@
         type="button"
         class="rounded-md bg-primary px-4 py-2 text-sm text-primary-foreground hover:bg-primary/80 disabled:opacity-40"
         disabled={!canSave}
-        onclick={() => void save()}
-      >{t('create')}</button>
+        onclick={() => void save()}>{t('create')}</button
+      >
     </div>
   </div>
 </div>

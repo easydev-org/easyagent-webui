@@ -49,7 +49,10 @@
         <Icon class="size-3 shrink-0" />
         <span class="truncate">{lbl(f.label)}</span>
       </dt>
-      <dd class={cn('min-w-0 truncate text-meta', f.mono && 'font-mono', tone(f.tone))} title={f.value}>
+      <dd
+        class={cn('min-w-0 truncate text-meta', f.mono && 'font-mono', tone(f.tone))}
+        title={f.value}
+      >
         {f.value}
       </dd>
     {/each}
@@ -71,7 +74,8 @@
       {@const lines = body.text.replace(/\n$/, '').split('\n')}
       {@const first = body.startLine ?? 1}
       <div
-        class="max-h-64 overflow-auto rounded-sm border border-border/50 bg-card py-1.5 font-mono text-[11px] leading-[1.45]">
+        class="max-h-64 overflow-auto rounded-sm border border-border/50 bg-card py-1.5 font-mono text-[11px] leading-[1.45]"
+      >
         <table class="border-collapse">
           <tbody>
             {#each lines as l, i (i)}
@@ -98,7 +102,8 @@
     {:else if body.kind === 'command'}
       <pre
         class="overflow-auto rounded-sm border border-border/50 bg-card px-2 py-1.5 font-mono text-[11px]"><span
-          class="text-muted-foreground">$ </span>{body.command}</pre>
+          class="text-muted-foreground"
+          >$ </span>{body.command}</pre>
     {:else if body.kind === 'kv'}
       <dl class="grid grid-cols-[auto_1fr] gap-x-2 gap-y-0.5">
         {#each body.rows as r (r.k)}
@@ -153,7 +158,12 @@
         {#each body.rows as r, i (i)}
           <li class="border-b border-border/30 px-2 py-1 last:border-0">
             {#if r.url}
-              <a href={r.url} target="_blank" rel="noopener noreferrer" class="text-meta text-primary hover:underline">
+              <a
+                href={r.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                class="text-meta text-primary hover:underline"
+              >
                 {r.label}
               </a>
             {:else}

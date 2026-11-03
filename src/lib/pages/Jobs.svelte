@@ -96,58 +96,60 @@
   page looked like. Chat avoids it by returning a single flex-col root, and so does this now.
 -->
 <div class="flex h-full min-h-0 w-full min-w-0 flex-col">
-<PageHeader title={t('jobsTitle')} onBack={() => store.popPage()}>
-  <button
-    type="button"
-    class="text-meta text-muted-foreground hover:text-foreground"
-    onclick={() => void refresh()}
-    disabled={loading}
-  >
-    {t('refresh')}
-  </button>
-</PageHeader>
+  <PageHeader title={t('jobsTitle')} onBack={() => store.popPage()}>
+    <button
+      type="button"
+      class="text-meta text-muted-foreground hover:text-foreground"
+      onclick={() => void refresh()}
+      disabled={loading}
+    >
+      {t('refresh')}
+    </button>
+  </PageHeader>
 
-{#if !sid}
-  <p class="p-4 text-meta text-muted-foreground">{t('jobsNoSession')}</p>
-{:else if loading && jobs.length === 0}
-  <p class="p-4 text-meta text-muted-foreground">{t('loading')}</p>
-{:else if jobs.length === 0}
-  <p class="p-4 text-meta text-muted-foreground">{t('jobsEmpty')}</p>
-{:else}
-  <ul class="divide-y divide-border">
-    {#each ordered as j (j.id)}
-      <li class="flex flex-col gap-1 px-4 py-3">
-        <div class="flex items-baseline gap-2">
-          <span class="truncate font-medium">{j.title || j.id}</span>
-          <span class="shrink-0 rounded-full border px-2 text-[11px] {tone(j) === 'ok'
-            ? 'border-green-600 text-green-600'
-            : tone(j) === 'bad'
-              ? 'border-red-600 text-red-600'
-              : tone(j) === 'warn'
-                ? 'border-amber-600 text-amber-600'
-                : tone(j) === 'run'
-                  ? 'border-blue-600 text-blue-600'
-                  : 'border-border text-muted-foreground'}">
-            {j.state}{#if j.exitCode !== undefined}, exit {j.exitCode}{/if}
-          </span>
-        </div>
-        <div class="flex flex-wrap items-center gap-x-3 text-[11px] text-muted-foreground">
-          <span class="font-mono">{j.id}</span>
-          <span>{j.kind}</span>
-          <span>{duration(j)}</span>
-          {#if cancelHint(j)}<span>{cancelHint(j)}</span>{/if}
-        </div>
-        {#if j.reason}
-          <p class="text-[11px] text-muted-foreground">{j.reason}</p>
-        {/if}
-        <!-- THE OUTPUT IS NOT HERE, deliberately: it lives where the work ran, and the extension's
+  {#if !sid}
+    <p class="p-4 text-meta text-muted-foreground">{t('jobsNoSession')}</p>
+  {:else if loading && jobs.length === 0}
+    <p class="p-4 text-meta text-muted-foreground">{t('loading')}</p>
+  {:else if jobs.length === 0}
+    <p class="p-4 text-meta text-muted-foreground">{t('jobsEmpty')}</p>
+  {:else}
+    <ul class="divide-y divide-border">
+      {#each ordered as j (j.id)}
+        <li class="flex flex-col gap-1 px-4 py-3">
+          <div class="flex items-baseline gap-2">
+            <span class="truncate font-medium">{j.title || j.id}</span>
+            <span
+              class="shrink-0 rounded-full border px-2 text-[11px] {tone(j) === 'ok'
+                ? 'border-green-600 text-green-600'
+                : tone(j) === 'bad'
+                  ? 'border-red-600 text-red-600'
+                  : tone(j) === 'warn'
+                    ? 'border-amber-600 text-amber-600'
+                    : tone(j) === 'run'
+                      ? 'border-blue-600 text-blue-600'
+                      : 'border-border text-muted-foreground'}"
+            >
+              {j.state}{#if j.exitCode !== undefined}, exit {j.exitCode}{/if}
+            </span>
+          </div>
+          <div class="flex flex-wrap items-center gap-x-3 text-[11px] text-muted-foreground">
+            <span class="font-mono">{j.id}</span>
+            <span>{j.kind}</span>
+            <span>{duration(j)}</span>
+            {#if cancelHint(j)}<span>{cancelHint(j)}</span>{/if}
+          </div>
+          {#if j.reason}
+            <p class="text-[11px] text-muted-foreground">{j.reason}</p>
+          {/if}
+          <!-- THE OUTPUT IS NOT HERE, deliberately: it lives where the work ran, and the extension's
              own tool reads it. Naming that tool is more useful than a truncated copy that would send
              the reader looking for the rest. -->
-        <p class="text-[11px] text-muted-foreground">
-          {t('jobsOutputHint')}
-        </p>
-      </li>
-    {/each}
-  </ul>
-{/if}
+          <p class="text-[11px] text-muted-foreground">
+            {t('jobsOutputHint')}
+          </p>
+        </li>
+      {/each}
+    </ul>
+  {/if}
 </div>

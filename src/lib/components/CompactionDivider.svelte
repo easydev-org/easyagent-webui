@@ -14,9 +14,7 @@
   let open = $state(false)
 
   const label = $derived(
-    part.compactionReason === 'overflow'
-      ? t('compactedOverflow')
-      : t('compactedLabel'),
+    part.compactionReason === 'overflow' ? t('compactedOverflow') : t('compactedLabel'),
   )
 </script>
 
@@ -29,7 +27,9 @@
   >
     <span class="h-px flex-1 bg-border"></span>
     <span class="flex items-center gap-1 whitespace-nowrap">
-      {#if open}<AppIcons.chevron_down class="size-3.5" />{:else}<AppIcons.chevron_right class="size-3.5" />{/if}
+      {#if open}<AppIcons.chevron_down class="size-3.5" />{:else}<AppIcons.chevron_right
+          class="size-3.5"
+        />{/if}
       <span>{label}</span>
     </span>
     <span class="h-px flex-1 bg-border"></span>
@@ -37,8 +37,12 @@
 
   {#if open}
     <div class="w-full max-w-[640px] rounded-sm border border-border/50 bg-muted/40 px-3 py-2">
-      <div class="mb-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] text-muted-foreground">
-        <span>{part.compactionReason === 'overflow' ? t('compactedAuto') : t('compactedManual')}</span>
+      <div
+        class="mb-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] text-muted-foreground"
+      >
+        <span
+          >{part.compactionReason === 'overflow' ? t('compactedAuto') : t('compactedManual')}</span
+        >
         {#if part.foldedCount != null}
           <span>{t('compactedFolded', { n: String(part.foldedCount) })}</span>
         {/if}

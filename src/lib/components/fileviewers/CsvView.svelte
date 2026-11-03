@@ -75,7 +75,9 @@
           <tr class={ri === 0 ? 'font-semibold' : ''}>
             {#each row as cell, ci (ci)}
               {#if ri === 0}
-                <th class="sticky top-0 border border-white/15 bg-white/10 px-2 py-1 text-left">{cell}</th>
+                <th class="sticky top-0 border border-white/15 bg-white/10 px-2 py-1 text-left"
+                  >{cell}</th
+                >
               {:else}
                 <td class="border border-white/10 px-2 py-0.5">{cell}</td>
               {/if}

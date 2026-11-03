@@ -46,9 +46,7 @@
       // Localize the preset system prompt like ToolsDetail/PresetForm: the
       // server resolves the requested agent locale; without it the panel fell
       // back to the default English prompt.
-      presets = await store.api.presets(
-        Prefs.loadAgentLocale(),
-      )
+      presets = await store.api.presets(Prefs.loadAgentLocale())
     } catch (e) {
       showErrorToast(String(e))
     }
@@ -114,7 +112,9 @@
 <div class="h-full w-full p-4">
   {#if loading}
     <div class="flex justify-center py-8">
-      <span class="size-6 animate-spin rounded-full border-2 border-muted-foreground/30 border-t-muted-foreground"></span>
+      <span
+        class="size-6 animate-spin rounded-full border-2 border-muted-foreground/30 border-t-muted-foreground"
+      ></span>
     </div>
   {:else if presets.length === 0}
     <p class="py-2 text-meta text-muted-foreground">{t('noPresets')}</p>
@@ -128,14 +128,29 @@
               class={defaultPreset === p.id ? 'text-primary' : 'text-muted-foreground'}
               title={t('defaultPreset')}
               onclick={() => void setDefault(p)}
-            >{#if defaultPreset === p.id}<AppIcons.target class="size-4 text-primary" />{:else}<AppIcons.circle class="size-4 text-muted-foreground" />{/if}</button>
+              >{#if defaultPreset === p.id}<AppIcons.target
+                  class="size-4 text-primary"
+                />{:else}<AppIcons.circle class="size-4 text-muted-foreground" />{/if}</button
+            >
             <span class="min-w-0 flex-1 truncate text-body font-medium">{p.id}</span>
             {#if p.isSystem}
-              <span class="rounded-full bg-muted px-1.5 py-px text-[10px] text-muted-foreground">system</span>
+              <span class="rounded-full bg-muted px-1.5 py-px text-[10px] text-muted-foreground"
+                >system</span
+              >
             {/if}
-            <button type="button" class="rounded p-1.5 hover:bg-muted" title={t('edit')} onclick={() => beginEdit(p)}><AppIcons.edit class="size-4" /></button>
+            <button
+              type="button"
+              class="rounded p-1.5 hover:bg-muted"
+              title={t('edit')}
+              onclick={() => beginEdit(p)}><AppIcons.edit class="size-4" /></button
+            >
             {#if !p.isSystem}
-              <button type="button" class="rounded p-1.5 text-muted-foreground hover:bg-muted" title={t('delete')} onclick={() => void remove(p)}><AppIcons.delete class="size-4" /></button>
+              <button
+                type="button"
+                class="rounded p-1.5 text-muted-foreground hover:bg-muted"
+                title={t('delete')}
+                onclick={() => void remove(p)}><AppIcons.delete class="size-4" /></button
+              >
             {/if}
           </div>
           {#if p.systemPrompt}
@@ -154,8 +169,16 @@
 </div>
 
 {#if editing}
-  <div class="fixed inset-0 z-[70] flex items-center justify-center bg-black/50 p-4" role="presentation" onclick={() => (editing = null)}>
-    <div class="w-[min(92vw,520px)] rounded-lg border border-border bg-card p-4 shadow-xl" onclick={e => e.stopPropagation()} role="presentation">
+  <div
+    class="fixed inset-0 z-[70] flex items-center justify-center bg-black/50 p-4"
+    role="presentation"
+    onclick={() => (editing = null)}
+  >
+    <div
+      class="w-[min(92vw,520px)] rounded-lg border border-border bg-card p-4 shadow-xl"
+      onclick={e => e.stopPropagation()}
+      role="presentation"
+    >
       <div class="mb-3 text-sm font-semibold">{t('editPreset')}</div>
       <label class="mb-3 block">
         <span class="mb-1 block text-meta text-muted-foreground">{t('presetId')}</span>
@@ -176,8 +199,16 @@
         <p class="mt-2 text-micro text-muted-foreground">{t('overrideNote')}</p>
       {/if}
       <div class="mt-4 flex justify-end gap-2">
-        <button type="button" class="rounded-md px-3 py-1.5 text-sm hover:bg-muted" onclick={() => (editing = null)}>{t('cancel')}</button>
-        <button type="button" class="rounded-md bg-primary px-3 py-1.5 text-sm text-primary-foreground hover:bg-primary/80" onclick={() => void saveEdit()}>{t('save')}</button>
+        <button
+          type="button"
+          class="rounded-md px-3 py-1.5 text-sm hover:bg-muted"
+          onclick={() => (editing = null)}>{t('cancel')}</button
+        >
+        <button
+          type="button"
+          class="rounded-md bg-primary px-3 py-1.5 text-sm text-primary-foreground hover:bg-primary/80"
+          onclick={() => void saveEdit()}>{t('save')}</button
+        >
       </div>
     </div>
   </div>

@@ -11,7 +11,10 @@
   import PageHeader from '$lib/components/layout/PageHeader.svelte'
   import { MSG_THEME, panelSrc } from '@easydev-org/ext-ui/host'
 
-  let { store, view }: PageProps & {
+  let {
+    store,
+    view,
+  }: PageProps & {
     view?: { ext: string; route: string; title: string; session: string }
   } = $props()
 
@@ -41,7 +44,10 @@
     console.info('[ext-view] bridge listening for', ext)
     return serveBridge(
       () => store.api.token,
-      win => (document.querySelector<HTMLIFrameElement>('iframe[data-ext-frame]')?.contentWindow === win ? ext : null),
+      win =>
+        document.querySelector<HTMLIFrameElement>('iframe[data-ext-frame]')?.contentWindow === win
+          ? ext
+          : null,
       () => themeNow(),
     )
   })

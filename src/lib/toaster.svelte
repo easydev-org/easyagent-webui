@@ -6,7 +6,9 @@
   let items = $derived(getToasts())
 </script>
 
-<div class="pointer-events-none fixed inset-x-0 bottom-4 z-[100] flex flex-col items-center gap-2 px-4">
+<div
+  class="pointer-events-none fixed inset-x-0 bottom-4 z-[100] flex flex-col items-center gap-2 px-4"
+>
   {#each items as t (t.id)}
     <button
       class={cn(

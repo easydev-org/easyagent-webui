@@ -29,9 +29,10 @@
   function eligible(tl: ToolInfo): boolean {
     if (tl.requiredConfig.length === 0) return true
     const vals = config[tl.name]
-    const m = vals && typeof vals === 'object' && !Array.isArray(vals)
-      ? (vals as Record<string, unknown>)
-      : {}
+    const m =
+      vals && typeof vals === 'object' && !Array.isArray(vals)
+        ? (vals as Record<string, unknown>)
+        : {}
     return tl.requiredConfig.every(name => {
       const v = m[name]
       return v != null && String(v) !== ''
@@ -87,9 +88,7 @@
   })
 
   function toggleAll(on: boolean) {
-    selected = on
-      ? new Set(tools.filter(eligible).map(valueOf))
-      : new Set()
+    selected = on ? new Set(tools.filter(eligible).map(valueOf)) : new Set()
   }
 </script>
 
@@ -99,8 +98,8 @@
     <button
       type="button"
       class="ml-auto text-micro text-primary hover:underline"
-      onclick={() => toggleAll(!allOn)}
-    >{allOn ? t('clearAll') : t('selectAll')}</button>
+      onclick={() => toggleAll(!allOn)}>{allOn ? t('clearAll') : t('selectAll')}</button
+    >
   </div>
 
   <div class="max-h-72 space-y-3 overflow-y-auto rounded-md border border-border p-2">
@@ -108,13 +107,17 @@
       {@const allOnGroup = g.tools.every(tl => canonical.has(valueOf(tl)))}
       <div>
         <div class="mb-1 flex items-center gap-2">
-          <span class="font-mono text-micro font-semibold tracking-wider text-muted-foreground uppercase">{g.extId}</span>
+          <span
+            class="font-mono text-micro font-semibold tracking-wider text-muted-foreground uppercase"
+            >{g.extId}</span
+          >
           <span class="text-micro text-muted-foreground">· {g.tools.length}</span>
           <button
             type="button"
             class="ml-auto text-micro text-primary hover:underline"
             onclick={() => toggleGroup(g.tools, !allOnGroup)}
-          >{allOnGroup ? t('clearAll') : t('selectAll')}</button>
+            >{allOnGroup ? t('clearAll') : t('selectAll')}</button
+          >
         </div>
         <div class="grid grid-cols-1 gap-1 sm:grid-cols-2">
           {#each g.tools as tl (valueOf(tl))}
@@ -130,11 +133,15 @@
               <Switch checked={canonical.has(v)} disabled={!ok} onchange={on => toggle(v, on)} />
               <span class="min-w-0 flex-1 truncate font-mono text-micro">{tl.name}</span>
               {#if isColliding(tools, tl.name)}
-                <span class="shrink-0 text-micro text-warning" title={t('collisionNote')}>({g.extId})</span>
+                <span class="shrink-0 text-micro text-warning" title={t('collisionNote')}
+                  >({g.extId})</span
+                >
               {/if}
               {#if tl.requiredConfig.length > 0}
-                <span class="shrink-0 text-micro {ok ? 'text-muted-foreground' : 'text-destructive'}"
-                  title={ok ? t('requiredConfig') : t('toolNeedsConfig')}>*</span>
+                <span
+                  class="shrink-0 text-micro {ok ? 'text-muted-foreground' : 'text-destructive'}"
+                  title={ok ? t('requiredConfig') : t('toolNeedsConfig')}>*</span
+                >
               {/if}
             </label>
           {/each}

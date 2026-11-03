@@ -57,12 +57,16 @@
     </div>
   {/snippet}
   {#snippet footer()}
-    <button type="button" class="rounded-md px-3 py-1.5 text-sm hover:bg-muted" onclick={() => (open = false)}>{t('cancel')}</button>
+    <button
+      type="button"
+      class="rounded-md px-3 py-1.5 text-sm hover:bg-muted"
+      onclick={() => (open = false)}>{t('cancel')}</button
+    >
     <button
       type="button"
       class="rounded-md bg-primary px-3 py-1.5 text-sm text-primary-foreground hover:bg-primary/80 disabled:opacity-50"
       disabled={!canCreate}
-      onclick={submit}
-    >{t('create')}</button>
+      onclick={submit}>{t('create')}</button
+    >
   {/snippet}
 </Dialog>

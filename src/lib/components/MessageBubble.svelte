@@ -97,23 +97,17 @@
   // Undo applies to it too (withdraw this step and everything after); the
   // regenerate action re-runs the turn from here.
   const isAssistant = $derived(msg.role === 'assistant')
-  const canUndo = $derived(
-    !isSending && !isStreaming && (isOwn || isAssistant),
-  )
+  const canUndo = $derived(!isSending && !isStreaming && (isOwn || isAssistant))
   // Left-aligned and avatar-bearing (assistant replies, session hand-offs).
   const incoming = $derived(!isOwn && !isSystem)
 
   // Jump-to-session is offered only while the source session still exists.
   const canOpenSession = $derived(
-    sourceKind === 'session' &&
-      !!onOpenSession &&
-      (!sessionExists || sessionExists(sourceName)),
+    sourceKind === 'session' && !!onOpenSession && (!sessionExists || sessionExists(sourceName)),
   )
   // Every LEFT-side avatar: a session hand-off uses the SOURCE session id; an
   // assistant reply (or any other incoming row) uses the OPEN session id.
-  const avatarSeed = $derived(
-    sourceKind === 'session' ? sourceName : sessionId || 'assistant',
-  )
+  const avatarSeed = $derived(sourceKind === 'session' ? sourceName : sessionId || 'assistant')
   const showAvatar = $derived(incoming && !isError && !isSending)
 
   // Source chip tone: sky for a session hand-off, violet for a system notice.
@@ -160,7 +154,10 @@
   let regenerateOpen = $state(false)
 
   function textOfMessage(): string {
-    return msg.parts.filter(p => p.type === 'text').map(p => p.text).join('\n')
+    return msg.parts
+      .filter(p => p.type === 'text')
+      .map(p => p.text)
+      .join('\n')
   }
 
   function copy() {
@@ -192,7 +189,6 @@
   // Selecting message text (notably long-press-to-select on touch) used to
   // surface a stray popup, so that whole path was removed. All message actions
   // live in the hover row below (copy / retry / edit / undo).
-
 </script>
 
 {#snippet chipBody()}
@@ -213,7 +209,9 @@
   {/each}
 {:else if isStreaming && ordered.length === 0}
   <div class="mb-3 flex items-center gap-2 text-micro text-muted-foreground">
-    <span class="size-3 animate-spin rounded-full border-2 border-muted-foreground/30 border-t-muted-foreground"></span>
+    <span
+      class="size-3 animate-spin rounded-full border-2 border-muted-foreground/30 border-t-muted-foreground"
+    ></span>
     {#if msg.retrying}
       {t('retrying')} (#{msg.retrying.attempt})
     {:else}
@@ -221,7 +219,12 @@
     {/if}
   </div>
 {:else}
-  <div class={cn('mb-3 flex flex-col', isSystem ? 'items-center' : isOwn ? 'items-end' : 'items-start')}>
+  <div
+    class={cn(
+      'mb-3 flex flex-col',
+      isSystem ? 'items-center' : isOwn ? 'items-end' : 'items-start',
+    )}
+  >
     <!-- Avatars live ABOVE the bubble, flush to the left edge: the assistant
          reply and a session hand-off each show a 28px avatar on its own row
          above the bubble; the reader's OWN prompt has none. The bubble below
@@ -253,100 +256,147 @@
     <!-- Sending row: the spinner sits to the LEFT of the user bubble while the
          backend has not yet confirmed the write. -->
     <div class={cn('flex max-w-full items-center gap-2', isOwn ? 'flex-row' : 'flex-row-reverse')}>
-    {#if isSending}
-      <span
-        class="size-3 shrink-0 animate-spin rounded-full border-2 border-muted-foreground/30 border-t-muted-foreground"
-        title={t('sending')}
-        aria-label={t('sending')}
-      ></span>
-    {/if}
-    <!-- svelte-ignore a11y_no_static_element_interactions -->
-    <div
-      class={cn(
-        'min-w-0 max-w-full rounded-md border px-3 py-2.5',
-        isError && 'border-destructive/40 bg-destructive/10',
-        isSystem && 'border-muted-foreground/25 bg-muted/30',
-        sourceKind === 'session' && !isError && 'border-sky-500/40 bg-sky-500/10',
-        isOwn && !isError && !isSystem && 'border-primary/40 bg-primary/12',
-        !isOwn && !isError && !isSystem && sourceKind !== 'session' && 'border-border/50 bg-card',
-      )}
-    >
-      <div class="flex min-w-0 max-w-full flex-col items-start gap-2 text-left">
-        {#if isError}
-          <span class="text-micro font-semibold text-destructive">
-            {msg.errorKind === 'send' ? t('sendFailedTitle') : t('modelError')}
-          </span>
-        {/if}
-        {#if sourceKind === 'session' || sourceKind === 'system'}
-          <!-- Source chip: "来自会话 · {name}" / "来自系统 · {name}". The
-               session chip opens that session when it still exists. -->
-          {#if canOpenSession}
-            <button
-              type="button"
-              onclick={() => onOpenSession?.(sourceName)}
-              title={sourceName}
-              class={sourceChipClass}
-            >
-              {@render chipBody()}
-            </button>
-          {:else}
-            <span class={sourceChipClass}>{@render chipBody()}</span>
+      {#if isSending}
+        <span
+          class="size-3 shrink-0 animate-spin rounded-full border-2 border-muted-foreground/30 border-t-muted-foreground"
+          title={t('sending')}
+          aria-label={t('sending')}
+        ></span>
+      {/if}
+      <!-- svelte-ignore a11y_no_static_element_interactions -->
+      <div
+        class={cn(
+          'min-w-0 max-w-full rounded-md border px-3 py-2.5',
+          isError && 'border-destructive/40 bg-destructive/10',
+          isSystem && 'border-muted-foreground/25 bg-muted/30',
+          sourceKind === 'session' && !isError && 'border-sky-500/40 bg-sky-500/10',
+          isOwn && !isError && !isSystem && 'border-primary/40 bg-primary/12',
+          !isOwn && !isError && !isSystem && sourceKind !== 'session' && 'border-border/50 bg-card',
+        )}
+      >
+        <div class="flex min-w-0 max-w-full flex-col items-start gap-2 text-left">
+          {#if isError}
+            <span class="text-micro font-semibold text-destructive">
+              {msg.errorKind === 'send' ? t('sendFailedTitle') : t('modelError')}
+            </span>
           {/if}
-        {/if}
-        {#each ordered as part (part.id)}
-          {#if part.type === 'text'}
-            <FileRefText text={part.text} {api} markdown={!isUser} streaming={isStreaming} />
-          {:else if part.type === 'file'}
-            {@const f = fileRefs.find(r => r.code === part.code) ?? { code: part.code ?? '', name: part.name ?? null, mime: part.mime ?? null, size: part.size ?? null }}
-            <MediaAttachment api={api} file={f} siblings={fileRefs} />
-          {:else if part.type === 'reasoning'}
-            <!-- flutter `_ReasoningBlock`: amber LEFT border, warning tint,
-                 right-only radius, auto-expanded while streaming. -->
-            <div class="w-full rounded-r-sm border-l-2 border-l-warning bg-warning/5 py-1 pr-2 pl-3">
+          {#if sourceKind === 'session' || sourceKind === 'system'}
+            <!-- Source chip: "来自会话 · {name}" / "来自系统 · {name}". The
+               session chip opens that session when it still exists. -->
+            {#if canOpenSession}
               <button
                 type="button"
-                class="flex w-full items-center gap-1.5 text-left text-micro font-semibold text-warning"
-                onclick={() => (reasoningOpen = !reasoningOpen)}
+                onclick={() => onOpenSession?.(sourceName)}
+                title={sourceName}
+                class={sourceChipClass}
               >
-                {#if reasoningOpen}<AppIcons.chevron_down class="size-3.5" />{:else}<AppIcons.chevron_right class="size-3.5" />{/if}
-                <span>{t('thinkLabel')}{isStreaming ? '…' : ''}</span>
+                {@render chipBody()}
               </button>
-              {#if reasoningOpen || isStreaming}
-                <div class="md-body pt-1 text-muted-foreground">{#if isStreaming}<span class="whitespace-pre-wrap break-words">{part.text}</span>{:else}{@html renderMarkdown(part.text)}{/if}</div>
-              {/if}
-            </div>
-          {:else if part.type === 'tool' && part.state}
-            <div class="w-full">
-              <!-- sessionId scopes the extension's data to THIS session; `store` is what lets the
+            {:else}
+              <span class={sourceChipClass}>{@render chipBody()}</span>
+            {/if}
+          {/if}
+          {#each ordered as part (part.id)}
+            {#if part.type === 'text'}
+              <FileRefText text={part.text} {api} markdown={!isUser} streaming={isStreaming} />
+            {:else if part.type === 'file'}
+              {@const f = fileRefs.find(r => r.code === part.code) ?? {
+                code: part.code ?? '',
+                name: part.name ?? null,
+                mime: part.mime ?? null,
+                size: part.size ?? null,
+              }}
+              <MediaAttachment {api} file={f} siblings={fileRefs} />
+            {:else if part.type === 'reasoning'}
+              <!-- flutter `_ReasoningBlock`: amber LEFT border, warning tint,
+                 right-only radius, auto-expanded while streaming. -->
+              <div
+                class="w-full rounded-r-sm border-l-2 border-l-warning bg-warning/5 py-1 pr-2 pl-3"
+              >
+                <button
+                  type="button"
+                  class="flex w-full items-center gap-1.5 text-left text-micro font-semibold text-warning"
+                  onclick={() => (reasoningOpen = !reasoningOpen)}
+                >
+                  {#if reasoningOpen}<AppIcons.chevron_down
+                      class="size-3.5"
+                    />{:else}<AppIcons.chevron_right class="size-3.5" />{/if}
+                  <span>{t('thinkLabel')}{isStreaming ? '…' : ''}</span>
+                </button>
+                {#if reasoningOpen || isStreaming}
+                  <div class="md-body pt-1 text-muted-foreground">
+                    {#if isStreaming}<span class="whitespace-pre-wrap break-words">{part.text}</span
+                      >{:else}{@html renderMarkdown(part.text)}{/if}
+                  </div>
+                {/if}
+              </div>
+            {:else if part.type === 'tool' && part.state}
+              <div class="w-full">
+                <!-- sessionId scopes the extension's data to THIS session; `store` is what lets the
                    card push the view onto the app's navigation stack.
                    No tenant: it lives inside the token and the extension resolves it server-side. -->
-              <ToolPartView {part} {isStreaming} {api} session={sessionId} {store} />
-            </div>
-          {/if}
-        {/each}
+                <ToolPartView {part} {isStreaming} {api} session={sessionId} {store} />
+              </div>
+            {/if}
+          {/each}
+        </div>
       </div>
-    </div>
     </div>
 
     {#if !isStreaming && !isSystem}
-      <div class={cn('mt-1 flex items-center gap-0.5 text-micro text-muted-foreground', isOwn ? 'justify-end' : 'justify-start')}>
+      <div
+        class={cn(
+          'mt-1 flex items-center gap-0.5 text-micro text-muted-foreground',
+          isOwn ? 'justify-end' : 'justify-start',
+        )}
+      >
         {#if hasText}
-          <button type="button" class="rounded p-0.5 hover:bg-muted" title={t('copy')} aria-label={t('copy')} onclick={copy}><AppIcons.copy class="size-3.5" /></button>
+          <button
+            type="button"
+            class="rounded p-0.5 hover:bg-muted"
+            title={t('copy')}
+            aria-label={t('copy')}
+            onclick={copy}><AppIcons.copy class="size-3.5" /></button
+          >
         {/if}
         <!-- retry / edit apply ONLY to the reader's OWN prompts (never a
              session hand-off); undo also applies to an agent assistant step,
              and regenerate re-runs the turn from that step. -->
         {#if !isSending && isOwn && onResend}
-          <button type="button" class="rounded p-0.5 hover:bg-muted" title={t('retry')} aria-label={t('retry')} onclick={() => (retryOpen = true)}><AppIcons.refresh class="size-3.5" /></button>
+          <button
+            type="button"
+            class="rounded p-0.5 hover:bg-muted"
+            title={t('retry')}
+            aria-label={t('retry')}
+            onclick={() => (retryOpen = true)}><AppIcons.refresh class="size-3.5" /></button
+          >
         {/if}
         {#if !isSending && isOwn && onEdit}
-          <button type="button" class="rounded p-0.5 hover:bg-muted" title={t('edit')} aria-label={t('edit')} onclick={beginEdit}><AppIcons.edit class="size-3.5" /></button>
+          <button
+            type="button"
+            class="rounded p-0.5 hover:bg-muted"
+            title={t('edit')}
+            aria-label={t('edit')}
+            onclick={beginEdit}><AppIcons.edit class="size-3.5" /></button
+          >
         {/if}
         {#if !isSending && isAssistant && onRegenerate}
-          <button type="button" class="rounded p-0.5 hover:bg-muted" title={t('regenerate')} aria-label={t('regenerate')} onclick={() => (regenerateOpen = true)}><AppIcons.refresh class="size-3.5" /></button>
+          <button
+            type="button"
+            class="rounded p-0.5 hover:bg-muted"
+            title={t('regenerate')}
+            aria-label={t('regenerate')}
+            onclick={() => (regenerateOpen = true)}><AppIcons.refresh class="size-3.5" /></button
+          >
         {/if}
         {#if canUndo}
-          <button type="button" class="rounded p-0.5 hover:bg-muted" title={t('undo')} aria-label={t('undo')} onclick={() => (undoOpen = true)}><AppIcons.undo class="size-3.5" /></button>
+          <button
+            type="button"
+            class="rounded p-0.5 hover:bg-muted"
+            title={t('undo')}
+            aria-label={t('undo')}
+            onclick={() => (undoOpen = true)}><AppIcons.undo class="size-3.5" /></button
+          >
         {/if}
         {#if msg.createdAt}
           <span class="ml-1 tabular-nums opacity-70">{fmtTime(msg.createdAt, now())}</span>
@@ -362,7 +412,11 @@
     <Textarea bind:value={editText} rows={5} />
   {/snippet}
   {#snippet footer()}
-    <button type="button" class="rounded-md px-3 py-1.5 text-sm hover:bg-muted" onclick={() => (editOpen = false)}>{t('cancel')}</button>
+    <button
+      type="button"
+      class="rounded-md px-3 py-1.5 text-sm hover:bg-muted"
+      onclick={() => (editOpen = false)}>{t('cancel')}</button
+    >
     <button
       type="button"
       class="rounded-md bg-primary px-3 py-1.5 text-sm text-primary-foreground hover:bg-primary/80"
@@ -370,8 +424,8 @@
         const v = editText.trim()
         editOpen = false
         if (v) onEdit?.(v)
-      }}
-    >{t('apply')}</button>
+      }}>{t('apply')}</button
+    >
   {/snippet}
 </Dialog>
 
@@ -381,15 +435,19 @@
     <div class="text-meta text-muted-foreground">{t('retryBody')}</div>
   {/snippet}
   {#snippet footer()}
-    <button type="button" class="rounded-md px-3 py-1.5 text-sm hover:bg-muted" onclick={() => (retryOpen = false)}>{t('cancel')}</button>
+    <button
+      type="button"
+      class="rounded-md px-3 py-1.5 text-sm hover:bg-muted"
+      onclick={() => (retryOpen = false)}>{t('cancel')}</button
+    >
     <button
       type="button"
       class="rounded-md bg-primary px-3 py-1.5 text-sm text-primary-foreground hover:bg-primary/80"
       onclick={() => {
         retryOpen = false
         onResend?.(textOfMessage())
-      }}
-    >{t('retry')}</button>
+      }}>{t('retry')}</button
+    >
   {/snippet}
 </Dialog>
 
@@ -399,15 +457,19 @@
     <div class="text-meta text-muted-foreground">{t('undoBody')}</div>
   {/snippet}
   {#snippet footer()}
-    <button type="button" class="rounded-md px-3 py-1.5 text-sm hover:bg-muted" onclick={() => (undoOpen = false)}>{t('cancel')}</button>
+    <button
+      type="button"
+      class="rounded-md px-3 py-1.5 text-sm hover:bg-muted"
+      onclick={() => (undoOpen = false)}>{t('cancel')}</button
+    >
     <button
       type="button"
       class="rounded-md bg-destructive px-3 py-1.5 text-sm text-white hover:bg-destructive/80"
       onclick={() => {
         undoOpen = false
         onUndo(msg.id)
-      }}
-    >{t('undo')}</button>
+      }}>{t('undo')}</button
+    >
   {/snippet}
 </Dialog>
 
@@ -418,14 +480,18 @@
     <div class="text-meta text-muted-foreground">{t('regenerateBody')}</div>
   {/snippet}
   {#snippet footer()}
-    <button type="button" class="rounded-md px-3 py-1.5 text-sm hover:bg-muted" onclick={() => (regenerateOpen = false)}>{t('cancel')}</button>
+    <button
+      type="button"
+      class="rounded-md px-3 py-1.5 text-sm hover:bg-muted"
+      onclick={() => (regenerateOpen = false)}>{t('cancel')}</button
+    >
     <button
       type="button"
       class="rounded-md bg-primary px-3 py-1.5 text-sm text-primary-foreground hover:bg-primary/80"
       onclick={() => {
         regenerateOpen = false
         onRegenerate?.()
-      }}
-    >{t('regenerate')}</button>
+      }}>{t('regenerate')}</button
+    >
   {/snippet}
 </Dialog>

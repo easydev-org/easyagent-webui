@@ -328,13 +328,23 @@
             <div class="text-muted-foreground">{t('adminLoginUsername')}</div>
             <div class="flex items-center gap-2">
               <code class="min-w-0 flex-1 truncate font-mono">{revealed.username}</code>
-              <IconButton icon={AppIcons.copy} label={t('copy')} onclick={() => void copy(revealed!.username!)} />
+              <IconButton
+                icon={AppIcons.copy}
+                label={t('copy')}
+                onclick={() => void copy(revealed!.username!)}
+              />
             </div>
           </div>
         {/if}
         <div class="flex items-center gap-2">
-          <code class="min-w-0 flex-1 truncate rounded bg-muted px-2 py-1 font-mono text-micro">{revealed.value}</code>
-          <IconButton icon={AppIcons.copy} label={t('copy')} onclick={() => void copy(revealed!.value)} />
+          <code class="min-w-0 flex-1 truncate rounded bg-muted px-2 py-1 font-mono text-micro"
+            >{revealed.value}</code
+          >
+          <IconButton
+            icon={AppIcons.copy}
+            label={t('copy')}
+            onclick={() => void copy(revealed!.value)}
+          />
           <IconButton icon={AppIcons.close} label={t('close')} onclick={() => (revealed = null)} />
         </div>
       </div>
@@ -350,12 +360,20 @@
     <!-- domains (subtree roots) with their member users -->
     <div class="flex items-center pr-2">
       <SectionLabel class="min-w-0 flex-1">{t('adminDomains')} · {domains.length}</SectionLabel>
-      <IconButton icon={AppIcons.add} label={t('adminCreateDomain')} variant="primary" class="p-1" onclick={() => openCreate(null)} />
+      <IconButton
+        icon={AppIcons.add}
+        label={t('adminCreateDomain')}
+        variant="primary"
+        class="p-1"
+        onclick={() => openCreate(null)}
+      />
     </div>
 
     {#if loading}
       <div class="flex justify-center py-8">
-        <span class="size-6 animate-spin rounded-full border-2 border-muted-foreground/30 border-t-muted-foreground"></span>
+        <span
+          class="size-6 animate-spin rounded-full border-2 border-muted-foreground/30 border-t-muted-foreground"
+        ></span>
       </div>
     {:else if domains.length === 0}
       <EmptyState>{t('adminNoTenants')}</EmptyState>
@@ -368,15 +386,24 @@
             class="flex min-w-0 flex-1 items-center gap-2 text-left"
             onclick={() => void toggleExpand('dom:' + dom.id)}
           >
-            {#if expanded === 'dom:' + dom.id}<AppIcons.chevron_down class="size-4 shrink-0 text-muted-foreground" />{:else}<AppIcons.chevron_right class="size-4 shrink-0 text-muted-foreground" />{/if}
+            {#if expanded === 'dom:' + dom.id}<AppIcons.chevron_down
+                class="size-4 shrink-0 text-muted-foreground"
+              />{:else}<AppIcons.chevron_right class="size-4 shrink-0 text-muted-foreground" />{/if}
             <AppIcons.jobs class="size-4 shrink-0 text-primary" />
             <span class="min-w-0 flex-1">
               <span class="block truncate text-body font-semibold">{dom.name || dom.id}</span>
-              <span class="block truncate font-mono text-micro text-muted-foreground">{dom.id} · {dom.members.length} {t('adminUsers')}</span>
+              <span class="block truncate font-mono text-micro text-muted-foreground"
+                >{dom.id} · {dom.members.length} {t('adminUsers')}</span
+              >
             </span>
-            {#if dom.disabled}<span class="text-micro text-destructive">{t('adminDisabled')}</span>{/if}
+            {#if dom.disabled}<span class="text-micro text-destructive">{t('adminDisabled')}</span
+              >{/if}
           </button>
-          <IconButton icon={AppIcons.add} label={t('adminCreateUser')} onclick={() => openCreate(dom.id)} />
+          <IconButton
+            icon={AppIcons.add}
+            label={t('adminCreateUser')}
+            onclick={() => openCreate(dom.id)}
+          />
           <!-- A domain (subtree root) had no way to be removed at all: only its
                individual users had a delete button. Deleting a domain cascades
                to its users on the server, so the confirm dialog says so. -->
@@ -400,13 +427,20 @@
                 {#if at.revoked}
                   <span class="text-micro text-destructive">{t('adminRevoked')}</span>
                 {:else}
-                  <IconButton icon={AppIcons.delete} label={t('adminRevokeToken')} variant="destructive" onclick={() => void revokeAdmin(at)} />
+                  <IconButton
+                    icon={AppIcons.delete}
+                    label={t('adminRevokeToken')}
+                    variant="destructive"
+                    onclick={() => void revokeAdmin(at)}
+                  />
                 {/if}
               </div>
             {/each}
             <div class="mt-1 flex items-end gap-2">
               <Input bind:value={newAdminLabel} placeholder={t('adminTokenLabel')} />
-              <Button size="sm" onclick={() => void createAdmin(dom.id)}>{t('adminCreateSubAdmin')}</Button>
+              <Button size="sm" onclick={() => void createAdmin(dom.id)}
+                >{t('adminCreateSubAdmin')}</Button
+              >
             </div>
             <div class="mt-1 text-micro text-muted-foreground">{t('adminTokenLabelHint')}</div>
           </div>
@@ -419,20 +453,25 @@
             class="flex w-full items-center gap-3 border-b border-border/60 px-4 py-2.5 pl-9 text-left hover:bg-muted"
             onclick={() => void toggleExpand(tn.id)}
           >
-            {#if expanded === tn.id}<AppIcons.chevron_down class="size-4 shrink-0 text-muted-foreground" />{:else}<AppIcons.chevron_right class="size-4 shrink-0 text-muted-foreground" />{/if}
+            {#if expanded === tn.id}<AppIcons.chevron_down
+                class="size-4 shrink-0 text-muted-foreground"
+              />{:else}<AppIcons.chevron_right class="size-4 shrink-0 text-muted-foreground" />{/if}
             <AppIcons.terminal class="size-4 shrink-0 text-muted-foreground" />
             <span class="min-w-0 flex-1">
               <span class="block truncate text-body">{tn.name || tn.id}</span>
               <span class="block truncate font-mono text-micro text-muted-foreground">{tn.id}</span>
             </span>
-            {#if tn.disabled}<span class="text-micro text-destructive">{t('adminDisabled')}</span>{/if}
+            {#if tn.disabled}<span class="text-micro text-destructive">{t('adminDisabled')}</span
+              >{/if}
           </button>
 
           {#if expanded === tn.id}
             <div class="border-b border-border bg-muted/30 pl-9">
               <div class="flex items-end gap-2 px-4 py-3">
                 <label class="block min-w-0 flex-1">
-                  <span class="mb-1 block text-meta text-muted-foreground">{t('adminTokenLabel')}</span>
+                  <span class="mb-1 block text-meta text-muted-foreground"
+                    >{t('adminTokenLabel')}</span
+                  >
                   <Input bind:value={issueLabel} placeholder="ci" />
                 </label>
                 <Button size="sm" onclick={() => void issue(tn)}>{t('adminIssueToken')}</Button>
@@ -446,29 +485,52 @@
                     {#if renaming === tok.tokenId}
                       <Input bind:value={renameValue} />
                       <Button size="sm" onclick={() => void commitRename(tn)}>{t('save')}</Button>
-                      <Button size="sm" variant="outline" onclick={() => (renaming = null)}>{t('cancel')}</Button>
+                      <Button size="sm" variant="outline" onclick={() => (renaming = null)}
+                        >{t('cancel')}</Button
+                      >
                     {:else}
                       <span class="min-w-0 flex-1">
                         <span class="block truncate text-meta">{tok.label || tok.tokenId}</span>
-                        <span class="block truncate text-micro text-muted-foreground">{tok.lastUsedAt ? t('adminUsed') : t('adminUnused')}</span>
+                        <span class="block truncate text-micro text-muted-foreground"
+                          >{tok.lastUsedAt ? t('adminUsed') : t('adminUnused')}</span
+                        >
                       </span>
                       {#if tok.revoked}
                         <span class="text-micro text-destructive">{t('adminRevoked')}</span>
                       {:else}
-                        <IconButton icon={AppIcons.edit} label={t('adminRenameToken')} onclick={() => startRename(tok)} />
-                        <IconButton icon={AppIcons.refresh} label={t('adminRotateToken')} onclick={() => void rotate(tn, tok)} />
-                        <IconButton icon={AppIcons.delete} label={t('adminRevokeToken')} variant="destructive" onclick={() => void revoke(tn, tok)} />
+                        <IconButton
+                          icon={AppIcons.edit}
+                          label={t('adminRenameToken')}
+                          onclick={() => startRename(tok)}
+                        />
+                        <IconButton
+                          icon={AppIcons.refresh}
+                          label={t('adminRotateToken')}
+                          onclick={() => void rotate(tn, tok)}
+                        />
+                        <IconButton
+                          icon={AppIcons.delete}
+                          label={t('adminRevokeToken')}
+                          variant="destructive"
+                          onclick={() => void revoke(tn, tok)}
+                        />
                       {/if}
                     {/if}
                   </div>
                 {/each}
               {/if}
               <div class="flex items-center gap-2 border-t border-border px-4 py-2.5">
-                <Button size="sm" variant="outline" onclick={() => void setDisabled(tn, !tn.disabled)}>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onclick={() => void setDisabled(tn, !tn.disabled)}
+                >
                   {tn.disabled ? t('adminEnable') : t('adminDisable')}
                 </Button>
                 {#if !tn.disabled}
-                  <Button size="sm" variant="destructive" onclick={() => void remove(tn)}>{t('adminDisableTenant')}</Button>
+                  <Button size="sm" variant="destructive" onclick={() => void remove(tn)}
+                    >{t('adminDisableTenant')}</Button
+                  >
                 {/if}
               </div>
             </div>
@@ -480,7 +542,9 @@
     {#if !isPlatform}
       <!-- delegated administrators of this subtree (re-delegation) -->
       <div class="flex items-center pr-2">
-        <SectionLabel class="min-w-0 flex-1">{t('adminSubAdmins')} · {adminTokens.length}</SectionLabel>
+        <SectionLabel class="min-w-0 flex-1"
+          >{t('adminSubAdmins')} · {adminTokens.length}</SectionLabel
+        >
       </div>
       <div class="flex items-end gap-2 px-4 py-2">
         <label class="block">
@@ -495,12 +559,19 @@
           <AppIcons.key class="size-4 shrink-0 text-muted-foreground" />
           <span class="min-w-0 flex-1">
             <span class="block truncate text-meta">{at.label || at.tokenId}</span>
-            <span class="block truncate font-mono text-micro text-muted-foreground">{at.scopeTenantId}</span>
+            <span class="block truncate font-mono text-micro text-muted-foreground"
+              >{at.scopeTenantId}</span
+            >
           </span>
           {#if at.revoked}
             <span class="text-micro text-destructive">{t('adminRevoked')}</span>
           {:else}
-            <IconButton icon={AppIcons.delete} label={t('adminRevokeToken')} variant="destructive" onclick={() => void revokeAdmin(at)} />
+            <IconButton
+              icon={AppIcons.delete}
+              label={t('adminRevokeToken')}
+              variant="destructive"
+              onclick={() => void revokeAdmin(at)}
+            />
           {/if}
         </div>
       {/each}
@@ -542,7 +613,9 @@
       <div class="flex justify-end gap-2">
         <Button variant="outline" onclick={() => (createOpen = false)}>{t('cancel')}</Button>
         <Button
-          disabled={(isPlatform && newId.trim() === '') || (!isPlatform && newName.trim() === '') || creating}
+          disabled={(isPlatform && newId.trim() === '') ||
+            (!isPlatform && newName.trim() === '') ||
+            creating}
           onclick={() => void create()}
         >
           {creating ? t('saving') : t('create')}

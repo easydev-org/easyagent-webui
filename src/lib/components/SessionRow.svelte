@@ -42,7 +42,8 @@
     /** Open the row's context menu. Receives the ROW's viewport rect so the
      *  menu anchors to this row (not the cursor) and the row can be
      *  highlighted. Null disables it (e.g. select mode). */
-    onMenuRequest?: ((anchor: { top: number; bottom: number; left: number; right: number }) => void) | null
+    onMenuRequest?:
+      ((anchor: { top: number; bottom: number; left: number; right: number }) => void) | null
     /** This row's context menu is open — highlight it so the target is
      *  unambiguous. */
     menuOpen?: boolean
@@ -188,7 +189,8 @@
         >{sessionName(session)}</span
       >
       {#if session.group && !isChild}
-        <span class="ml-1 shrink-0 rounded-full bg-primary/14 px-1.5 py-px text-[9px] leading-none text-primary"
+        <span
+          class="ml-1 shrink-0 rounded-full bg-primary/14 px-1.5 py-px text-[9px] leading-none text-primary"
           >{t('subsessionBadge')}</span
         >
       {/if}
@@ -210,17 +212,25 @@
           }}
         >
           {t('subsessionCount', { arg1: childCount })}
-          {#if expanded}<AppIcons.chevron_up class="size-[13px]" />{:else}<AppIcons.chevron_down class="size-[13px]" />{/if}
+          {#if expanded}<AppIcons.chevron_up class="size-[13px]" />{:else}<AppIcons.chevron_down
+              class="size-[13px]"
+            />{/if}
         </span>
       {/if}
       <!-- Fixed-width right-aligned slot: every trailing chip ends at the same
            x on every row, exactly like the Flutter implementation. -->
-      <span class="w-[52px] shrink-0 text-right text-micro text-muted-foreground" style="line-height:1.4">{stamp}</span>
+      <span
+        class="w-[52px] shrink-0 text-right text-micro text-muted-foreground"
+        style="line-height:1.4">{stamp}</span
+      >
     </span>
     <span class="mt-0.5 flex items-center">
-      <span class="min-w-0 flex-1 truncate text-micro text-muted-foreground">{subtitle || session.id}</span>
+      <span class="min-w-0 flex-1 truncate text-micro text-muted-foreground"
+        >{subtitle || session.id}</span
+      >
       {#if unread && !isActive && unreadCount > 0}
-        <span class="ml-1 flex h-[18px] shrink-0 items-center rounded-full bg-destructive px-1.5 text-[10px] leading-none font-semibold text-white"
+        <span
+          class="ml-1 flex h-[18px] shrink-0 items-center rounded-full bg-destructive px-1.5 text-[10px] leading-none font-semibold text-white"
           >{unreadCount > 99 ? '99+' : unreadCount}</span
         >
       {/if}

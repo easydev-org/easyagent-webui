@@ -37,10 +37,7 @@
     try {
       // DECLARATIONS COME FROM THE EXTENSIONS, fetched fresh each time: a newly-deployed extension
       // should appear without a page reload.
-      const [d, g] = await Promise.all([
-        store.api.listPermissionDecls(),
-        store.api.listGrants(sid),
-      ])
+      const [d, g] = await Promise.all([store.api.listPermissionDecls(), store.api.listGrants(sid)])
       decls = d
       grants = g
       // REFUSALS ARE LOADED SEPARATELY AND MAY FAIL WITHOUT EMPTYING THE PAGE: a deployment without a
@@ -109,62 +106,64 @@
   page looked like. Chat avoids it by returning a single flex-col root, and so does this now.
 -->
 <div class="flex h-full min-h-0 w-full min-w-0 flex-col">
-<PageHeader title={t('permissionsTitle')} onBack={() => store.popPage()} />
+  <PageHeader title={t('permissionsTitle')} onBack={() => store.popPage()} />
 
-{#if !sid}
-  <p class="p-4 text-meta text-muted-foreground">{t('permissionsNoSession')}</p>
-{:else if loading && decls.length === 0}
-  <p class="p-4 text-meta text-muted-foreground">{t('loading')}</p>
-{:else}
-  <!--
+  {#if !sid}
+    <p class="p-4 text-meta text-muted-foreground">{t('permissionsNoSession')}</p>
+  {:else if loading && decls.length === 0}
+    <p class="p-4 text-meta text-muted-foreground">{t('loading')}</p>
+  {:else}
+    <!--
     REFUSED FIRST, AND ABOVE THE LIST.
 
     A reader who arrives here because something stopped working is looking for the reason, and the
     reason is in this block. The full catalogue below is what they browse when nothing is wrong — so
     the order is "what just broke" then "what could I grant", not the reverse.
   -->
-  {#if denials.length > 0}
-    <section class="border-b border-border bg-amber-500/5 px-4 py-3">
-      <h2 class="mb-2 text-micro font-semibold tracking-wide text-muted-foreground uppercase">
-        {t('denialsTitle')}
-      </h2>
-      <p class="mb-2 text-micro text-muted-foreground">{t('denialsHint')}</p>
-      <ul class="flex flex-col gap-2">
-        {#each denials as d (d.extId + '/' + d.capability)}
-          <li class="flex items-start justify-between gap-3 rounded border border-amber-600/30 px-2 py-1.5">
-            <div class="min-w-0">
-              <div class="truncate font-mono text-[11px]">
-                {d.extId}<span class="text-muted-foreground">/</span>{d.capability}
-              </div>
-              <!-- THE TOOL, not the capability, is what a reader recognises — and the count says
-                   whether this was a one-off or a wall they kept hitting. -->
-              <div class="truncate text-[11px] text-muted-foreground">
-                {d.tool}{#if d.count > 1}&nbsp;· {t('denialsCount', { n: String(d.count) })}{/if}
-              </div>
-            </div>
-            <button
-              class="shrink-0 rounded border border-border px-2 py-0.5 text-micro hover:border-foreground/40"
-              onclick={() => void grantDenied(d)}
+    {#if denials.length > 0}
+      <section class="border-b border-border bg-amber-500/5 px-4 py-3">
+        <h2 class="mb-2 text-micro font-semibold tracking-wide text-muted-foreground uppercase">
+          {t('denialsTitle')}
+        </h2>
+        <p class="mb-2 text-micro text-muted-foreground">{t('denialsHint')}</p>
+        <ul class="flex flex-col gap-2">
+          {#each denials as d (d.extId + '/' + d.capability)}
+            <li
+              class="flex items-start justify-between gap-3 rounded border border-amber-600/30 px-2 py-1.5"
             >
-              {t('permissionsGrant')}
-            </button>
-          </li>
-        {/each}
-      </ul>
-    </section>
-  {/if}
+              <div class="min-w-0">
+                <div class="truncate font-mono text-[11px]">
+                  {d.extId}<span class="text-muted-foreground">/</span>{d.capability}
+                </div>
+                <!-- THE TOOL, not the capability, is what a reader recognises — and the count says
+                   whether this was a one-off or a wall they kept hitting. -->
+                <div class="truncate text-[11px] text-muted-foreground">
+                  {d.tool}{#if d.count > 1}&nbsp;· {t('denialsCount', { n: String(d.count) })}{/if}
+                </div>
+              </div>
+              <button
+                class="shrink-0 rounded border border-border px-2 py-0.5 text-micro hover:border-foreground/40"
+                onclick={() => void grantDenied(d)}
+              >
+                {t('permissionsGrant')}
+              </button>
+            </li>
+          {/each}
+        </ul>
+      </section>
+    {/if}
 
-  <!-- FULL WIDTH, FULL HEIGHT. The panel's own `w-[340px]` is overridden rather than removed: the
+    <!-- FULL WIDTH, FULL HEIGHT. The panel's own `w-[340px]` is overridden rather than removed: the
        component still knows how to be a side panel, and this page is the only caller that wants it
        to be a page. -->
-  <PermissionsPanel
-    sessionId={sid}
-    {decls}
-    {grants}
-    locale={''}
-    ongrant={grant}
-    onrevoke={revoke}
-    class="w-full"
-  />
-{/if}
+    <PermissionsPanel
+      sessionId={sid}
+      {decls}
+      {grants}
+      locale={''}
+      ongrant={grant}
+      onrevoke={revoke}
+      class="w-full"
+    />
+  {/if}
 </div>

@@ -209,14 +209,15 @@
       showErrorToast(String(e))
     }
   }
-
 </script>
 
 <div class="flex h-full w-full flex-col">
   <PageHeader>
     {#if selectMode}
       <IconButton icon={AppIcons.close} label={t('cancel')} onclick={exitSelect} />
-      <span class="min-w-0 flex-1 truncate text-base font-semibold">{t('selectedCount', { n: selected.size })}</span>
+      <span class="min-w-0 flex-1 truncate text-base font-semibold"
+        >{t('selectedCount', { n: selected.size })}</span
+      >
       <IconButton icon={AppIcons.list} label={t('selectAll')} onclick={toggleAll} />
       <IconButton
         icon={AppIcons.delete}
@@ -240,9 +241,24 @@
       />
     {:else}
       <span class="min-w-0 flex-1 truncate text-base font-semibold">{t('tabChat')}</span>
-      <IconButton icon={AppIcons.search} label={t('search')} variant="primary" onclick={() => (searching = true)} />
-      <IconButton icon={AppIcons.list} label={t('selectSessions')} variant="primary" onclick={() => (selectMode = true)} />
-      <IconButton icon={AppIcons.add} label={t('newSession')} variant="primary" onclick={() => void create()} />
+      <IconButton
+        icon={AppIcons.search}
+        label={t('search')}
+        variant="primary"
+        onclick={() => (searching = true)}
+      />
+      <IconButton
+        icon={AppIcons.list}
+        label={t('selectSessions')}
+        variant="primary"
+        onclick={() => (selectMode = true)}
+      />
+      <IconButton
+        icon={AppIcons.add}
+        label={t('newSession')}
+        variant="primary"
+        onclick={() => void create()}
+      />
     {/if}
   </PageHeader>
 
@@ -271,7 +287,7 @@
           selected={selected.has(s.id)}
           childCount={isChild || searching ? 0 : childCount(s.id)}
           expanded={expanded.has(s.id)}
-          isChild={isChild}
+          {isChild}
           onToggleExpand={() => toggleExpand(s.id)}
           onTap={() => (selectMode ? toggle(s.id) : store.pickSession(s.id))}
           menuOpen={rowMenu?.sid === s.id}
@@ -282,7 +298,12 @@
   </div>
 
   {#if rowMenu}
-    <ContextMenu anchor={rowMenu.anchor} items={rowMenuItems} onPick={v => void onRowMenuPick(v)} onClose={() => (rowMenu = null)} />
+    <ContextMenu
+      anchor={rowMenu.anchor}
+      items={rowMenuItems}
+      onPick={v => void onRowMenuPick(v)}
+      onClose={() => (rowMenu = null)}
+    />
   {/if}
 
   <NewSessionDialog

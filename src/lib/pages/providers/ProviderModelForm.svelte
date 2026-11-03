@@ -12,7 +12,11 @@
   import CapabilityIcon from './CapabilityIcon.svelte'
   import PageHeader from '$lib/components/layout/PageHeader.svelte'
 
-  let { store, showBack = false, modelId = null }: PageProps & { modelId?: string | null } = $props()
+  let {
+    store,
+    showBack = false,
+    modelId = null,
+  }: PageProps & { modelId?: string | null } = $props()
 
   const draft = $derived(store.providerDraft)
   const existing = $derived(draft?.models.find(m => m.id === modelId) ?? null)
@@ -72,7 +76,9 @@
         capability,
       })
       testOk = r.ok
-      testMsg = r.ok ? t('testModelOk', { r: String(r.result ?? '') }) : String(r.result ?? t('testFailed'))
+      testMsg = r.ok
+        ? t('testModelOk', { r: String(r.result ?? '') })
+        : String(r.result ?? t('testFailed'))
     } catch (e) {
       testOk = false
       testMsg = String(e)
@@ -102,19 +108,31 @@
 
 {#if !draft}
   <div class="flex h-full items-center justify-center">
-    <span class="size-6 animate-spin rounded-full border-2 border-muted-foreground/30 border-t-muted-foreground"></span>
+    <span
+      class="size-6 animate-spin rounded-full border-2 border-muted-foreground/30 border-t-muted-foreground"
+    ></span>
   </div>
 {:else}
   <div class="flex h-full w-full flex-col">
-    <PageHeader title={isEdit ? t('editModel') : t('addModel')} onBack={showBack ? () => store.popPage() : null}>
-      <button type="button" class="ml-auto text-sm text-primary disabled:opacity-40" disabled={!canSave} onclick={save}>{t('save')}</button>
+    <PageHeader
+      title={isEdit ? t('editModel') : t('addModel')}
+      onBack={showBack ? () => store.popPage() : null}
+    >
+      <button
+        type="button"
+        class="ml-auto text-sm text-primary disabled:opacity-40"
+        disabled={!canSave}
+        onclick={save}>{t('save')}</button
+      >
     </PageHeader>
 
     <div class="min-h-0 flex-1 space-y-3 overflow-y-auto p-4">
       <label class="block">
         <span class="mb-1 flex items-center justify-between text-meta text-muted-foreground">
           <span>{t('modelIdReq')}</span>
-          <button type="button" class="text-primary underline" onclick={() => void autofill()}>{t('autofill')}</button>
+          <button type="button" class="text-primary underline" onclick={() => void autofill()}
+            >{t('autofill')}</button
+          >
         </span>
         <Input bind:value={mid} class="font-mono" />
       </label>
@@ -145,9 +163,16 @@
           class="rounded-md border border-border px-3 py-1.5 text-meta hover:bg-muted disabled:opacity-40"
           disabled={testing || !mid.trim()}
           onclick={() => void test()}
-        ><AppIcons.flask class="mr-1 inline size-3.5" />{testing ? t('connecting') : t('test')}</button>
+          ><AppIcons.flask class="mr-1 inline size-3.5" />{testing
+            ? t('connecting')
+            : t('test')}</button
+        >
         {#if testOk !== null}
-          <div class="mt-2 rounded-md border {testOk ? 'border-success/40 bg-success/10 text-success' : 'border-destructive/40 bg-destructive/10 text-destructive'} px-3 py-2 text-micro">
+          <div
+            class="mt-2 rounded-md border {testOk
+              ? 'border-success/40 bg-success/10 text-success'
+              : 'border-destructive/40 bg-destructive/10 text-destructive'} px-3 py-2 text-micro"
+          >
             {testMsg}
           </div>
         {/if}

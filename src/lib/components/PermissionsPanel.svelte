@@ -27,7 +27,13 @@
     class?: string
   }
   let {
-    sessionId, decls, grants, locale = '', ongrant, onrevoke, class: className,
+    sessionId,
+    decls,
+    grants,
+    locale = '',
+    ongrant,
+    onrevoke,
+    class: className,
   }: Props = $props()
 
   // NO TABS AND NO HEADER ANY MORE.
@@ -119,9 +125,7 @@
 
   const canConfirm = $derived(
     granting != null &&
-      granting.paramsFields
-        .filter(f => f.required)
-        .every(f => (draft[f.name] ?? '').trim() !== ''),
+      granting.paramsFields.filter(f => f.required).every(f => (draft[f.name] ?? '').trim() !== ''),
   )
 </script>
 
@@ -156,7 +160,9 @@
                 <!-- One grant per row, with the rows visually separated.
                      Without that, several grants of the same capability read as one block
                      and "Revoke" is ambiguous: which of these three am I removing? -->
-                <div class="flex items-center justify-between gap-2 border-t border-border/50 px-2 py-1 first:border-t-0">
+                <div
+                  class="flex items-center justify-between gap-2 border-t border-border/50 px-2 py-1 first:border-t-0"
+                >
                   <span class="min-w-0 flex-1 truncate font-mono text-[10px] text-muted-foreground">
                     {paramsText(g.params) || t('permissionsNoParams')}
                   </span>
@@ -170,7 +176,8 @@
                 </div>
                 {#if g.grantedBy.startsWith('auto:fork:')}
                   <p class="px-2 pb-1 text-[9px] text-muted-foreground italic">
-                    {t('permissionsInherited')} {g.grantedBy.slice('auto:fork:'.length)}
+                    {t('permissionsInherited')}
+                    {g.grantedBy.slice('auto:fork:'.length)}
                   </p>
                 {/if}
               {/each}

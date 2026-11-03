@@ -69,7 +69,9 @@
    * (setup steps first). Un-namespaced knobs go in a leading '' group so they
    * appear before the groups rather than after them.
    */
-  function configGroups(ext: ExtensionInfo): { ns: string; description: string; fields: ToolConfig[] }[] {
+  function configGroups(
+    ext: ExtensionInfo,
+  ): { ns: string; description: string; fields: ToolConfig[] }[] {
     const order: string[] = ['']
     const desc = new Map<string, string>()
     for (const n of ext.namespaces ?? []) {
@@ -159,7 +161,9 @@
 <div class="h-full w-full p-4">
   {#if loading}
     <div class="flex justify-center py-8">
-      <span class="size-6 animate-spin rounded-full border-2 border-muted-foreground/30 border-t-muted-foreground"></span>
+      <span
+        class="size-6 animate-spin rounded-full border-2 border-muted-foreground/30 border-t-muted-foreground"
+      ></span>
     </div>
   {:else if extensions.length === 0}
     <p class="py-2 text-center text-meta text-muted-foreground">{t('noExtensions')}</p>
@@ -172,129 +176,170 @@
           onclick={() => (expanded = expanded === ext.extId ? null : ext.extId)}
         >
           <span class="min-w-0 flex-1 truncate font-mono text-meta">{ext.extId}</span>
-          <span class="text-micro text-muted-foreground">{ext.configFields.length} {t('configKnobs')}</span>
-          <span class="text-micro text-muted-foreground">{#if expanded === ext.extId}<AppIcons.chevron_down class="size-3" />{:else}<AppIcons.chevron_right class="size-3" />{/if}</span>
+          <span class="text-micro text-muted-foreground"
+            >{ext.configFields.length} {t('configKnobs')}</span
+          >
+          <span class="text-micro text-muted-foreground"
+            >{#if expanded === ext.extId}<AppIcons.chevron_down
+                class="size-3"
+              />{:else}<AppIcons.chevron_right class="size-3" />{/if}</span
+          >
         </button>
 
         {#if expanded === ext.extId}
           <div class="space-y-3 border-t border-border/60 px-3 py-3">
             {#each configGroups(ext) as grp (grp.ns)}
               {#if grp.ns !== ''}
-                <div class="mb-1 mt-2 text-micro font-semibold uppercase tracking-wide text-muted-foreground">
-                  {grp.ns}{#if grp.description}<span class="ml-1 font-normal normal-case tracking-normal">— {grp.description}</span>{/if}
+                <div
+                  class="mb-1 mt-2 text-micro font-semibold uppercase tracking-wide text-muted-foreground"
+                >
+                  {grp.ns}{#if grp.description}<span
+                      class="ml-1 font-normal normal-case tracking-normal">— {grp.description}</span
+                    >{/if}
                 </div>
               {/if}
-            {#each grp.fields as knob (knob.name)}
-              <label class="block">
-                <span class="mb-1 flex items-center gap-1.5 text-meta">
-                  <span class="font-mono">{knob.name}</span>
-                  {#if knob.description}
-                    <span class="text-micro text-muted-foreground">— {knob.description}</span>
-                  {/if}
-                </span>
-                <!-- STRUCTURED knobs come FIRST, before the secret branch.
+              {#each grp.fields as knob (knob.name)}
+                <label class="block">
+                  <span class="mb-1 flex items-center gap-1.5 text-meta">
+                    <span class="font-mono">{knob.name}</span>
+                    {#if knob.description}
+                      <span class="text-micro text-muted-foreground">— {knob.description}</span>
+                    {/if}
+                  </span>
+                  <!-- STRUCTURED knobs come FIRST, before the secret branch.
                      A structured knob may itself be kind=secret (the sandbox list
                      holds a token per item): checking `kind` first would render
                      it as one masked textarea and hide the whole form. -->
-                {#if (knob.type === 'list' || knob.type === 'object') && knob.fields?.length}
-                  <StructuredConfigEditor
-                    fields={knob.fields}
-                    itemType={knob.itemType}
-                    minItems={knob.minItems}
-                    maxItems={knob.maxItems}
-                    mode={knob.type === 'list' ? 'list' : 'object'}
-                    value={structuredValue(ext.extId, knob)}
-                    onchange={v => (drafts[`${ext.extId}.${knob.name}`] = JSON.stringify(v))}
-                  />
-                  <div class="mt-1 flex items-center gap-2">
-                    <button
-                      type="button"
-                      class="rounded-md border border-border px-3 py-1 text-meta hover:bg-muted"
-                      onclick={() => void saveKnob(ext.extId, knob, drafts[`${ext.extId}.${knob.name}`] ?? JSON.stringify(structuredValue(ext.extId, knob)))}
-                    >{t('save')}</button>
-                    <span class="text-micro text-muted-foreground">{t('structHint')}</span>
-                  </div>
-                {:else if knob.kind === 'secret'}
-                  {@const key = `${ext.extId}.${knob.name}`}
-                  <div class="flex items-center gap-2">
-                    {#if isSecretSet(ext.extId, knob.name) && !editingSecret[key]}
-                      <!-- A value is set; the server never returns it. Show a
+                  {#if (knob.type === 'list' || knob.type === 'object') && knob.fields?.length}
+                    <StructuredConfigEditor
+                      fields={knob.fields}
+                      itemType={knob.itemType}
+                      minItems={knob.minItems}
+                      maxItems={knob.maxItems}
+                      mode={knob.type === 'list' ? 'list' : 'object'}
+                      value={structuredValue(ext.extId, knob)}
+                      onchange={v => (drafts[`${ext.extId}.${knob.name}`] = JSON.stringify(v))}
+                    />
+                    <div class="mt-1 flex items-center gap-2">
+                      <button
+                        type="button"
+                        class="rounded-md border border-border px-3 py-1 text-meta hover:bg-muted"
+                        onclick={() =>
+                          void saveKnob(
+                            ext.extId,
+                            knob,
+                            drafts[`${ext.extId}.${knob.name}`] ??
+                              JSON.stringify(structuredValue(ext.extId, knob)),
+                          )}>{t('save')}</button
+                      >
+                      <span class="text-micro text-muted-foreground">{t('structHint')}</span>
+                    </div>
+                  {:else if knob.kind === 'secret'}
+                    {@const key = `${ext.extId}.${knob.name}`}
+                    <div class="flex items-center gap-2">
+                      {#if isSecretSet(ext.extId, knob.name) && !editingSecret[key]}
+                        <!-- A value is set; the server never returns it. Show a
                            badge + replace/clear, never the credential. -->
-                      <span class="flex items-center gap-1.5 text-meta text-muted-foreground">
-                        <span class="size-1.5 rounded-full bg-emerald-500"></span>
-                        {t('secretSet')}
-                      </span>
-                      <button
-                        type="button"
-                        class="rounded-md border border-border px-3 text-meta hover:bg-muted"
-                        onclick={() => (editingSecret = { ...editingSecret, [key]: true })}
-                      >{t('replace')}</button>
-                      <button
-                        type="button"
-                        class="rounded-md border border-border px-3 text-meta hover:bg-muted"
-                        onclick={() => void saveKnob(ext.extId, knob, '')}
-                      >{t('clear')}</button>
-                    {:else}
+                        <span class="flex items-center gap-1.5 text-meta text-muted-foreground">
+                          <span class="size-1.5 rounded-full bg-emerald-500"></span>
+                          {t('secretSet')}
+                        </span>
+                        <button
+                          type="button"
+                          class="rounded-md border border-border px-3 text-meta hover:bg-muted"
+                          onclick={() => (editingSecret = { ...editingSecret, [key]: true })}
+                          >{t('replace')}</button
+                        >
+                        <button
+                          type="button"
+                          class="rounded-md border border-border px-3 text-meta hover:bg-muted"
+                          onclick={() => void saveKnob(ext.extId, knob, '')}>{t('clear')}</button
+                        >
+                      {:else}
+                        <input
+                          type="password"
+                          autocomplete="new-password"
+                          value={drafts[key] ?? ''}
+                          placeholder={t('secretNotSet')}
+                          class="h-9 min-w-0 flex-1 rounded-md border border-input bg-transparent px-3 text-sm outline-none focus-visible:border-ring"
+                          oninput={e => (drafts[key] = e.currentTarget.value)}
+                          onkeydown={e =>
+                            e.key === 'Enter' && void saveKnob(ext.extId, knob, drafts[key] ?? '')}
+                        />
+                        <button
+                          type="button"
+                          class="rounded-md border border-border px-3 text-meta hover:bg-muted"
+                          onclick={() => void saveKnob(ext.extId, knob, drafts[key] ?? '')}
+                          >{t('save')}</button
+                        >
+                        {#if editingSecret[key]}
+                          <button
+                            type="button"
+                            class="rounded-md border border-border px-3 text-meta hover:bg-muted"
+                            onclick={() => (editingSecret = { ...editingSecret, [key]: false })}
+                            >{t('cancel')}</button
+                          >
+                        {/if}
+                      {/if}
+                    </div>
+                  {:else if knob.kind === 'model'}
+                    <Select
+                      value={knobValue(ext.extId, knob)}
+                      items={[
+                        { value: '', label: t('none') },
+                        ...modelRefs(knob.capability).map(ref => ({ value: ref, label: ref })),
+                      ]}
+                      onchange={v => void saveKnob(ext.extId, knob, v)}
+                    />
+                  {:else if knob.type === 'enum' && knob.enumValues.length}
+                    <Select
+                      value={knobValue(ext.extId, knob)}
+                      items={[
+                        { value: '', label: t('none') },
+                        ...knob.enumValues.map(ev => ({ value: ev, label: ev })),
+                      ]}
+                      onchange={v => void saveKnob(ext.extId, knob, v)}
+                    />
+                  {:else if knob.type === 'boolean'}
+                    <Select
+                      value={knobValue(ext.extId, knob)}
+                      items={[
+                        { value: '', label: t('none') },
+                        { value: 'true', label: 'true' },
+                        { value: 'false', label: 'false' },
+                      ]}
+                      onchange={v => void saveKnob(ext.extId, knob, v)}
+                    />
+                  {:else}
+                    <div class="flex gap-2">
                       <input
-                        type="password"
-                        autocomplete="new-password"
-                        value={drafts[key] ?? ''}
-                        placeholder={t('secretNotSet')}
+                        type={knob.type === 'number' ? 'number' : 'text'}
+                        value={knobValue(ext.extId, knob)}
+                        placeholder={fmtDefault(knob.defaultValue)}
                         class="h-9 min-w-0 flex-1 rounded-md border border-input bg-transparent px-3 text-sm outline-none focus-visible:border-ring"
-                        oninput={e => (drafts[key] = e.currentTarget.value)}
-                        onkeydown={e => e.key === 'Enter' && void saveKnob(ext.extId, knob, drafts[key] ?? '')}
+                        oninput={e => (drafts[`${ext.extId}.${knob.name}`] = e.currentTarget.value)}
+                        onkeydown={e =>
+                          e.key === 'Enter' &&
+                          void saveKnob(
+                            ext.extId,
+                            knob,
+                            drafts[`${ext.extId}.${knob.name}`] ?? knobValue(ext.extId, knob),
+                          )}
                       />
                       <button
                         type="button"
                         class="rounded-md border border-border px-3 text-meta hover:bg-muted"
-                        onclick={() => void saveKnob(ext.extId, knob, drafts[key] ?? '')}
-                      >{t('save')}</button>
-                      {#if editingSecret[key]}
-                        <button
-                          type="button"
-                          class="rounded-md border border-border px-3 text-meta hover:bg-muted"
-                          onclick={() => (editingSecret = { ...editingSecret, [key]: false })}
-                        >{t('cancel')}</button>
-                      {/if}
-                    {/if}
-                  </div>
-                {:else if knob.kind === 'model'}
-                  <Select
-                    value={knobValue(ext.extId, knob)}
-                    items={[{ value: '', label: t('none') }, ...modelRefs(knob.capability).map(ref => ({ value: ref, label: ref }))]}
-                    onchange={v => void saveKnob(ext.extId, knob, v)}
-                  />
-                {:else if knob.type === 'enum' && knob.enumValues.length}
-                  <Select
-                    value={knobValue(ext.extId, knob)}
-                    items={[{ value: '', label: t('none') }, ...knob.enumValues.map(ev => ({ value: ev, label: ev }))]}
-                    onchange={v => void saveKnob(ext.extId, knob, v)}
-                  />
-                {:else if knob.type === 'boolean'}
-                  <Select
-                    value={knobValue(ext.extId, knob)}
-                    items={[{ value: '', label: t('none') }, { value: 'true', label: 'true' }, { value: 'false', label: 'false' }]}
-                    onchange={v => void saveKnob(ext.extId, knob, v)}
-                  />
-                {:else}
-                  <div class="flex gap-2">
-                    <input
-                      type={knob.type === 'number' ? 'number' : 'text'}
-                      value={knobValue(ext.extId, knob)}
-                      placeholder={fmtDefault(knob.defaultValue)}
-                      class="h-9 min-w-0 flex-1 rounded-md border border-input bg-transparent px-3 text-sm outline-none focus-visible:border-ring"
-                      oninput={e => (drafts[`${ext.extId}.${knob.name}`] = e.currentTarget.value)}
-                      onkeydown={e => e.key === 'Enter' && void saveKnob(ext.extId, knob, drafts[`${ext.extId}.${knob.name}`] ?? knobValue(ext.extId, knob))}
-                    />
-                    <button
-                      type="button"
-                      class="rounded-md border border-border px-3 text-meta hover:bg-muted"
-                      onclick={() => void saveKnob(ext.extId, knob, drafts[`${ext.extId}.${knob.name}`] ?? knobValue(ext.extId, knob))}
-                    >{t('save')}</button>
-                  </div>
-                {/if}
-              </label>
-            {/each}
+                        onclick={() =>
+                          void saveKnob(
+                            ext.extId,
+                            knob,
+                            drafts[`${ext.extId}.${knob.name}`] ?? knobValue(ext.extId, knob),
+                          )}>{t('save')}</button
+                      >
+                    </div>
+                  {/if}
+                </label>
+              {/each}
             {/each}
           </div>
         {/if}

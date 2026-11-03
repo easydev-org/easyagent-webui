@@ -26,11 +26,7 @@
   {#if loading}
     <div class="p-6 text-center text-meta text-muted-foreground">{t('loading')}</div>
   {:else}
-    <iframe
-      title="html preview"
-      sandbox=""
-      srcdoc={html}
-      class="size-full border-0 bg-white"
+    <iframe title="html preview" sandbox="" srcdoc={html} class="size-full border-0 bg-white"
     ></iframe>
   {/if}
 </div>

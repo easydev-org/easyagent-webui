@@ -75,7 +75,7 @@
 
 <svelte:window
   onpointerdown={onWindowPointerdown}
-  onkeydown={(e) => e.key === 'Escape' && onClose()}
+  onkeydown={e => e.key === 'Escape' && onClose()}
   onscroll={onClose}
   onresize={onClose}
 />
