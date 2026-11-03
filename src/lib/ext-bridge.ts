@@ -15,6 +15,8 @@
 // tenant never has to travel as a query parameter either — it comes out of the token on the server,
 // exactly as it does for every other call.
 
+import { MSG_THEME, isThemeReady } from '@easydev-org/ext-ui/host'
+
 export interface BridgeRequest {
   /** Correlates the answer; chosen by the iframe. */
   id: string
@@ -33,7 +35,6 @@ export interface BridgeResponse {
 
 export const BRIDGE_REQUEST = 'easyagent:ext-fetch'
 export const BRIDGE_RESPONSE = 'easyagent:ext-fetch:result'
-export const BRIDGE_HELLO = 'easyagent:ext-hello'
 
 /** The extension id a frame was mounted for, given its window. */
 type ExtOf = (win: Window) => string | null
@@ -63,8 +64,12 @@ export function serveBridge(token: () => string, extOf: ExtOf, theme: () => 'lig
       return
     }
 
-    if (data.type === BRIDGE_HELLO) {
-      post(ev.source as Window, { type: 'easyagent:theme', theme: theme() })
+    // THE THEME HANDSHAKE. An extension that loaded inside a frame announces it can receive theme
+    // messages; this answers with the current one. Answering on the announcement — rather than only
+    // on every theme change — is what makes the panel independent of the console's broadcasting
+    // behaviour: a frame that mounts while the theme is dark and never sees a change still gets it.
+    if (isThemeReady(data)) {
+      post(ev.source as Window, { type: MSG_THEME, theme: theme() })
       return
     }
     if (data.type !== BRIDGE_REQUEST || typeof data.id !== 'string' || typeof data.path !== 'string') {

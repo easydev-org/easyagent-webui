@@ -9,14 +9,17 @@
   // card is a second document.
   import { onMount } from 'svelte'
   import { t } from '$lib/i18n.svelte'
+  // The protocol comes from the package on BOTH ends, which is the whole point of it existing: this
+  // file used to keep a hand-written copy of every constant and validator below.
   import {
-    extCardSrc,
-    MSG_CARD_DATA,
-    MSG_CARD_HEIGHT,
-    MSG_CARD_READY,
+    cardDataMessage,
+    cardHeightFrom,
+    cardSrc,
+    isCardReady,
+    MSG_THEME,
     openViewFrom,
-    type ExtCard,
-  } from '$lib/ext-card'
+  } from '@easydev-org/ext-ui/host'
+  import type { ExtCard } from '$lib/ext-card'
   import { extViewPage } from '$lib/ext-panel.svelte'
   import type { AppStore } from '$lib/store.svelte'
 
@@ -98,15 +101,17 @@
   /** Send the call. Idempotent: the frame may announce readiness more than once (a reload). */
   function pushData(win: Window | null | undefined): void {
     if (!win) return
+    // `cardDataMessage` adds the `type` discriminator the frame validates on. A payload missing it
+    // renders nothing, with no error on either side — which is exactly the failure this package
+    // exists to make impossible.
     win.postMessage(
-      {
-        type: MSG_CARD_DATA,
+      cardDataMessage({
         tool,
         input: plain(input),
         data: plain(data),
         output,
         error,
-      },
+      }),
       '*',
     )
   }
@@ -121,19 +126,19 @@
   const onMessage = (ev: MessageEvent): void => {
     if (!frame || ev.source !== frame.contentWindow) return
 
-    const m = ev.data as { type?: string; height?: number } | null
-    if (m?.type === MSG_CARD_READY) {
+    if (isCardReady(ev.data)) {
       // The frame says it is listening. This is the ONLY moment it can be sure a message will not
       // race the listener being registered in the child.
       pushData(frame.contentWindow)
       return
     }
-    if (m?.type === MSG_CARD_HEIGHT) {
-      if (typeof m.height === 'number' && m.height > 0) {
-        // Capped: a card reports its CONTENT height, and a runaway one must not push the
-        // conversation off screen.
-        height = Math.min(Math.max(m.height, 60), 640)
-      }
+    // 0 means "not a height message". The package refuses zero, negative and non-finite values,
+    // because a zero-height card is invisible and a NaN one collapses the conversation layout.
+    const h = cardHeightFrom(ev.data)
+    if (h > 0) {
+      // Capped: a card reports its CONTENT height, and a runaway one must not push the conversation
+      // off screen.
+      height = Math.min(Math.max(h, 60), 640)
       return
     }
     const open = openViewFrom(ev.data)
@@ -143,7 +148,7 @@
         extViewPage({
           ext: open.ext,
           route: open.route,
-          title: open.title ?? card.template,
+          title: open.title || card.template,
           session,
         }),
       )
@@ -174,12 +179,13 @@
   $effect(() => {
     const mode = themeNow()
     if (!frame) return
-    frame.contentWindow?.postMessage({ type: 'easyagent:theme', theme: mode }, '*')
+    frame.contentWindow?.postMessage({ type: MSG_THEME, theme: mode }, '*')
   })
 
   // The session is passed even though this route renders from the payload: the extension's UI is one
-  // document, and its api client scopes every request by `?session=`.
-  const src = $derived(extCardSrc(card, themeNow(), session))
+  // document, and its api client scopes every request by `?session=`. The URL's shape — theme in the
+  // query, template in the hash, template percent-encoded — is the package's, not this file's.
+  const src = $derived(cardSrc(card.ext, card.template, themeNow(), session))
 </script>
 
 <div bind:this={host} class="min-w-0">

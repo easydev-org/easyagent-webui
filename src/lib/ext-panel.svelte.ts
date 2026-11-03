@@ -30,13 +30,3 @@ export function extViewPage(v: {
 }): AppPage {
   return { kind: 'ext_view', key: 'ext_view', ...v }
 }
-
-/** Build the iframe src for an extension view. */
-export function extViewSrc(ext: string, route: string, session: string, theme: 'light' | 'dark'): string {
-  // `session` scopes the data; `theme` pre-applies the host's palette before first paint, because
-  // an iframe has its own <html> and would otherwise flash light in dark mode.
-  // NO tenant: it lives in the bearer token and the extension resolves it server-side.
-  const q = new URLSearchParams({ session, theme })
-  const r = route.startsWith('/') ? route : `/${route}`
-  return `/ext/${ext}/?${q.toString()}#${r}`
-}

@@ -1,5 +1,14 @@
 import { describe, expect, it } from 'vitest'
-import { extCardFrom, extCardSrc, MSG_OPEN_VIEW, openViewFrom } from './ext-card'
+import { extCardFrom } from './ext-card'
+
+/**
+ * The card DECLARATION — the one piece of this contract the console still owns.
+ *
+ * THE PROTOCOL'S OWN TESTS LIVE IN THE PACKAGE NOW. `extCardSrc`, `openViewFrom` and the message
+ * constants moved to `@easydev-org/ext-ui/host` and are tested there, beside the code: keeping a
+ * second copy here would only pin this repository's copy of a shape it no longer contains, and would
+ * pass while the package's version drifted.
+ */
 
 describe('extCardFrom', () => {
   it('reads a well-formed declaration', () => {
@@ -28,61 +37,5 @@ describe('extCardFrom', () => {
   // when the workspace expired. It must not be accepted as a card.
   it('does not accept a route-shaped declaration', () => {
     expect(extCardFrom({ card: { ext: 'github', route: '/card/ws1' } })).toBeNull()
-  })
-})
-
-describe('extCardSrc', () => {
-  it('carries the template in the hash and the theme in the query', () => {
-    expect(extCardSrc({ ext: 'github', template: 'gh-pr-files' }, 'dark')).toBe(
-      '/ext/github/?theme=dark#/card/gh-pr-files',
-    )
-  })
-
-  // The card renders from the payload, so it needs no scope — but the extension's UI is ONE document
-  // and its api client scopes every request by `?session=`. Leaving it out made the card work and
-  // every other screen in the same frame report an empty workspace list.
-  it('carries the session when there is one', () => {
-    const src = extCardSrc({ ext: 'github', template: 't' }, 'light', 'sess-1')
-    expect(src).toContain('session=sess-1')
-  })
-
-  it('omits an empty session rather than sending a blank scope', () => {
-    const src = extCardSrc({ ext: 'github', template: 't' }, 'light', '')
-    expect(src).not.toContain('session=')
-  })
-
-  it('escapes a template that would otherwise break the path', () => {
-    const src = extCardSrc({ ext: 'github', template: 'a/b' }, 'light')
-    expect(src.endsWith('#/card/a%2Fb')).toBe(true)
-  })
-
-  // The data goes over postMessage, not the URL: a tool result can be large, and a URL ends up in
-  // history and in logs. Neither the session nor the tenant belongs here either — the card reads
-  // nothing, so it needs no scope.
-  it('puts no data, session or tenant in the URL', () => {
-    const src = extCardSrc({ ext: 'github', template: 't' }, 'light')
-    expect(src).not.toContain('session')
-    expect(src).not.toContain('tenant')
-    expect(src).not.toContain('data')
-  })
-})
-
-describe('openViewFrom', () => {
-  it('accepts a well-formed request from a card', () => {
-    expect(
-      openViewFrom({ type: MSG_OPEN_VIEW, ext: 'github', route: '/ws/a/tree/', title: 'r' }),
-    ).toEqual({ type: MSG_OPEN_VIEW, ext: 'github', route: '/ws/a/tree/', title: 'r' })
-  })
-
-  // The frame is a separate document. Anything else arriving on `message` — the theme channel, a
-  // stray payload, another origin — must not be able to push a page.
-  it('ignores every other message shape', () => {
-    expect(openViewFrom({ type: 'easyagent:theme', theme: 'dark' })).toBeNull()
-    expect(openViewFrom({ type: MSG_OPEN_VIEW })).toBeNull()
-    expect(openViewFrom({ type: MSG_OPEN_VIEW, ext: 'github' })).toBeNull()
-    expect(openViewFrom({ type: MSG_OPEN_VIEW, ext: '', route: '/x' })).toBeNull()
-    expect(openViewFrom({ type: MSG_OPEN_VIEW, ext: 'github', route: '' })).toBeNull()
-    expect(openViewFrom('easyagent:open-view')).toBeNull()
-    expect(openViewFrom(null)).toBeNull()
   })
 })

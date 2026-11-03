@@ -6,6 +6,11 @@ on:
   pull_request:
   workflow_dispatch:
 
+permissions:
+  contents: read
+  # Reading @easydev-org/ext-ui from GitHub Packages. Without this the install is a 401.
+  packages: read
+
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -24,7 +29,11 @@ jobs:
       # something else. Adding the lockfile also removed the
       # "Cannot read properties of null (reading 'edgesOut')" crash that npm hits
       # when asked to install with no lockfile at all.
+      # @easydev-org/ext-ui is a private package on npm.pkg.github.com, so the install is
+      # authenticated with GITHUB_TOKEN (see the permissions block) — no PAT to rotate.
       - run: npm ci --no-audit --no-fund
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       # `npm run build` is the type check too: svelte-check runs inside it, so a
       # type error fails here rather than at runtime in the browser.
       - run: npm run build
@@ -46,6 +55,10 @@ jobs:
           push: false
           load: true
           tags: webui:ci
+          # Same reason as the release workflow: the private package needs a token, and it goes in
+          # as a build secret so it never becomes part of a layer.
+          secrets: |
+            node_auth_token=${{ secrets.GITHUB_TOKEN }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
       - name: it must serve the SPA
