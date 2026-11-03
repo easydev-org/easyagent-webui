@@ -370,8 +370,6 @@ const en = {
   testPrompt: `Prompt to send`,
   testTextToSpeak: `Text to speak`,
   testVoice: `Voice`,
-  testCloningNeedsReference: `This is a voice-cloning model: it needs a reference clip, which this test
-    panel does not record. Use a preset-voice model to try speech here.`,
   testRecord: `Record`,
   testStopRecording: `Stop and transcribe`,
   testRecordHint: `Record a short clip; it is sent to the model and the transcript is shown below.`,
@@ -794,7 +792,6 @@ const zh = {
   testPrompt: `发送的提示词`,
   testTextToSpeak: `要朗读的文本`,
   testVoice: `音色`,
-  testCloningNeedsReference: `这是声音克隆模型，需要参考音频；此测试面板不录制参考音频。想试语音请用预设音色模型。`,
   testRecord: `录音`,
   testStopRecording: `停止并转写`,
   testRecordHint: `录一小段，会发给模型并在下方显示转写结果。`,

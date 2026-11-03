@@ -44,17 +44,14 @@
   let recordError = $state('')
 
   /**
-   * TWO KINDS OF TTS MODEL, AND THEY NEED DIFFERENT INPUT.
+   * A SPEECH MODEL HAS NAMED VOICES, and the gateway rejects anything else with a 400 that lists them.
    *
-   * A `-customvoice` model speaks in one of its OWN voices, named; sending anything else is a 400 that
-   * lists them. A `-base` model is a VOICE CLONER: it cannot speak without a reference sample, so
-   * there is no preset to choose and the request fails without `ref_audio`.
-   *
-   * The suffix is the only signal the gateway gives — there is no capability flag for it — so this is
-   * where the distinction has to be made.
+   * VOICE CLONING IS NOT OFFERED HERE. The gateway also serves a `-base` model that refuses to speak
+   * without a reference sample, and there is no way to supply one from this panel — so it is not
+   * registered, and this panel does not pretend to have a mode for it. A "recording required" branch
+   * was worse than nothing: it explained a limitation instead of removing it.
    */
-  const isCloningVoice = $derived(/tts-base/.test(modelId))
-  const isPresetVoice = $derived(capability === 'speech' && !isCloningVoice)
+  const hasVoices = $derived(capability === 'speech')
 
   /** The gateway's own preset list, from the error it returns for an unknown name. */
   const PRESET_VOICES = [
@@ -81,10 +78,10 @@
           : 'What is the capital of France?',
   )
 
-  // A PRESET VOICE IS CHOSEN, NOT TYPED: the gateway rejects anything not on its list, so a free-text
-  // field would be a field whose valid values the user has to discover by failing.
+  // A VOICE IS CHOSEN, NOT TYPED: the gateway rejects anything not on its list, so a free-text field
+  // would be a field whose valid values the user has to discover by failing.
   $effect(() => {
-    if (isPresetVoice && voice === '') voice = 'serena'
+    if (hasVoices && voice === '') voice = 'serena'
   })
 
   // OBJECT URLS ARE REVOKED WHEN THE RESULT IS REPLACED, not on unmount alone: a user who tests three
@@ -110,7 +107,7 @@
         model: modelId ? `${providerId}/${modelId}` : providerId,
         capability,
         prompt: prompt.trim(),
-        voice: isPresetVoice ? voice : '',
+        voice: hasVoices ? voice : '',
         audio,
         audioMediaType,
       })
@@ -180,7 +177,7 @@
     <p class="text-meta text-muted-foreground">{t('testRecordHint')}</p>
   {/if}
 
-  {#if isPresetVoice}
+  {#if hasVoices}
     <label class="block">
       <span class="mb-1 block text-meta text-muted-foreground">{t('testVoice')}</span>
       <select
@@ -192,10 +189,6 @@
         {/each}
       </select>
     </label>
-  {:else if isCloningVoice}
-    <!-- A VOICE CLONER CANNOT SPEAK WITHOUT A SAMPLE, so there is nothing to pick and the request
-         would fail. Say why instead of offering an empty field. -->
-    <p class="text-micro text-muted-foreground">{t('testCloningNeedsReference')}</p>
   {/if}
 
   <div class="flex flex-wrap items-center gap-2">
