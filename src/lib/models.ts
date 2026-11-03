@@ -519,42 +519,6 @@ export interface Denial {
   count: number
 }
 
-/**
- * One background job, as the shared list reports it.
- *
- * NO OUTPUT FIELD, AND THAT IS THE CONTRACT. A job's output lives where the work ran; reading it is
- * that extension's own tool (`sandbox-job-output`, `gh-run-log`). This is the row a list needs, and
- * nothing more.
- */
-export interface Job {
-  id: string
-  /** The extension's word for the kind of work: "sandbox-job", "ci-run". */
-  kind: string
-  title: string
-  /**
-   * running | done | cancelled | lost
-   *
-   * THERE IS NO "failed": a job that exited 1 is `done` with `exitCode: 1`. The state says why it
-   * stopped; the code says what the ending was worth, and a UI that colours on the state alone will
-   * show a failed build as green.
-   */
-  state: string
-  /** Absent while running, and absent for a cancelled or lost job — neither produced one. */
-  exitCode?: number
-  /** Unix milliseconds. */
-  startedAt: number
-  /** Unix milliseconds; 0 while running. */
-  finishedAt: number
-  /**
-   * "kill" ends a process the extension owns; "request" only asks a remote system, which may finish
-   * its current step first; empty means there is nothing to cancel. A UI that offers the action for
-   * anything but these two teaches the reader that the button does not work.
-   */
-  cancelMode: string
-  /** Why a terminal state happened, when the state alone does not say. */
-  reason: string
-}
-
 /** One permission an extension declares, as published in its manifest. */
 export interface PermissionDecl {
   /**

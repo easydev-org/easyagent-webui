@@ -27,7 +27,6 @@ import type {
   Denial,
   ExtensionInfo,
   Identity,
-  Job,
   MailboxEntry,
   Message,
   ModelInfo,
@@ -392,29 +391,6 @@ export class AgentApi {
       firstAt: Number(d.firstAt),
       lastAt: Number(d.lastAt),
       count: d.count,
-    }))
-  }
-
-  /** The background jobs one conversation started.
-   *
-   *  A SNAPSHOT, NOT A STREAM. The page asks when it opens and when the reader asks again; a job
-   *  that ends while the page is open is noticed on the next refresh, which is enough for a list
-   *  that is read rather than watched.
-   *
-   *  THE LIST IS NOT THE TRUTH ABOUT THE WORK: it is a cache extensions write to, and a job whose
-   *  owner stopped renewing arrives as `lost` rather than as one still running. */
-  async listJobs(id: string): Promise<Job[]> {
-    const r = await this._guard(() => this._c.listJobs({ id }))
-    return (r.jobs ?? []).map(j => ({
-      id: j.id,
-      kind: j.kind,
-      title: j.title,
-      state: j.state,
-      exitCode: j.exitCode,
-      startedAt: Number(j.startedAt),
-      finishedAt: Number(j.finishedAt),
-      cancelMode: j.cancelMode,
-      reason: j.reason,
     }))
   }
 

@@ -14,7 +14,7 @@ export type SiderTab = 'chat' | 'extensions' | 'config'
 // `channels` IS NOT A TAB OF `permissions`. They sat behind one tab strip and the second was
 // undiscoverable: "what may this session do" and "what does it hear" are different questions, so
 // each gets its own entry rather than one hiding the other.
-export type SessionOverlay = 'mailbox' | 'permissions' | 'channels' | 'jobs'
+export type SessionOverlay = 'mailbox' | 'permissions' | 'channels'
 
 export type AppPage =
   | { kind: 'chat_list'; key: 'chat_list' }
