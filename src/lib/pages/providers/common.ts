@@ -1,14 +1,18 @@
-// Shared provider helpers — port of the providers.dart top-level constants.
-/** The 8 first-class modalities, in section order. */
+// Shared provider helpers.
+/**
+ * The modalities the console offers, in section order.
+ *
+ * THREE ARE MISSING ON PURPOSE: embedding, rerank and realtime. Nothing in this console calls them —
+ * a chat turn is text, an attachment is read by a vision model, a card renders an image, an output
+ * pane plays speech — so a section for them would be a picker whose models are never selectable. The
+ * PROTOCOL still accepts them (the gateway serves them); this is a decision about what to show.
+ */
 export const MODEL_CAPABILITIES = [
   'text',
   'image',
   'video',
   'speech',
   'transcription',
-  'embedding',
-  'rerank',
-  'realtime',
 ] as const
 
 /** The api types that can serve a modality (from the server catalog). */
@@ -34,13 +38,6 @@ export function capabilityLabelKey(capability: string): string {
       return 'capSpeech'
     case 'transcription':
       return 'capTranscription'
-    case 'embedding':
-      return 'capEmbedding'
-    case 'rerank':
-    case 'reranking':
-      return 'capReranking'
-    case 'realtime':
-      return 'capRealtime'
     default:
       return 'capText'
   }
@@ -48,19 +45,9 @@ export function capabilityLabelKey(capability: string): string {
 
 export function apiTypeLabelKey(apiType: string): string {
   switch (apiType) {
-    case 'openai-compatible':
-      return 'apiTypeOpenaiCompat'
-    case 'openai':
-      return 'apiTypeOpenai'
-    case 'anthropic':
-      return 'apiTypeAnthropic'
-    case 'gemini':
-    case 'google':
-      return 'apiTypeGemini'
-    case 'deepseek':
-      return 'apiTypeDeepseek'
-    case 'cohere':
-      return 'apiTypeCohere'
+    // ONE PROTOCOL. The other branches that used to be here (openai-compatible, openai, anthropic,
+    // gemini, deepseek, cohere) described wire formats this agent cannot speak and the server now
+    // rejects — a label for them was a menu entry for something that would fail on first call.
     case 'v4-gateway':
     case 'vercel-compatible-gateway':
       return 'apiTypeGateway'
