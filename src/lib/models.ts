@@ -461,6 +461,16 @@ export interface Identity {
   tenant: string
   tenantName: string
   role: 'tenant' | 'admin'
+  /**
+   * Admin scope: `'*'` (the platform admin) or a subtree root id (a delegated admin). Empty for a
+   * tenant.
+   *
+   * IT IS ON THE WIRE AND WAS MISSING HERE. `GetIdentityResponse` has carried `scope` since the
+   * delegated-admin feature landed; this interface did not, so the only way to read it was to declare
+   * it inline at the call site — which is what `App.svelte` did, and why the compiler was the only
+   * thing that noticed the field was missing.
+   */
+  scope: string
 }
 
 /**
