@@ -630,18 +630,6 @@
   }
 
   /**
-   * Open the tasks page.
-   *
-   * IT SITS BESIDE PERMISSIONS because it answers the same kind of question — what is going on in this
-   * conversation that the transcript does not show. A background job outlives the tool call that
-   * started it, so without a page like this the only way to know one is running is to remember.
-   */
-  function openJobs() {
-    if (!sid) return
-    store.pushPage({ kind: 'chat_overlay', key: 'chat_overlay', overlay: 'jobs' })
-  }
-
-  /**
    * Open the channels page.
    *
    * A SEPARATE ENTRY, NOT A TAB INSIDE PERMISSIONS. It lived behind a tab strip there, which meant a
@@ -844,7 +832,6 @@
             <DropdownMenuItem onSelect={() => void openChannels()}
               >{t('channelsMenu')}</DropdownMenuItem
             >
-            <DropdownMenuItem onSelect={() => void openJobs()}>{t('jobsMenu')}</DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem onSelect={() => void menuAction('compact')}
               >{t('compactHistory')}</DropdownMenuItem
