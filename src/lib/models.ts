@@ -587,7 +587,11 @@ export interface ChannelDecl {
   description: string
   descriptions: Record<string, string>
   /** Documented topic shapes, e.g. "tag.owner/repo.v1.2.3". Documentation only. */
-  topics: { pattern: string; description: string; descriptions: Record<string, string> }[]
+  topics: {
+    pattern: string
+    description: string
+    descriptions: Record<string, string>
+  }[]
 }
 
 /** Display name for a connection. The webui is served same-origin with the

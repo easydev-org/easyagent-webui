@@ -33,7 +33,9 @@ const fileInfo: CardHandler = ({ tool, data, input }) => {
         field('database', 'tcSize', humanBytes(n(data, 'size'))),
         // The digest is long and meaningless at a glance; kept in a mono row so it can be compared,
         // not read.
-        field('checks', 'tcSha256', s(data, 'sha256').slice(0, 16), { mono: true }),
+        field('checks', 'tcSha256', s(data, 'sha256').slice(0, 16), {
+          mono: true,
+        }),
       ),
     },
   }
@@ -93,7 +95,9 @@ const todoWrite: CardHandler = ({ tool, data, input }) => {
       // the counts belong, so a collapsed card still says something useful.
       fields: fields(
         field('todo', 'tcTotal', total),
-        field('success', 'tcDone', done, { tone: done === total && total > 0 ? 'success' : undefined }),
+        field('success', 'tcDone', done, {
+          tone: done === total && total > 0 ? 'success' : undefined,
+        }),
         field('clock', 'tcRemaining', total - done),
       ),
     },
@@ -156,7 +160,9 @@ const webFetch: CardHandler = ({ tool, data, input, output }) => {
     },
     result: {
       fields: fields(
-        field('braces', 'tcContentType', s(data, 'contentType'), { mono: true }),
+        field('braces', 'tcContentType', s(data, 'contentType'), {
+          mono: true,
+        }),
         field('list', 'tcLength', humanBytes(output.length)),
       ),
       // Fetched pages are markdown or text already; rendering as markdown is what makes a fetched
@@ -222,22 +228,40 @@ function mediaCard(
         fields: fields(
           field('asterisk', 'tcPrompt', firstLine(prompt, 60)),
           field('cpu', 'tcModel', model, { mono: true }),
-          field('code', 'tcReference', s(data, 'source') || s(data, 'reference'), { mono: true }),
+          field(
+            'code',
+            'tcReference',
+            s(data, 'source') || s(data, 'reference'),
+            { mono: true },
+          ),
         ),
       },
       result: {
         fields: fields(
           field('list', 'tcFiles', files.length),
-          field('database', 'tcSize', humanBytes(files.reduce((a, f) => a + (f.bytes ?? 0), 0))),
+          field(
+            'database',
+            'tcSize',
+            humanBytes(files.reduce((a, f) => a + (f.bytes ?? 0), 0)),
+          ),
         ),
         body: first
           ? opts.audio
             ? { kind: 'audio', code: first.code ?? '', caption: first.name }
             : files.length === 1
-              ? { kind: 'media', code: first.code ?? '', mime: first.mime, name: first.name }
+              ? {
+                  kind: 'media',
+                  code: first.code ?? '',
+                  mime: first.mime,
+                  name: first.name,
+                }
               : {
                   kind: 'files',
-                  files: files.map(f => ({ code: f.code ?? '', mime: f.mime, name: f.name })),
+                  files: files.map(f => ({
+                    code: f.code ?? '',
+                    mime: f.mime,
+                    name: f.name,
+                  })),
                 }
           : output
             ? { kind: 'text', text: output }
@@ -255,7 +279,11 @@ const subsessionCreate: CardHandler = ({ tool, data, input }) => {
     subtitle: 'subsession',
     input: {
       fields: fields(
-        field('chat', 'tcDescription', firstLine(s(input, 'prompt') || s(input, 'description'), 60)),
+        field(
+          'chat',
+          'tcDescription',
+          firstLine(s(input, 'prompt') || s(input, 'description'), 60),
+        ),
       ),
     },
     result: {

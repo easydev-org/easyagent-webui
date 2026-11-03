@@ -11,9 +11,13 @@
 import type { AppPage } from './nav'
 import { bundledHandlers } from './tool-cards/bundled'
 import { sandboxHandlers } from './tool-cards/sandbox'
-import { bareToolName, type CardCtx, type CardHandler } from './tool-cards/shared'
 // `export type` below re-exports the names but does not bring them into this file's scope.
 import type { CardSpec } from './tool-cards/shared'
+import {
+  bareToolName,
+  type CardCtx,
+  type CardHandler,
+} from './tool-cards/shared'
 
 export type {
   CardBody,

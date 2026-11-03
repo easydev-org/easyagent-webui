@@ -7,15 +7,17 @@
     "node": ">=22.22"
   },
   "scripts": {
-    "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview",
     "check": "biome check .",
     "check:fix": "biome check --fix .",
     "check:svelte": "svelte-check --tsconfig ./tsconfig.json",
     "check:types": "tsc --noEmit",
+    "dev": "vite",
     "format": "biome format --write .",
+    "format:check": "biome check .",
+    "format:fix": "biome check --write .",
     "lint": "biome lint .",
+    "preview": "vite preview",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage"
   },

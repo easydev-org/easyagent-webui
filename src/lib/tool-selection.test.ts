@@ -17,7 +17,10 @@ const t = (category: string, name: string): ToolInfo => ({
 
 describe('toolValue', () => {
   it('uses the bare name when unique across extensions', () => {
-    const all = [t('bundled', 'todo-write'), t('workspace', 'sandbox-job-start')]
+    const all = [
+      t('bundled', 'todo-write'),
+      t('workspace', 'sandbox-job-start'),
+    ]
     expect(toolValue(all, all[0]!)).toBe('todo-write')
   })
 

@@ -12,7 +12,9 @@ import { extCardFrom } from './ext-card'
 
 describe('extCardFrom', () => {
   it('reads a well-formed declaration', () => {
-    expect(extCardFrom({ card: { ext: 'github', template: 'gh-pr-files' } })).toEqual({
+    expect(
+      extCardFrom({ card: { ext: 'github', template: 'gh-pr-files' } }),
+    ).toEqual({
       ext: 'github',
       template: 'gh-pr-files',
     })
@@ -23,7 +25,9 @@ describe('extCardFrom', () => {
     expect(extCardFrom(null)).toBeNull()
     // A `view` alone must NOT be mistaken for a card: a view is a place, a card is a render of what
     // already happened, and only one of them can fail after the fact.
-    expect(extCardFrom({ view: { ext: 'github', route: '/ws/x/tree/' } })).toBeNull()
+    expect(
+      extCardFrom({ view: { ext: 'github', route: '/ws/x/tree/' } }),
+    ).toBeNull()
   })
 
   it('rejects a malformed declaration rather than building a broken frame', () => {
@@ -36,6 +40,8 @@ describe('extCardFrom', () => {
   // A ROUTE is the shape this used to have, and it is exactly what made a card fetch and then fail
   // when the workspace expired. It must not be accepted as a card.
   it('does not accept a route-shaped declaration', () => {
-    expect(extCardFrom({ card: { ext: 'github', route: '/card/ws1' } })).toBeNull()
+    expect(
+      extCardFrom({ card: { ext: 'github', route: '/card/ws1' } }),
+    ).toBeNull()
   })
 })

@@ -1,11 +1,12 @@
 // Pure protobuf → UI-model mappers for the agent API, plus the per-file
 // ingest uploader and its JSON helpers. No client state — AgentApi composes
 // these, and they are independently unit-testable.
+
+import { create, fromBinary, toBinary } from '@bufbuild/protobuf'
 import {
   IngestFileRequestSchema,
   IngestFileResponseSchema,
 } from '../gen/agent/v1/agent_pb.js'
-import { create, fromBinary, toBinary } from '@bufbuild/protobuf'
 import { t } from './i18n.svelte'
 import type { Message, MessagePart, Session, SessionGrant } from './models'
 
@@ -38,7 +39,15 @@ export function grantFromPb(g: {
 
 /** An empty grant, for the "create returned nothing" path. */
 export function emptyGrant(): SessionGrant {
-  return { id: '', extId: '', capability: '', params: '', risk: '', grantedAt: '', grantedBy: '' }
+  return {
+    id: '',
+    extId: '',
+    capability: '',
+    params: '',
+    risk: '',
+    grantedAt: '',
+    grantedBy: '',
+  }
 }
 
 /** bigint | number | null → number (codegenv2 encodes int64 as bigint). */
@@ -88,7 +97,9 @@ function structToJson(v: unknown): Record<string, unknown> {
   return out
 }
 
-export function sessionFromPb(s: import('../gen/agent/v1/agent_pb.js').Session): Session {
+export function sessionFromPb(
+  s: import('../gen/agent/v1/agent_pb.js').Session,
+): Session {
   return {
     id: s.name,
     org: s.org,
@@ -216,13 +227,15 @@ export function messageFromPb(m: PbMessage): Message {
         const callId = (d['id'] as string) || p.messageId
         const res = results[callId]
         const content = res?.['content']
-        const meta = (res?.['meta'] as Record<string, unknown> | undefined) ??
+        const meta =
+          (res?.['meta'] as Record<string, unknown> | undefined) ??
           (res?.['metadata'] as Record<string, unknown> | undefined)
         // A FAILED CALL HAS `state: "error"` AND ITS REASON IN `meta.error` — not in `content`, which is
         // the empty string because the tool printed nothing. This used to set status 'complete'
         // unconditionally and read only `content`, so a refused or crashing tool rendered as a green
         // card with no body: the user saw that a step failed and could not see why.
-        const failed = res?.['state'] === 'error' || typeof meta?.['error'] === 'string'
+        const failed =
+          res?.['state'] === 'error' || typeof meta?.['error'] === 'string'
         parts.push({
           id: p.id,
           type: 'tool',
@@ -233,7 +246,10 @@ export function messageFromPb(m: PbMessage): Message {
             title: (d['name'] as string) || '',
             input: (d['input'] as Record<string, unknown>) || null,
             output: typeof content === 'string' ? content : null,
-            error: typeof meta?.['error'] === 'string' ? (meta['error'] as string) : null,
+            error:
+              typeof meta?.['error'] === 'string'
+                ? (meta['error'] as string)
+                : null,
             data: meta ?? null,
             // How the call ended, so a rebuilt transcript says "timed out" the same
             // way the live one did.
@@ -246,11 +262,13 @@ export function messageFromPb(m: PbMessage): Message {
         const id = (d['tool_use_id'] as string) || p.messageId
         if (results[id] && m.parts.some(q => q.type === 'tool')) break
         const content = d['content']
-        const meta = (d['meta'] as Record<string, unknown> | undefined) ??
+        const meta =
+          (d['meta'] as Record<string, unknown> | undefined) ??
           (d['metadata'] as Record<string, unknown> | undefined)
         // THE ORPHAN CASE — a result with no tool part to pair with. It has the same shape, and the
         // same trap: the reason for a failure lives in meta.error while content is empty.
-        const failed = d['state'] === 'error' || typeof meta?.['error'] === 'string'
+        const failed =
+          d['state'] === 'error' || typeof meta?.['error'] === 'string'
         parts.push({
           id: p.id,
           type: 'tool',
@@ -260,7 +278,10 @@ export function messageFromPb(m: PbMessage): Message {
             status: failed ? 'error' : 'complete',
             title: '',
             output: typeof content === 'string' ? content : null,
-            error: typeof meta?.['error'] === 'string' ? (meta['error'] as string) : null,
+            error:
+              typeof meta?.['error'] === 'string'
+                ? (meta['error'] as string)
+                : null,
           },
         })
         break

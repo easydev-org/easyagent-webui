@@ -323,7 +323,7 @@ export class MessageStore {
     reasoning: boolean,
   ) {
     // Buffer; flushDeltas() applies it on the next animation frame (see above).
-    const key = msgId + "\u0000" + partId
+    const key = `${msgId}\u0000${partId}`
     const cur = this.deltaBuf.get(key)
     if (cur === undefined) {
       this.deltaBuf.set(key, { msgId, partId, text: delta, reasoning })
@@ -403,7 +403,11 @@ export class MessageStore {
    * snapshots (the AI SDK's `preliminary` convention), so the latest frame is the
    * whole truth and a repeated one is idempotent.
    */
-  applyToolOutput(msgId: string | undefined, partId: string, upd: ToolOutputUpdate) {
+  applyToolOutput(
+    msgId: string | undefined,
+    partId: string,
+    upd: ToolOutputUpdate,
+  ) {
     const sid = msgId || this.streamingId
     if (!sid) return
     const apply = (parts: ChatPart[]) => applyToolOutputTo(parts, partId, upd)
@@ -412,11 +416,17 @@ export class MessageStore {
       this.ensureStreamingMsg(sid)
       const j = this.messages.findIndex(m => m.id === sid)
       if (j < 0) return
-      this.messages[j] = { ...this.messages[j]!, parts: apply(this.messages[j]!.parts) }
+      this.messages[j] = {
+        ...this.messages[j]!,
+        parts: apply(this.messages[j]!.parts),
+      }
       this.notify()
       return
     }
-    this.messages[idx] = { ...this.messages[idx]!, parts: apply(this.messages[idx]!.parts) }
+    this.messages[idx] = {
+      ...this.messages[idx]!,
+      parts: apply(this.messages[idx]!.parts),
+    }
     this.notify()
   }
 

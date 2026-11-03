@@ -2,13 +2,13 @@
 // (agent.v1.AgentService, Connect protocol). The caller owns baseUrl + token;
 // the client is rebuilt on backend switch.
 
-import { AgentService } from '../gen/agent/v1/agent_pb.js'
 import {
   type Client,
   createClient,
   type Interceptor,
 } from '@connectrpc/connect'
 import { createConnectTransport } from '@connectrpc/connect-web'
+import { AgentService } from '../gen/agent/v1/agent_pb.js'
 
 export type AgentClient = Client<typeof AgentService>
 

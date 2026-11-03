@@ -1,9 +1,9 @@
 // Shared page prop bag handed to every routed page by the Shell.
 
 import type { BackendCfg } from './models'
+import type { SessionOverlay } from './nav'
 import type { ThemeMode } from './prefs'
 import type { AppStore } from './store.svelte'
-import type { SessionOverlay } from './nav'
 
 export interface PageProps {
   store: AppStore

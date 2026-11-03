@@ -199,7 +199,7 @@ export function applyToolOutputTo(
     if (upd.delta) {
       const base = prev ?? ''
       if (!base) return upd.delta
-      return base.endsWith('\n') ? base + upd.delta : base + '\n' + upd.delta
+      return base.endsWith('\n') ? base + upd.delta : `${base}\n${upd.delta}`
     }
     return prev ?? ''
   }
@@ -212,10 +212,13 @@ export function applyToolOutputTo(
     // like a real tool called "tool" and is indistinguishable from a rendering bug. Logging the id
     // and the parts already present is the difference between "the tool-call never arrived" and
     // "it arrived under a different id" — and those need opposite fixes.
-    console.warn('[tool-output] no card for this call; creating a placeholder', {
-      partId,
-      presentIds: next.filter(p => p.type === 'tool').map(p => p.id),
-    })
+    console.warn(
+      '[tool-output] no card for this call; creating a placeholder',
+      {
+        partId,
+        presentIds: next.filter(p => p.type === 'tool').map(p => p.id),
+      },
+    )
 
     // BEFORE creating an orphan, adopt the one card that is waiting for exactly this.
     //
@@ -225,7 +228,10 @@ export function applyToolOutputTo(
     // tool card that is still RUNNING and has produced no output — there is at most one such card
     // per message, because a step runs its tools sequentially.
     const waiting = next.findIndex(
-      p => p.type === 'tool' && (p.state?.status ?? '') === 'running' && (p.state?.output ?? '') === '',
+      p =>
+        p.type === 'tool' &&
+        (p.state?.status ?? '') === 'running' &&
+        (p.state?.output ?? '') === '',
     )
     if (waiting >= 0) {
       const w = next[waiting]!
@@ -240,10 +246,13 @@ export function applyToolOutputTo(
           toolState: upd.state ?? null,
         },
       }
-      console.warn('[tool-output] adopted a waiting card instead of creating a placeholder', {
-        partId,
-        adopted: w.id,
-      })
+      console.warn(
+        '[tool-output] adopted a waiting card instead of creating a placeholder',
+        {
+          partId,
+          adopted: w.id,
+        },
+      )
       return next
     }
 

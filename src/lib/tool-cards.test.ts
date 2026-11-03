@@ -17,14 +17,23 @@ describe('cardFor', () => {
     // No handler claims git-ws-clone (that is an extension tool), so this proves the PREFIX was
     // removed rather than the name being taken literally.
     expect(spec).toBeNull()
-    const mine = cardFor('bundled.file-info', { name: 'a.txt', size: 10 }, { code: 'x' })
+    const mine = cardFor(
+      'bundled.file-info',
+      { name: 'a.txt', size: 10 },
+      { code: 'x' },
+    )
     expect(mine).not.toBeNull()
   })
 
   it('builds file-info rows from the payload the tool actually returns', () => {
     const spec = cardFor(
       'file-info',
-      { name: 'a.txt', mime: 'text/plain', size: 2048, sha256: 'abc123def456ghi' },
+      {
+        name: 'a.txt',
+        mime: 'text/plain',
+        size: 2048,
+        sha256: 'abc123def456ghi',
+      },
       { code: 'c1' },
     )
     expect(spec).not.toBeNull()
@@ -38,11 +47,17 @@ describe('cardFor', () => {
 
   it('omits rows whose value is missing instead of showing blanks', () => {
     const spec = cardFor('file-info', { name: 'only-name' }, { code: 'c1' })
-    expect(spec!.result.fields.map((f: { label: string }) => f.label)).toEqual(['tcName'])
+    expect(spec!.result.fields.map((f: { label: string }) => f.label)).toEqual([
+      'tcName',
+    ])
   })
 
   it('keeps a numeric zero, which is information', () => {
-    const spec = cardFor('file-read', { code: 'c', offset: 0, lines: 0 }, { code: 'c' })
+    const spec = cardFor(
+      'file-read',
+      { code: 'c', offset: 0, lines: 0 },
+      { code: 'c' },
+    )
     const labels = spec!.result.fields.map((f: { label: string }) => f.label)
     expect(labels).toContain('tcLines')
   })
@@ -58,7 +73,12 @@ describe('cardFor', () => {
       },
       {},
     )
-    const byLabel = Object.fromEntries(spec!.result.fields.map((f: { label: string; value: string }) => [f.label, f.value]))
+    const byLabel = Object.fromEntries(
+      spec!.result.fields.map((f: { label: string; value: string }) => [
+        f.label,
+        f.value,
+      ]),
+    )
     expect(byLabel['tcTotal']).toBe('2')
     expect(byLabel['tcDone']).toBe('1')
     expect(byLabel['tcRemaining']).toBe('1')
@@ -80,14 +100,22 @@ describe('cardFor', () => {
   })
 
   it('renders a fetched page as markdown, not as raw text', () => {
-    const spec = cardFor('web-fetch', { url: 'https://x', contentType: 'text/markdown' }, {}, '# Hi')
+    const spec = cardFor(
+      'web-fetch',
+      { url: 'https://x', contentType: 'text/markdown' },
+      {},
+      '# Hi',
+    )
     expect(spec!.result.body?.kind).toBe('markdown')
   })
 
   it('attaches the generated media file so it can be previewed', () => {
     const spec = cardFor(
       'image-generate',
-      { files: [{ code: 'f1', mime: 'image/png', name: 'p.png', bytes: 100 }], model: 'm' },
+      {
+        files: [{ code: 'f1', mime: 'image/png', name: 'p.png', bytes: 100 }],
+        model: 'm',
+      },
       { prompt: 'a cat' },
     )
     expect(spec!.result.body).toEqual({

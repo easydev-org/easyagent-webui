@@ -4,10 +4,10 @@
 // admin console INSTEAD of the chat/settings shell. The caller owns baseUrl +
 // token (the same bearer the tenant client uses — the token IS the role).
 
-import { AdminService } from '../gen/agent/v1/agent_pb.js'
 import type { Client } from '@connectrpc/connect'
 import { createClient } from '@connectrpc/connect'
 import { createConnectTransport } from '@connectrpc/connect-web'
+import { AdminService } from '../gen/agent/v1/agent_pb.js'
 import { trimBase } from './agent'
 
 export type AdminClient = Client<typeof AdminService>
@@ -87,7 +87,11 @@ function createAdminClient(baseUrl: string, token: string): AdminClient {
  * on. The username must match (the admin name, a tenant id/name, or a subtree
  * root); the token is whatever that account's credential is.
  */
-export async function login(baseUrl: string, username: string, token: string): Promise<Identity> {
+export async function login(
+  baseUrl: string,
+  username: string,
+  token: string,
+): Promise<Identity> {
   const c = createAdminClient(baseUrl, '')
   const r = await c.login({ username, token })
   return {
@@ -127,7 +131,11 @@ export class AdminApi {
    * subtree root). `parentId` (optional) creates the tenant UNDER that parent
    * (a user inside a domain). Returns the generated id + the bootstrap token.
    */
-  async createTenant(id: string, name: string, parentId = ''): Promise<{ id: string; token: string }> {
+  async createTenant(
+    id: string,
+    name: string,
+    parentId = '',
+  ): Promise<{ id: string; token: string }> {
     const r = await this._c.createTenant({ id, name, parentId })
     return { id: r.tenant?.id ?? '', token: r.token }
   }
@@ -197,7 +205,10 @@ export class AdminApi {
   }
 
   /** Mint a delegated admin token for a subtree. Returns the one-time plaintext. */
-  async createAdminToken(scopeTenantId: string, label: string): Promise<string> {
+  async createAdminToken(
+    scopeTenantId: string,
+    label: string,
+  ): Promise<string> {
     const r = await this._c.createAdminToken({ scopeTenantId, label })
     return r.plaintext
   }
