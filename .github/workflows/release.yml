@@ -62,11 +62,11 @@ jobs:
           file: ./Dockerfile
           platforms: ${{ matrix.platform }}
           outputs: type=image,name=ghcr.io/${{ github.repository }},push-by-digest=true,name-canonical=true,push=true
-          # `@easydev-org/ext-ui` is private on npm.pkg.github.com, so `npm ci` inside the
-          # Dockerfile needs a read token. It is passed as a BUILD SECRET rather than an ARG: an
-          # ARG would be recorded in the image history and readable by anyone who pulls it.
-          secrets: |
-            node_auth_token=${{ secrets.GITHUB_TOKEN }}
+          # `@easydev-org/ext-ui` is private on npm.pkg.github.com, so `npm ci` inside the Dockerfile
+          # needs a read token. GITHUB_TOKEN expires with the job, which is what makes passing it as
+          # a build ARG acceptable — see the comment in the Dockerfile.
+          build-args: |
+            NODE_AUTH_TOKEN=${{ secrets.GITHUB_TOKEN }}
           # The Dockerfile carries no proxy or mirror; the build cache is what
           # makes repeat builds fast, and it lives in the registry rather than in
           # an environment-specific daemon. Cached per architecture — a cache
