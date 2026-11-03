@@ -6,10 +6,10 @@
   // wide screen it sits beside the conversation. An absolutely-positioned overlay — the previous
   // design — split a phone screen in half instead.
   import { serveBridge } from '$lib/ext-bridge'
-  import { extViewSrc } from '$lib/ext-panel.svelte'
   import { t } from '$lib/i18n.svelte'
   import type { PageProps } from '$lib/page-props'
   import PageHeader from '$lib/components/layout/PageHeader.svelte'
+  import { MSG_THEME, panelSrc } from '@easydev-org/ext-ui/host'
 
   let { store, view }: PageProps & {
     view?: { ext: string; route: string; title: string; session: string }
@@ -25,7 +25,7 @@
     const mode = themeNow()
     document
       .querySelectorAll<HTMLIFrameElement>('iframe[data-ext-frame]')
-      .forEach(f => f.contentWindow?.postMessage({ type: 'easyagent:theme', theme: mode }, '*'))
+      .forEach(f => f.contentWindow?.postMessage({ type: MSG_THEME, theme: mode }, '*'))
   })
 
   // The data bridge: the iframe asks, this side fetches with the real bearer.
@@ -53,7 +53,7 @@
     <iframe
       data-ext-frame
       title={view.title || view.ext}
-      src={extViewSrc(view.ext, view.route, view.session, themeNow())}
+      src={panelSrc(view.ext, view.route, themeNow(), view.session)}
       class="min-h-0 w-full flex-1 border-0 bg-background"
       sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
     ></iframe>
