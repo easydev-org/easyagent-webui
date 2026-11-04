@@ -10,7 +10,7 @@
   // fetched once, turned into an object URL, and revoked when the component goes away — a leaked
   // object URL keeps the whole blob alive in memory for the life of the page.
   import { avatarSpec, type HexCell } from '$lib/identicon'
-  import { planAvatar } from '$lib/avatar-plan'
+  import { resolveAvatar } from '$lib/avatar-source'
 
   let {
     seed,
@@ -36,8 +36,8 @@
 
   // THE CHOICE IS A PURE FUNCTION, so it is tested without a DOM: no avatar and an unusable avatar both
   // resolve to the identicon, and only a well-formed `file:<code>` becomes an image.
-  const plan = $derived(planAvatar(avatar))
-  const code = $derived(plan.source === 'file' ? plan.code : '')
+  const resolved = $derived(resolveAvatar(avatar))
+  const code = $derived(resolved.source === 'file' ? resolved.code : '')
 
   let src = $state('')
   let failed = $state(false)

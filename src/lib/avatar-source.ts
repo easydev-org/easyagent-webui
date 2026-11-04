@@ -6,6 +6,12 @@
  * this project does not have, and getting it wrong is a blank circle — the one outcome worse than
  * either picture.
  *
+ * IT IS CALLED "RESOLVE", NOT "PLAN". `Plan` in this codebase means `agent/resolve.go`'s TurnPlan: the
+ * whole resolved shape of a turn — system prompt, tool whitelist, turn budget. That word carries
+ * weight, and nothing here is planned, staged or deferred; a stored string is read once and one answer
+ * comes out. "Resolve" is what this repository already uses for "decide the effective value from what
+ * was stored", which is exactly this.
+ *
  * THE RULE:
  *
  *   no avatar            → identicon (the honeycomb seeded by the session name)
@@ -20,19 +26,21 @@
 
 export type AvatarSource = 'identicon' | 'file'
 
-export interface AvatarPlan {
+export interface ResolvedAvatar {
   source: AvatarSource
   /** The blob code, when `source === 'file'`. Empty otherwise. */
   code: string
 }
 
 /**
- * planAvatar reads a session's stored avatar and says how to render it.
+ * resolveAvatar reads a session's stored avatar and says how to render it.
  *
  * IT DOES NOT DECIDE ABOUT FAILURES — a fetch that errors falls back to the identicon in the
  * component, because that is a runtime fact this function cannot know.
  */
-export function planAvatar(avatar: string | undefined | null): AvatarPlan {
+export function resolveAvatar(
+  avatar: string | undefined | null,
+): ResolvedAvatar {
   const raw = (avatar ?? '').trim()
   if (!raw.startsWith('file:')) {
     return { source: 'identicon', code: '' }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { planAvatar } from './avatar-plan'
+import { resolveAvatar } from './avatar-source'
 
 /**
  * THREE STATES, AND ONLY ONE OF THEM IS "SHOW THE STORED IMAGE".
@@ -8,22 +8,22 @@ import { planAvatar } from './avatar-plan'
  * must still render something. That is the identicon, exactly as every session showed before avatars
  * existed.
  */
-describe('planAvatar', () => {
+describe('resolveAvatar', () => {
   it('derives the identicon when no avatar is set', () => {
     for (const v of [undefined, null, '', '   ']) {
-      expect(planAvatar(v)).toEqual({ source: 'identicon', code: '' })
+      expect(resolveAvatar(v)).toEqual({ source: 'identicon', code: '' })
     }
   })
 
   it('uses the stored image when one is set', () => {
-    expect(planAvatar('file:abc123')).toEqual({
+    expect(resolveAvatar('file:abc123')).toEqual({
       source: 'file',
       code: 'abc123',
     })
   })
 
   it('tolerates whitespace around the code', () => {
-    expect(planAvatar('  file:abc123  ')).toEqual({
+    expect(resolveAvatar('  file:abc123  ')).toEqual({
       source: 'file',
       code: 'abc123',
     })
@@ -37,8 +37,8 @@ describe('planAvatar', () => {
    * that stops working the moment the error path changes.
    */
   it('derives the identicon for a bare file: prefix', () => {
-    expect(planAvatar('file:')).toEqual({ source: 'identicon', code: '' })
-    expect(planAvatar('file:   ')).toEqual({ source: 'identicon', code: '' })
+    expect(resolveAvatar('file:')).toEqual({ source: 'identicon', code: '' })
+    expect(resolveAvatar('file:   ')).toEqual({ source: 'identicon', code: '' })
   })
 
   /**
@@ -55,7 +55,7 @@ describe('planAvatar', () => {
       'javascript:alert(1)',
       'FILE:abc',
     ]) {
-      expect(planAvatar(v)).toEqual({ source: 'identicon', code: '' })
+      expect(resolveAvatar(v)).toEqual({ source: 'identicon', code: '' })
     }
   })
 })
