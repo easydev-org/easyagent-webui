@@ -61,6 +61,11 @@
   let variant = $state('')
   let preset = $state('')
   let locale = $state('')
+  // The picture and the intro are EDITED AS SESSION SETTINGS, alongside the model, because they are
+  // the session's own description of itself — not a profile of the person using it.
+  let avatarFile = $state('')
+  let intro = $state('')
+  let uploadingAvatar = $state(false)
   let allModels = $state<ModelInfo[]>([])
   let loadingModels = $state(false)
   let modelsLoaded = $state(false)
@@ -562,6 +567,46 @@
 
   // ---- settings dialog ----
 
+  /**
+   * Uploads a picture and puts it in the dialog's pending value.
+   *
+   * THE UPLOAD IS IMMEDIATE BUT THE ASSIGNMENT IS NOT: the bytes go to the blob store now, so the
+   * preview can show them, but the session only points at them when the dialog is saved. Losing that
+   * distinction would mean a cancelled dialog left the session permanently repainted.
+   *
+   * ANIMATED FORMATS AND VIDEOS ARE ACCEPTED AS BYTES but not offered here: the picker filters to
+   * image/* because an avatar is drawn in a circle at 40px, and a clip would be uploaded and then
+   * never shown. The size limit is the blob store's, not a second one invented here.
+   */
+  function pickAvatar() {
+    if (!session || uploadingAvatar) return
+    const input = document.createElement('input')
+    input.type = 'file'
+    input.accept = 'image/*'
+    input.onchange = () => {
+      const file = input.files?.[0]
+      if (!file) return
+      void (async () => {
+        uploadingAvatar = true
+        try {
+          const bytes = new Uint8Array(await file.arrayBuffer())
+          const done = await store.api.uploadFile({
+            path: '',
+            name: file.name || 'avatar',
+            mimeType: file.type || guessMime(file.name),
+            bytes,
+          })
+          avatarFile = `file:${done.code}`
+        } catch (e) {
+          showErrorToast(String(e))
+        } finally {
+          uploadingAvatar = false
+        }
+      })()
+    }
+    input.click()
+  }
+
   async function showSettings() {
     if (!session) return
     selectedRef = session.model
@@ -570,6 +615,8 @@
     // Legacy sessions may carry an empty locale (pre-pinning); show the
     // effective default rather than a blank selector.
     locale = session.locale || Prefs.loadAgentLocale()
+    avatarFile = session.avatarFile ?? ''
+    intro = session.intro ?? ''
     settingsOpen = true
     if (!modelsLoaded) {
       loadingModels = true
@@ -607,6 +654,11 @@
         variant,
         ...(preset ? { preset } : {}),
         locale,
+        // SENT UNCONDITIONALLY, including empty: on the wire these two are `optional`, where an
+        // absent field means "leave it alone" and an empty one means "clear it". Omitting them here
+        // would silently make clearing impossible.
+        avatarFile,
+        intro: intro.trim(),
       })
       store.applySession(updated)
       showToast(t('saved'))
@@ -1202,10 +1254,15 @@
       bind:variant
       bind:preset
       bind:locale
+      bind:avatarFile
+      bind:intro
+      seed={session?.id ?? ''}
       {loadingModels}
       {modelOptions}
       variants={variantsForModel}
       {presetOptions}
+      fetchBytes={store.api.fetchFileBytes.bind(store.api)}
+      onPickAvatar={pickAvatar}
       onSave={() => void applySettings()}
     />
 
