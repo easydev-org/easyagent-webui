@@ -290,6 +290,7 @@
           {isChild}
           onToggleExpand={() => toggleExpand(s.id)}
           onTap={() => (selectMode ? toggle(s.id) : store.pickSession(s.id))}
+          fetchBytes={store.api.fetchFileBytes.bind(store.api)}
           menuOpen={rowMenu?.sid === s.id}
           onMenuRequest={selectMode ? null : anchor => openRowMenu(s.id, anchor)}
         />

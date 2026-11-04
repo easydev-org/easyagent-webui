@@ -111,11 +111,14 @@ interface HistoryEntry {
   content?: string
   tool_name?: string
   created_at?: string
-  depth?: number
+  /** The message's position in the conversation; the only address the tools print. */
+  seq?: number
 }
 
 const history: CardHandler = ({ tool, data, input }) => {
-  if (tool !== 'history-search' && tool !== 'history-range') return null
+  // `history-range-read` replaced `history-range`, whose window was measured from the tip and moved
+  // as messages arrived. Keep the old name so an older transcript still renders.
+  if (tool !== 'history-search' && tool !== 'history-range-read' && tool !== 'history-range') return null
   const entries = arr<HistoryEntry>(data, 'entries')
   return {
     subtitle: 'history',
@@ -137,7 +140,7 @@ const history: CardHandler = ({ tool, data, input }) => {
               content: e.content ?? '',
               tool_name: e.tool_name,
               created_at: e.created_at,
-              depth: e.depth,
+              seq: e.seq,
             })),
           }
         : undefined,
