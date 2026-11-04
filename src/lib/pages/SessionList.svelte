@@ -153,6 +153,18 @@
   // anchor gives no clue which session the menu acts on.
   let rowMenu = $state<{ sid: string; anchor: MenuAnchor } | null>(null)
 
+  /**
+   * Open a session's PROFILE from its picture in the list.
+   *
+   * THE SESSION BECOMES ACTIVE FIRST. The profile page reads the active session, so opening a profile
+   * without selecting it would either show the previous one's data or nothing — and the capsule in the
+   * chat header, which also opens this page, only exists for the active session.
+   */
+  function openProfile(sid: string) {
+    store.activeSessionId = sid
+    store.pushPage({ kind: 'session_profile', key: 'session_profile' })
+  }
+
   function openRowMenu(sid: string, anchor: MenuAnchor) {
     rowMenu = { sid, anchor }
   }
@@ -291,6 +303,7 @@
           onToggleExpand={() => toggleExpand(s.id)}
           onTap={() => (selectMode ? toggle(s.id) : store.pickSession(s.id))}
           fetchBytes={store.api.fetchFileBytes.bind(store.api)}
+          onAvatarTap={() => openProfile(s.id)}
           menuOpen={rowMenu?.sid === s.id}
           onMenuRequest={selectMode ? null : anchor => openRowMenu(s.id, anchor)}
         />

@@ -28,6 +28,7 @@
     menuOpen = false,
     onToggleExpand,
     fetchBytes,
+    onAvatarTap,
   }: {
     session: Session
     isActive?: boolean
@@ -51,6 +52,15 @@
     onToggleExpand?: () => void
     /** Fetches a `file:<code>`'s bytes for the avatar. Absent = identicon only. */
     fetchBytes?: (code: string) => Promise<Uint8Array>
+    /**
+     * Opens the session's PROFILE instead of its chat.
+     *
+     * THE PICTURE IS A SECOND TARGET INSIDE THE ROW, the way an IM contact list works: the row opens
+     * the conversation, the picture opens the person. It is a span with a role rather than a nested
+     * `<button>` because a button inside a button is invalid HTML — and the click is stopped here so
+     * the row's own handler does not also fire.
+     */
+    onAvatarTap?: () => void
   } = $props()
 
   // Long-press (touch): 480ms hold without movement opens the context menu at
@@ -112,6 +122,41 @@
   const stamp = $derived(fmtTime(session.lastMessageAt || session.updatedAt, now()))
 </script>
 
+<!-- THE PICTURE AND ITS STATUS BADGE, factored out because the two branches above differ only in
+     whether they may be clicked: the same 40px avatar with the same lease badge. -->
+{#snippet avatar()}
+  <ChatAvatar
+    seed={session.id}
+    size={40}
+    avatar={session.avatarFile ?? ''}
+    {fetchBytes}
+    label={sessionName(session)}
+  />
+  <!-- Runtime status from the server's run lease: a top-right badge on the
+       avatar. Running (incl. mid-retry) = pulsing green; idle = gray;
+       unknown (lease read error) = amber; a reply that did not read the
+       lease (undefined) = no badge. -->
+  {#if session.status === 'busy'}
+    <span
+      class="absolute -top-0.5 -right-0.5 size-2.5 animate-pulse rounded-full bg-success ring-2 ring-background"
+      title={t('running')}
+      aria-label={t('running')}
+    ></span>
+  {:else if session.status === 'idle'}
+    <span
+      class="absolute -top-0.5 -right-0.5 size-2.5 rounded-full bg-muted-foreground ring-2 ring-background"
+      title={t('idle')}
+      aria-label={t('idle')}
+    ></span>
+  {:else if session.status === 'unknown'}
+    <span
+      class="absolute -top-0.5 -right-0.5 size-2.5 rounded-full bg-warning ring-2 ring-background"
+      title={t('statusUnknown')}
+      aria-label={t('statusUnknown')}
+    ></span>
+  {/if}
+{/snippet}
+
 <button
   type="button"
   class={cn(
@@ -157,39 +202,33 @@
         <span class="size-4 rounded-full border border-muted-foreground/50"></span>
       {/if}
     </span>
-  {:else}
-    <span class="relative shrink-0">
-      <ChatAvatar
-        seed={session.id}
-        size={40}
-        avatar={session.avatarFile ?? ''}
-        {fetchBytes}
-        label={sessionName(session)}
-      />
-      <!-- Runtime status from the server's run lease: a top-right badge on the
-           avatar. Running (incl. mid-retry) = pulsing green; idle = gray;
-           unknown (lease read error) = amber; a reply that did not read the
-           lease (undefined) = no badge. -->
-      {#if session.status === 'busy'}
-        <span
-          class="absolute -top-0.5 -right-0.5 size-2.5 animate-pulse rounded-full bg-success ring-2 ring-background"
-          title={t('running')}
-          aria-label={t('running')}
-        ></span>
-      {:else if session.status === 'idle'}
-        <span
-          class="absolute -top-0.5 -right-0.5 size-2.5 rounded-full bg-muted-foreground ring-2 ring-background"
-          title={t('idle')}
-          aria-label={t('idle')}
-        ></span>
-      {:else if session.status === 'unknown'}
-        <span
-          class="absolute -top-0.5 -right-0.5 size-2.5 rounded-full bg-warning ring-2 ring-background"
-          title={t('statusUnknown')}
-          aria-label={t('statusUnknown')}
-        ></span>
-      {/if}
+  {:else if onAvatarTap}
+    <!-- NOT A NESTED <button>: the whole row is already a button, and a button inside a button is
+         invalid HTML that the browser "repairs" during hydration. A span with a STATIC role is the
+         correct shape here — a conditional role reads to both the a11y checker and the browser as
+         "sometimes a button", which is exactly the ambiguity this branch removes. -->
+    <span
+      role="button"
+      tabindex="0"
+      class="relative shrink-0 cursor-pointer rounded-full hover:opacity-80"
+      aria-label={t('sessionProfile')}
+      title={t('sessionProfile')}
+      onclick={e => {
+        e.stopPropagation()
+        onAvatarTap()
+      }}
+      onkeydown={e => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault()
+          e.stopPropagation()
+          onAvatarTap()
+        }
+      }}
+    >
+      {@render avatar()}
     </span>
+  {:else}
+    <span class="relative shrink-0">{@render avatar()}</span>
   {/if}
   <span class="w-3 shrink-0"></span>
   <span class="min-w-0 flex-1">

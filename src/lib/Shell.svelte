@@ -12,6 +12,7 @@
   import { AppIcons } from '$lib/icons'
   import SessionList from './pages/SessionList.svelte'
   import Chat from './pages/Chat.svelte'
+  import SessionProfilePage from './pages/SessionProfilePage.svelte'
   import Mailbox from './pages/Mailbox.svelte'
   import Permissions from './pages/Permissions.svelte'
   import Channels from './pages/Channels.svelte'
@@ -70,6 +71,8 @@
         return SessionList as Component<PageProps>
       case 'chat_session':
         return Chat as Component<PageProps>
+      case 'session_profile':
+        return SessionProfilePage as Component<PageProps>
       case 'chat_overlay':
         // ONE PLACE PER OVERLAY. The page carries which overlay it is; the component table would
         // otherwise need an entry per combination of "chat page" and "what is on top of it".

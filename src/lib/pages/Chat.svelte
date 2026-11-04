@@ -12,9 +12,9 @@
   import { showErrorToast, showToast } from '$lib/toast.svelte'
   import { Prefs } from '$lib/prefs'
   import { guessMime, mimeToKind } from '$lib/media'
-  import type { ModelInfo, Preset, ProviderInfo, Session, UploadedFile } from '$lib/models'
-  import { modelRefOf, sessionName } from '$lib/models'
-  import { buildModelOptions, fmtContext, fmtElapsed, variantsFor } from '$lib/chat-helpers'
+  import type { ProviderInfo, Session, UploadedFile } from '$lib/models'
+  import { sessionName } from '$lib/models'
+  import { fmtContext, fmtElapsed } from '$lib/chat-helpers'
   import { composerAction } from '$lib/composer-action'
   import { VoiceRecorder } from '$lib/voice'
   import { cn } from '$lib/utils'
@@ -27,9 +27,7 @@
   import { AppIcons } from '$lib/icons'
   import MessageBubble from '$lib/components/MessageBubble.svelte'
   import MediaAttachment from '$lib/components/MediaAttachment.svelte'
-  import ChatInfoDialog from './ChatInfoDialog.svelte'
 
-  import ChatSettingsDialog from './ChatSettingsDialog.svelte'
   import ReconnectBanner from '$lib/components/ReconnectBanner.svelte'
   import TodosPanel from '$lib/components/TodosPanel.svelte'
   import { latestTodos, todoCounts } from '$lib/todos'
@@ -45,7 +43,6 @@
   // it through `untrack` so the effect does not depend on it.
   let ctrl = $state<MessagesController | null>(null)
   let providers = $state<Record<string, ProviderInfo>>({})
-  let presets: Preset[] = $state([])
   let localUrls = $state<Record<string, string>>({})
 
   // The session's checklist, derived from message history — the LAST `todo-write` call wins,
@@ -53,22 +50,6 @@
   // is reactive: a new call updates the badge as it streams.
   const todos = $derived(latestTodos(ctrl?.sorted ?? []))
   const todoRemaining = $derived(todoCounts(todos).remaining)
-
-  // settings dialog state
-  let settingsOpen = $state(false)
-  let infoOpen = $state(false)
-  let selectedRef = $state('')
-  let variant = $state('')
-  let preset = $state('')
-  let locale = $state('')
-  // The picture and the intro are EDITED AS SESSION SETTINGS, alongside the model, because they are
-  // the session's own description of itself — not a profile of the person using it.
-  let avatarFile = $state('')
-  let intro = $state('')
-  let uploadingAvatar = $state(false)
-  let allModels = $state<ModelInfo[]>([])
-  let loadingModels = $state(false)
-  let modelsLoaded = $state(false)
 
   // composer state
   let text = $state('')
@@ -139,11 +120,6 @@
   async function loadMeta() {
     try {
       providers = await store.api.providers()
-    } catch (e) {
-      showErrorToast(t('loadError', { e: String(e) }))
-    }
-    try {
-      presets = await store.api.presets()
     } catch (e) {
       showErrorToast(t('loadError', { e: String(e) }))
     }
@@ -565,106 +541,17 @@
     input.click()
   }
 
-  // ---- settings dialog ----
-
   /**
-   * Uploads a picture and puts it in the dialog's pending value.
+   * Open the session's profile page.
    *
-   * THE UPLOAD IS IMMEDIATE BUT THE ASSIGNMENT IS NOT: the bytes go to the blob store now, so the
-   * preview can show them, but the session only points at them when the dialog is saved. Losing that
-   * distinction would mean a cancelled dialog left the session permanently repainted.
-   *
-   * ANIMATED FORMATS AND VIDEOS ARE ACCEPTED AS BYTES but not offered here: the picker filters to
-   * image/* because an avatar is drawn in a circle at 40px, and a clip would be uploaded and then
-   * never shown. The size limit is the blob store's, not a second one invented here.
+   * THE PICTURE, THE INTRO AND THE MODEL LIVE THERE, not in a dialog over this one. That split is what
+   * an IM app does with a contact: the chat is for talking, and everything ABOUT the conversation is a
+   * page you step onto. It also fixed a two-dialog stack — a read-only info sheet whose only action
+   * was "Edit", then the settings form behind it.
    */
-  function pickAvatar() {
-    if (!session || uploadingAvatar) return
-    const input = document.createElement('input')
-    input.type = 'file'
-    input.accept = 'image/*'
-    input.onchange = () => {
-      const file = input.files?.[0]
-      if (!file) return
-      void (async () => {
-        uploadingAvatar = true
-        try {
-          const bytes = new Uint8Array(await file.arrayBuffer())
-          const done = await store.api.uploadFile({
-            path: '',
-            name: file.name || 'avatar',
-            mimeType: file.type || guessMime(file.name),
-            bytes,
-          })
-          avatarFile = `file:${done.code}`
-        } catch (e) {
-          showErrorToast(String(e))
-        } finally {
-          uploadingAvatar = false
-        }
-      })()
-    }
-    input.click()
-  }
-
-  async function showSettings() {
-    if (!session) return
-    selectedRef = session.model
-    variant = session.variant
-    preset = session.preset
-    // Legacy sessions may carry an empty locale (pre-pinning); show the
-    // effective default rather than a blank selector.
-    locale = session.locale || Prefs.loadAgentLocale()
-    avatarFile = session.avatarFile ?? ''
-    intro = session.intro ?? ''
-    settingsOpen = true
-    if (!modelsLoaded) {
-      loadingModels = true
-      const out: ModelInfo[] = []
-      for (const pid of Object.keys(providers)) {
-        try {
-          out.push(...(await store.api.models(pid)))
-        } catch {
-          /* provider skipped */
-        }
-      }
-      allModels = out
-      loadingModels = false
-      modelsLoaded = true
-      if (out.length && !out.some(m => modelRefOf(m) === selectedRef)) {
-        selectedRef = modelRefOf(out[0]!)
-      }
-    }
-  }
-
-  const modelOptions = $derived(buildModelOptions(allModels, selectedRef))
-
-  const variantsForModel = $derived(variantsFor(allModels, selectedRef))
-
-  $effect(() => {
-    if (variantsForModel.length && !variantsForModel.some(v => v.id === variant)) variant = ''
-  })
-
-  async function applySettings() {
-    settingsOpen = false
+  function openProfile() {
     if (!sid) return
-    try {
-      const updated = await store.api.settings(sid, {
-        ...(selectedRef ? { model: selectedRef } : {}),
-        variant,
-        ...(preset ? { preset } : {}),
-        locale,
-        // SENT UNCONDITIONALLY, including empty: on the wire these two are `optional`, where an
-        // absent field means "leave it alone" and an empty one means "clear it". Omitting them here
-        // would silently make clearing impossible.
-        avatarFile,
-        intro: intro.trim(),
-      })
-      store.applySession(updated)
-      showToast(t('saved'))
-    } catch (e) {
-      showErrorToast(String(e))
-    }
+    store.pushPage({ kind: 'session_profile', key: 'session_profile' })
   }
 
   // ---- menu actions ----
@@ -747,10 +634,6 @@
   const ctxLabel = $derived(
     fmtContext((session?.lastInputTokens ?? 0) + (session?.lastOutputTokens ?? 0)),
   )
-  const presetOptions = $derived([
-    ...presets.map(p => p.id),
-    ...(preset && !presets.some(p => p.id === preset) ? [preset] : []),
-  ])
   const tileDim = 56
 
   function isLocalPreview(a: UploadedFile): string {
@@ -814,12 +697,15 @@
             <span class="text-micro text-muted-foreground tabular-nums">{ctxLabel}</span>
           {/if}
         </div>
+        <!-- THE NAME CAPSULE IS THE SESSION'S OWN BUTTON, the way an IM header opens the contact
+             rather than a settings sheet. `title` says where it goes: it used to say "Session
+             Settings" while opening a read-only info sheet, which was a promise the click broke. -->
         <div class="pointer-events-none absolute inset-x-0 flex justify-center">
           <button
             type="button"
-            class="pointer-events-auto min-w-24 max-w-40 truncate rounded-full bg-primary/14 px-3 py-1 text-center text-meta font-semibold text-primary"
-            onclick={() => (infoOpen = true)}
-            title={t('settingsTitle')}
+            class="pointer-events-auto min-w-24 max-w-40 truncate rounded-full bg-primary/14 px-3 py-1 text-center text-meta font-semibold text-primary hover:bg-primary/20"
+            onclick={openProfile}
+            title={t('sessionProfile')}
           >
             {session?.id}
           </button>
@@ -878,6 +764,10 @@
             {/if}
           </div>
           <DropdownMenu label={t('settingsTitle')}>
+            <!-- THE PROFILE IS FIRST because it is the one entry here that is about the session
+                 itself; everything below it is about what the session may do or hear. -->
+            <DropdownMenuItem onSelect={openProfile}>{t('sessionProfile')}</DropdownMenuItem>
+            <DropdownMenuSeparator />
             <DropdownMenuItem onSelect={() => void openPermissions()}
               >{t('permissionsMenu')}</DropdownMenuItem
             >
@@ -1244,27 +1134,8 @@
       {/if}
     </div>
 
-    <!-- session info dialog -->
-    <ChatInfoDialog bind:open={infoOpen} {session} onEdit={() => void showSettings()} />
-
-    <!-- settings dialog -->
-    <ChatSettingsDialog
-      bind:open={settingsOpen}
-      bind:selectedRef
-      bind:variant
-      bind:preset
-      bind:locale
-      bind:avatarFile
-      bind:intro
-      seed={session?.id ?? ''}
-      {loadingModels}
-      {modelOptions}
-      variants={variantsForModel}
-      {presetOptions}
-      fetchBytes={store.api.fetchFileBytes.bind(store.api)}
-      onPickAvatar={pickAvatar}
-      onSave={() => void applySettings()}
-    />
+    <!-- THE PROFILE IS A PAGE, NOT A DIALOG. Reached from the name capsule and from the picture;
+         see pages/SessionProfilePage.svelte. -->
 
     <!-- THE PERMISSIONS PANEL IS NO LONGER RENDERED HERE. It is a page now — pushed like the mailbox,
          with its own header and back button — because a 340px column pinned to the right edge is the

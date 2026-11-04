@@ -19,6 +19,13 @@ export type SessionOverlay = 'mailbox' | 'permissions' | 'channels'
 export type AppPage =
   | { kind: 'chat_list'; key: 'chat_list' }
   | { kind: 'chat_session'; key: 'chat_session' }
+  // The session's own page: picture, intro, model, preset. It sits ON TOP of the session, the way a
+  // contact card sits on top of a conversation in an IM app, and it is reached from the chat header.
+  //
+  // A PAGE RATHER THAN A DIALOG. It replaced two dialogs that stacked on each other — a read-only
+  // info sheet whose only action was "Edit", and the settings form behind it — which made changing one
+  // field a two-step ritual and left neither able to show the picture it was letting you choose.
+  | { kind: 'session_profile'; key: 'session_profile' }
   | { kind: 'chat_overlay'; key: 'chat_overlay'; overlay: SessionOverlay }
   // An extension's own UI, as a PAGE rather than a floating panel.
   //
