@@ -118,7 +118,12 @@ interface HistoryEntry {
 const history: CardHandler = ({ tool, data, input }) => {
   // `history-range-read` replaced `history-range`, whose window was measured from the tip and moved
   // as messages arrived. Keep the old name so an older transcript still renders.
-  if (tool !== 'history-search' && tool !== 'history-range-read' && tool !== 'history-range') return null
+  if (
+    tool !== 'history-search' &&
+    tool !== 'history-range-read' &&
+    tool !== 'history-range'
+  )
+    return null
   const entries = arr<HistoryEntry>(data, 'entries')
   return {
     subtitle: 'history',

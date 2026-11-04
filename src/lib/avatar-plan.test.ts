@@ -16,11 +16,17 @@ describe('planAvatar', () => {
   })
 
   it('uses the stored image when one is set', () => {
-    expect(planAvatar('file:abc123')).toEqual({ source: 'file', code: 'abc123' })
+    expect(planAvatar('file:abc123')).toEqual({
+      source: 'file',
+      code: 'abc123',
+    })
   })
 
   it('tolerates whitespace around the code', () => {
-    expect(planAvatar('  file:abc123  ')).toEqual({ source: 'file', code: 'abc123' })
+    expect(planAvatar('  file:abc123  ')).toEqual({
+      source: 'file',
+      code: 'abc123',
+    })
   })
 
   /**
@@ -43,7 +49,12 @@ describe('planAvatar', () => {
    * an empty circle with no explanation.
    */
   it('refuses anything that is not file:<code>', () => {
-    for (const v of ['https://example.com/a.png', 'abc123', 'javascript:alert(1)', 'FILE:abc']) {
+    for (const v of [
+      'https://example.com/a.png',
+      'abc123',
+      'javascript:alert(1)',
+      'FILE:abc',
+    ]) {
       expect(planAvatar(v)).toEqual({ source: 'identicon', code: '' })
     }
   })

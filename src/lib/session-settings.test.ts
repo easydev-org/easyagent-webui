@@ -24,7 +24,9 @@ describe('optionalProfileFields', () => {
   })
 
   it('sends a set value verbatim', () => {
-    expect(optionalProfileFields({ avatarFile: 'file:abc', intro: 'CI triage' })).toEqual({
+    expect(
+      optionalProfileFields({ avatarFile: 'file:abc', intro: 'CI triage' }),
+    ).toEqual({
       avatarFile: 'file:abc',
       intro: 'CI triage',
     })
@@ -37,12 +39,18 @@ describe('optionalProfileFields', () => {
    * updates are the normal case: the dialog binds both, but nothing guarantees every caller does.
    */
   it('lets one field move without the other', () => {
-    expect(optionalProfileFields({ avatarFile: 'file:abc' })).toEqual({ avatarFile: 'file:abc' })
-    expect(optionalProfileFields({ intro: 'CI triage' })).toEqual({ intro: 'CI triage' })
+    expect(optionalProfileFields({ avatarFile: 'file:abc' })).toEqual({
+      avatarFile: 'file:abc',
+    })
+    expect(optionalProfileFields({ intro: 'CI triage' })).toEqual({
+      intro: 'CI triage',
+    })
   })
 
   it('treats null and undefined as empty rather than sending the word', () => {
-    expect(optionalProfileFields({ avatarFile: null, intro: undefined })).toEqual({
+    expect(
+      optionalProfileFields({ avatarFile: null, intro: undefined }),
+    ).toEqual({
       avatarFile: '',
       intro: '',
     })

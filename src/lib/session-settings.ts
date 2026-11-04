@@ -18,9 +18,12 @@ export interface OptionalProfileFields {
   intro?: string
 }
 
-export function optionalProfileFields(settings: Record<string, unknown>): OptionalProfileFields {
+export function optionalProfileFields(
+  settings: Record<string, unknown>,
+): OptionalProfileFields {
   const out: OptionalProfileFields = {}
-  if ('avatarFile' in settings) out.avatarFile = (settings['avatarFile'] as string) || ''
+  if ('avatarFile' in settings)
+    out.avatarFile = (settings['avatarFile'] as string) || ''
   if ('intro' in settings) out.intro = (settings['intro'] as string) || ''
   return out
 }
