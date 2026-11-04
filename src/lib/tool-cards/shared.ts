@@ -46,7 +46,8 @@ export type CardBody =
         content: string
         tool_name?: string
         created_at?: string
-        depth?: number
+        /** The message's position in the conversation; the address the history tools accept. */
+        seq?: number
       }>
     }
   | {

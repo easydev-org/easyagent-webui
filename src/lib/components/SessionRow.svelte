@@ -27,6 +27,7 @@
     onMenuRequest,
     menuOpen = false,
     onToggleExpand,
+    fetchBytes,
   }: {
     session: Session
     isActive?: boolean
@@ -48,6 +49,8 @@
      *  unambiguous. */
     menuOpen?: boolean
     onToggleExpand?: () => void
+    /** Fetches a `file:<code>`'s bytes for the avatar. Absent = identicon only. */
+    fetchBytes?: (code: string) => Promise<Uint8Array>
   } = $props()
 
   // Long-press (touch): 480ms hold without movement opens the context menu at
@@ -156,7 +159,13 @@
     </span>
   {:else}
     <span class="relative shrink-0">
-      <ChatAvatar seed={session.id} size={40} />
+      <ChatAvatar
+        seed={session.id}
+        size={40}
+        avatar={session.avatarFile ?? ''}
+        {fetchBytes}
+        label={sessionName(session)}
+      />
       <!-- Runtime status from the server's run lease: a top-right badge on the
            avatar. Running (incl. mid-retry) = pulsing green; idle = gray;
            unknown (lease read error) = amber; a reply that did not read the

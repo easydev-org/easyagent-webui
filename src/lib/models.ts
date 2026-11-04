@@ -74,6 +74,10 @@ export interface Session {
    *  (including mid-retry), 'idle' otherwise, 'unknown' when the lease could
    *  not be read. Empty on a reply that did not read the lease. */
   status?: 'busy' | 'idle' | 'unknown'
+  /** The session's picture as `file:<code>` (empty = derive the identicon). */
+  avatarFile?: string
+  /** One line describing what this session is, injected into the turn's <env>. */
+  intro?: string
 }
 
 export function sessionName(s: Session): string {

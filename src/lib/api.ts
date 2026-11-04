@@ -43,6 +43,7 @@ import type {
   UploadedFileSource,
 } from './models'
 import { type ConfigFieldSchema, modelRefOf } from './models'
+import { optionalProfileFields } from './session-settings'
 
 /**
  * mapConfigFields converts a structured knob's wire shape into the local type.
@@ -330,6 +331,15 @@ export class AgentApi {
     return model
   }
 
+  /**
+   * Saves the session's settings.
+   *
+   * `avatarFile` and `intro` ARE OPTIONAL IN A WAY THE OTHER FIELDS ARE NOT. On the wire they are
+   * `optional`, where absent means "leave it alone" and present-but-empty means "clear it" — and
+   * clearing is exactly how a session goes back to its derived identicon or to saying nothing about
+   * itself. So the key's PRESENCE decides, not its value: a caller that never touches the picture must
+   * not clear it by saving the model, and a caller that does touch it must be able to clear it.
+   */
   async settings(
     id: string,
     settings: Record<string, unknown>,
@@ -343,6 +353,7 @@ export class AgentApi {
         ...(preset ? { preset } : {}),
         locale: (settings['locale'] as string) || '',
         variant: (settings['variant'] as string) || '',
+        ...optionalProfileFields(settings),
       }),
     )
     return r.session ? sessionFromPb(r.session) : emptySession('')

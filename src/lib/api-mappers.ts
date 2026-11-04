@@ -121,6 +121,8 @@ export function sessionFromPb(
     lastMessagePreview: s.lastMessagePreview,
     messageSeq: s.messageSeq,
     group: s.group,
+    avatarFile: s.avatarFile || undefined,
+    intro: s.intro || undefined,
     // 'unknown' (a transient read error) is surfaced so the row shows a
     // distinct badge instead of a misleading idle or a bare gap.
     status:
