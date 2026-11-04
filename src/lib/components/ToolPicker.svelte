@@ -7,37 +7,35 @@
   import { cn } from '$lib/utils'
   import {
     canonicalizeSelection,
+    disqualifiedByConfig,
     groupByExtension,
     isColliding,
+    toolIneligible,
     toolValue,
   } from '$lib/tool-selection'
   import { Switch } from '$lib/components/ui/switch'
 
   let {
     tools,
-    config = {},
+    config,
     selected = $bindable(new Set<string>()),
   }: {
     tools: ToolInfo[]
-    /** The aggregate `{toolName: {knob: value}}` config map, so a tool whose
-     *  REQUIRED config is unmet is disabled (it cannot run). */
+    /**
+     * The aggregate `{toolName: {knob: value}}` config map, so a tool whose REQUIRED config is unmet
+     * is disabled (it cannot run).
+     *
+     * UNDEFINED MEANS "NOT LOADED", AND IS NOT THE SAME AS `{}`. Omitted, nothing is disabled — the
+     * picker does not know the config and must not pretend a blank one. It used to default to `{}`,
+     * and combined with an unconditional prune below that DELETED every configured tool from a stored
+     * whitelist the moment the panel opened. Callers pass `undefined` while loading, or when the
+     * fetch failed, and the picker stays neutral.
+     */
     config?: Record<string, unknown>
     selected?: Set<string>
   } = $props()
 
-  // A tool is eligible only when EVERY required config knob has a value.
-  function eligible(tl: ToolInfo): boolean {
-    if (tl.requiredConfig.length === 0) return true
-    const vals = config[tl.name]
-    const m =
-      vals && typeof vals === 'object' && !Array.isArray(vals)
-        ? (vals as Record<string, unknown>)
-        : {}
-    return tl.requiredConfig.every(name => {
-      const v = m[name]
-      return v != null && String(v) !== ''
-    })
-  }
+  const eligible = (tl: ToolInfo) => toolIneligible(tl, config) === null
 
   // Canonicalize the STORED whitelist for DISPLAY only: an entry that predates
   // the collision-aware form (`<extId>.<name>`) must still highlight the right
@@ -75,12 +73,15 @@
     selected = next
   }
 
-  // Only ELIGIBLE tools can be enabled: prune any ineligible tool that a stored
-  // whitelist selected (config may have been cleared since). Guarded so it does
-  // not loop (writes only when the set actually changes).
+  // ONLY A REAL, FETCHED CONFIG MAY DISQUALIFY ANYTHING.
+  //
+  // This used to prune whenever a selected tool looked ineligible, and `config` defaulted to `{}` —
+  // so on mount, before any config was fetched, every tool with a required knob counted as unmet and
+  // was removed from `selected`. The panel then wrote that pruned set back on save: opening a preset
+  // to look at it silently dropped its configured tools. `disqualifiedByConfig` returns nothing for
+  // an unknown config, and the effect only writes when it names something.
   $effect(() => {
-    const ineligible = tools.filter(tl => !eligible(tl)).map(valueOf)
-    const stale = ineligible.filter(v => canonical.has(v))
+    const stale = disqualifiedByConfig(tools, canonical, config).filter(v => canonical.has(v))
     if (stale.length === 0) return
     const next = new Set(canonical)
     for (const v of stale) next.delete(v)

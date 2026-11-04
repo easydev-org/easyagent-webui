@@ -19,7 +19,11 @@
   let maxTurns = $state('25')
   let selectedTools = $state<Set<string>>(new Set())
   let tools = $state<ToolInfo[]>([])
-  let toolConfig = $state<Record<string, unknown>>({})
+  /**
+   * `undefined` UNTIL FETCHED, so a failed or pending fetch leaves the picker NEUTRAL instead of
+   * greying out every tool that needs a knob. `{}` would claim "there is a config and it is blank".
+   */
+  let toolConfig = $state<Record<string, unknown> | undefined>(undefined)
   let saving = $state(false)
 
   const canSave = $derived(id.trim() !== '' && !saving)

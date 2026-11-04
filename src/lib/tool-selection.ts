@@ -99,3 +99,65 @@ export function canonicalizeSelection(
   }
   return out
 }
+
+/**
+ * Why a tool cannot be switched on, or null when it can.
+ *
+ * THREE STATES, NOT TWO. "Required config is unmet" and "we cannot know whether it is met" are
+ * different, and collapsing them loses data:
+ *
+ *   · UNMET (we have the config surface and a required knob is blank) — the tool would refuse at call
+ *     time, so the picker greys it out.
+ *   · UNKNOWN (no config has been fetched yet, or the fetch failed) — the picker must NOT grey
+ *     anything out. It does not know, and a tool it wrongly bans disappears from a preset that was
+ *     working. An empty `config` map is this state, not "every knob is blank".
+ *
+ * The difference is observable: UNKNOWN is `config === undefined` (the caller never asked), while an
+ * empty object means the caller asked and the deployment has no config at all.
+ */
+export type IneligibleReason = 'config-unmet' | null
+
+export function toolIneligible(
+  tool: Pick<ToolInfo, 'name' | 'requiredConfig'>,
+  config: Record<string, unknown> | undefined,
+): IneligibleReason {
+  if (tool.requiredConfig.length === 0) return null
+  // NO ANSWER IS NOT A "NO". Without a config surface we cannot judge, so the tool stays usable.
+  if (config === undefined) return null
+  const vals = config[tool.name]
+  const knobs =
+    vals && typeof vals === 'object' && !Array.isArray(vals)
+      ? (vals as Record<string, unknown>)
+      : {}
+  const unmet = tool.requiredConfig.some(name => {
+    const v = knobs[name]
+    return v == null || String(v) === ''
+  })
+  return unmet ? 'config-unmet' : null
+}
+
+/**
+ * Which selected entries a config change has DISQUALIFIED.
+ *
+ * RETURNS THE OFFENDERS RATHER THAN A PRUNED SET, so the caller decides what to do with them. The
+ * subtlety is the one that lost data: `config === undefined` means "not loaded", and pruning on that
+ * basis deletes every configured tool from a preset the user never touched. Only a REAL, fetched
+ * config can disqualify anything.
+ *
+ * AN ENTRY THAT MATCHES NO TOOL IS NEVER AN OFFENDER. `canonicalizeSelection` keeps unknown entries
+ * verbatim so re-saving does not drop them; pruning them here would undo that in the same breath.
+ */
+export function disqualifiedByConfig(
+  all: readonly ToolInfo[],
+  selected: ReadonlySet<string>,
+  config: Record<string, unknown> | undefined,
+): string[] {
+  if (config === undefined) return []
+  const out: string[] = []
+  for (const t of all) {
+    const value = toolValue(all, t)
+    if (!selected.has(value)) continue
+    if (toolIneligible(t, config) !== null) out.push(value)
+  }
+  return out
+}

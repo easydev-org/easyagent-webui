@@ -2,9 +2,11 @@ import { describe, expect, it } from 'vitest'
 import type { ToolInfo } from './models'
 import {
   canonicalizeSelection,
+  disqualifiedByConfig,
   groupByExtension,
   isColliding,
   sanitizeToolName,
+  toolIneligible,
   toolValue,
 } from './tool-selection'
 
@@ -99,5 +101,100 @@ describe('sanitized bare name (gateway charset)', () => {
     expect([...canonicalizeSelection(all, ['extA.search'])]).toEqual([
       'extA.search',
     ])
+  })
+})
+
+/**
+ * A TOOL THAT CANNOT RUN MUST NOT BE SELECTABLE — AND A TOOL WE CANNOT JUDGE MUST STAY SELECTABLE.
+ *
+ * The second half is the one that cost data: the picker used to treat "no config fetched" as "every
+ * knob is blank" and PRUNED every configured tool out of the stored whitelist, then wrote the pruned
+ * set back on save. A preset that worked lost its tools by being opened.
+ */
+describe('toolIneligible', () => {
+  const needs = (name: string, ...required: string[]) => ({
+    name,
+    requiredConfig: required,
+  })
+
+  it('allows a tool with no required config, whatever the config says', () => {
+    expect(toolIneligible(needs('plain'), undefined)).toBeNull()
+    expect(toolIneligible(needs('plain'), {})).toBeNull()
+  })
+
+  it('allows when every required knob has a value', () => {
+    expect(
+      toolIneligible(needs('web-search', 'search_provider'), {
+        'web-search': { search_provider: 'tavily' },
+      }),
+    ).toBeNull()
+  })
+
+  it('reports an unmet knob: missing, empty, or null', () => {
+    const t = needs('web-search', 'search_provider')
+    expect(toolIneligible(t, {})).toBe('config-unmet')
+    expect(toolIneligible(t, { 'web-search': { search_provider: '' } })).toBe(
+      'config-unmet',
+    )
+    expect(toolIneligible(t, { 'web-search': { search_provider: null } })).toBe(
+      'config-unmet',
+    )
+    expect(toolIneligible(t, { 'web-search': {} })).toBe('config-unmet')
+  })
+
+  /** `undefined` is "not loaded". It must not be read as "nothing configured". */
+  it('does not judge when no config was fetched', () => {
+    expect(
+      toolIneligible(needs('web-search', 'search_provider'), undefined),
+    ).toBeNull()
+  })
+
+  it('tolerates a knob value that is not an object', () => {
+    expect(toolIneligible(needs('x', 'k'), { x: 'not-an-object' })).toBe(
+      'config-unmet',
+    )
+  })
+})
+
+describe('disqualifiedByConfig', () => {
+  it('never disqualifies anything when no config was fetched', () => {
+    const all = [
+      {
+        name: 'web-search',
+        category: 'bundled',
+        requiredConfig: ['search_provider'],
+      },
+    ]
+    const selected = new Set([sanitizeToolName('web-search')])
+    expect(disqualifiedByConfig(all as never, selected, undefined)).toEqual([])
+  })
+
+  it('names the selected entries whose config went away', () => {
+    const all = [
+      {
+        name: 'web-search',
+        category: 'bundled',
+        requiredConfig: ['search_provider'],
+      },
+      { name: 'plain', category: 'bundled', requiredConfig: [] },
+    ]
+    const selected = new Set([
+      sanitizeToolName('web-search'),
+      sanitizeToolName('plain'),
+    ])
+    expect(disqualifiedByConfig(all as never, selected, {})).toEqual([
+      sanitizeToolName('web-search'),
+    ])
+  })
+
+  /**
+   * AN UNKNOWN ENTRY IS NOT AN OFFENDER.
+   *
+   * A whitelist entry naming a tool this deployment does not have is kept on purpose, so that opening
+   * the preset on a machine missing an extension does not rewrite it. Pruning it here would undo that.
+   */
+  it('leaves entries that match no tool alone', () => {
+    const selected = new Set(['ghost-tool'])
+    expect(disqualifiedByConfig([], selected, {})).toEqual([])
   })
 })

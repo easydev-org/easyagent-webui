@@ -22,6 +22,15 @@
   let editTurns = $state('25')
   let editTools = $state<Set<string>>(new Set())
   let tools = $state<ToolInfo[]>([])
+  /**
+   * `undefined` UNTIL THE FETCH SUCCEEDS, and that distinction is the point.
+   *
+   * `ToolPicker` treats a missing config as "unknown, disable nothing", while `{}` means "there is a
+   * config and every knob in it is blank". Defaulting this to `{}` — which is what the component used
+   * to do internally, and what an empty initialiser here would recreate — greys out every tool that
+   * needs a knob and prunes it from the preset's whitelist on save.
+   */
+  let toolConfig = $state<Record<string, unknown> | undefined>(undefined)
 
   const DEFAULT_KEY = 'agent.defaultPreset'
   let defaultPreset = $state(localStorage.getItem(DEFAULT_KEY) || '')
@@ -36,6 +45,14 @@
         tools = await store.api.tools(Prefs.loadAgentLocale())
       } catch {
         /* tools optional */
+      }
+      try {
+        // LOADED HERE, not in the picker: a tool whose required config is unmet cannot run, so the
+        // editable list has to know the config. Without it every such tool looked unavailable, and
+        // the picker pruned exactly those out of the preset being edited.
+        toolConfig = await store.api.toolConfig()
+      } catch {
+        /* no config yet — the picker stays neutral rather than assuming blank */
       }
     })()
   })
@@ -193,7 +210,7 @@
         <Input bind:value={editTurns} type="number" min="1" />
       </label>
       <div class="mt-3">
-        <ToolPicker {tools} bind:selected={editTools} />
+        <ToolPicker {tools} config={toolConfig} bind:selected={editTools} />
       </div>
       {#if editing.isSystem}
         <p class="mt-2 text-micro text-muted-foreground">{t('overrideNote')}</p>
