@@ -6,7 +6,7 @@ import type { AgentApi } from './api'
 import { connection } from './connection.svelte'
 import type { LocalStore } from './db'
 import { t } from './i18n.svelte'
-import type { ChatDraft, ProviderDraft, Session } from './models'
+import type { ChatDraft, Group, ProviderDraft, Session } from './models'
 import {
   draftFromProvider,
   FALLBACK_API_TYPE_CAPABILITIES,
@@ -33,6 +33,14 @@ export class AppStore {
 
   siderTab = $state<SiderTab>('chat')
   sessions = $state<Session[]>([])
+  /**
+   * THE GROUPS THIS TENANT HAS, kept beside the sessions because they are the same kind of thing.
+   *
+   * A group is a conversation: it has a transcript, a picture, and somewhere to type. It used to be reachable
+   * only from an unlabelled icon in the header, which is not an entrance — it is a secret. The session list
+   * shows both kinds of conversation, so this is loaded with the sessions rather than on the groups page.
+   */
+  groups = $state<Group[]>([])
   activeSessionId = $state<string | null>(null)
   sessionOverlay = $state<SessionOverlay | null>(null)
 
@@ -176,6 +184,20 @@ export class AppStore {
       this.setSessions(await this.api.listSessions())
     } catch (e) {
       showErrorToast(`${t('connectionError', { arg1: String(e) })}`)
+    }
+  }
+
+  /**
+   * refreshGroups loads the group list.
+   *
+   * A FAILURE IS NOT AN ERROR TOAST: the session list is the page, and a group lookup that failed should not
+   * replace a working list with an error about a section of it. The groups section simply does not appear.
+   */
+  async refreshGroups() {
+    try {
+      this.groups = await this.api.groups()
+    } catch {
+      this.groups = []
     }
   }
 

@@ -19,8 +19,21 @@
   import EmptyState from '$lib/components/layout/EmptyState.svelte'
   import ReconnectBanner from '$lib/components/ReconnectBanner.svelte'
   import { AppIcons } from '$lib/icons'
+  import ChatAvatar from '$lib/components/ChatAvatar.svelte'
 
   let { store }: PageProps = $props()
+
+  /**
+   * GROUPS ARE LISTED WITH THE SESSIONS, because they are the same kind of thing: a conversation you open and
+   * type into. They used to live behind an unlabelled icon in the header, which put the two live groups in this
+   * tenant somewhere no reader would look — and a conversation nobody can find is not a feature.
+   *
+   * The list is reloaded when this page mounts. Groups change rarely (a person creates one), and the cost of a
+   * second call on mount is nothing next to showing a stale set.
+   */
+  $effect(() => {
+    void store.refreshGroups()
+  })
 
   let searching = $state(false)
   let q = $state('')
@@ -256,16 +269,56 @@
 
   <ReconnectBanner />
 
-  <SectionLabel class="normal-case">{t('recent')}</SectionLabel>
-
   <div
     class="min-h-0 flex-1 overflow-y-auto"
     role="list"
     ontouchstart={onTouchStart}
     ontouchmove={onTouchMove}
   >
+    <!-- GROUPS SCROLL WITH THE SESSIONS, because they are the same list in two parts. A fixed section above a
+         scrolling one would push the sessions off the screen once a tenant had a few groups, and the sessions
+         are the longer list. -->
+    {#if !selectMode && !searching && store.groups.length > 0}
+      <SectionLabel class="normal-case">{t('groupsTitle')}</SectionLabel>
+      <div class="space-y-1 px-2 pb-1" role="list">
+        {#each store.groups as g (g.name)}
+          <!-- A GROUP ROW IS A CONVERSATION ROW: picture, name, and what it holds. Tapping opens the
+               transcript, which is the whole point of showing it here. -->
+          <button
+            type="button"
+            class="flex w-full items-center gap-3 rounded-md px-2 py-2 text-left hover:bg-muted/50"
+            onclick={() => store.pushPage({ kind: 'group_chat', key: 'group_chat', id: g.name })}
+          >
+            <ChatAvatar
+              seed={g.name}
+              avatar={g.avatarFile ?? ''}
+              size={36}
+              label={g.name}
+              fetchBytes={store.api.fetchFileBytes.bind(store.api)}
+            />
+            <span class="min-w-0 flex-1">
+              <span class="block truncate text-body font-medium">{g.name}</span>
+              <span class="block text-micro text-muted-foreground"
+                >{t('groupMemberCount', { arg1: g.memberCount })}</span
+              >
+            </span>
+            <AppIcons.chevron_right class="size-4 shrink-0 text-muted-foreground" />
+          </button>
+        {/each}
+      </div>
+    {/if}
+
+    {#if display.length > 0}
+      <SectionLabel class="normal-case">{t('recent')}</SectionLabel>
+    {/if}
+
     {#if display.length === 0}
-      <EmptyState>{t('noSessions')}</EmptyState>
+      <!-- THE PAGE IS NOT EMPTY IF THERE ARE GROUPS: the groups section above is a list of conversations, so
+           "no sessions" would contradict what the reader can see. It is shown only when there is nothing at
+           all, and then it is true. -->
+      {#if store.groups.length === 0}
+        <EmptyState>{t('noSessions')}</EmptyState>
+      {/if}
     {:else}
       {#each display as s (s.id)}
         <SessionRow
