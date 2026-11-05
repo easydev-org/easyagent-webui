@@ -837,20 +837,18 @@ export class AgentApi {
   }
 
   /**
-   * Posts to a group.
+   * Posts to a group. THE RECIPIENT IS ALWAYS THE COORDINATOR.
    *
-   * `to` IS FOR SESSIONS ONLY — the members a COORDINATOR addresses. A user's message is delivered to the
-   * group's coordinator, which is what "writing to the group" means; the console never passes `to`, and the
-   * server refuses it from an empty sender rather than silently ignoring it.
+   * There is no "to": a user writes to the group, and the coordinator decides who works on it. A field here
+   * would promise a reach the server does not grant.
    */
   async sendGroupMessage(
     group: string,
     text: string,
     sender = '',
-    to: string[] = [],
   ): Promise<GroupMessage> {
     const r = await this._guard(() =>
-      this._c.sendGroupMessage({ group, text, sender, to }),
+      this._c.sendGroupMessage({ group, text, sender }),
     )
     return groupMessageFromPb(r.message!)
   }
