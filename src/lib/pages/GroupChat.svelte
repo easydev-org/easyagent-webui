@@ -45,6 +45,19 @@
     return s ? s.name || s.id : m.sender
   }
 
+  /**
+   * THE SENDER'S OWN PICTURE, if they have one.
+   *
+   * A message carries the sender's NAME as it was when sent, but not their avatar — the picture is a property
+   * of the session, not of the message, and storing a copy per message would freeze an image the session may
+   * have since changed. So the picture is read from the live session and the identicon is what shows when there
+   * is none, which is the same rule as everywhere else.
+   */
+  function avatarOf(m: GroupMessage): string {
+    if (!m.sender) return ''
+    return store.sessions.find(x => x.id === m.sender)?.avatarFile ?? ''
+  }
+
   function stamp(iso: string): string {
     const d = new Date(iso)
     if (isNaN(d.getTime())) return ''
@@ -146,6 +159,7 @@
             seed={m.sender || group}
             size={28}
             label={labelOf(m)}
+            avatar={avatarOf(m)}
             fetchBytes={store.api.fetchFileBytes.bind(store.api)}
           />
           <div class="min-w-0 max-w-[78%]">
