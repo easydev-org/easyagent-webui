@@ -220,7 +220,7 @@
       <div class="space-y-4 p-4">
         <label class="block">
           <span class="mb-1 block text-meta font-medium text-muted-foreground"
-            >{t('introLabel')}</span
+            >{t('groupIntroLabel')}</span
           >
           <Textarea bind:value={intro} rows={2} placeholder={t('groupIntroPlaceholder')} />
           <span class="mt-1 block text-micro text-muted-foreground">{t('groupIntroHint')}</span>

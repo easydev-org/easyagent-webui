@@ -28,6 +28,8 @@
   // The create form. The coordinator is required, so it starts empty and the Save button waits for it.
   let newName = $state('')
   let newCoordinator = $state('')
+  // ONE LINE SAYING WHAT THE GROUP IS FOR, set while the person naming it still has the answer in mind.
+  let newIntro = $state('')
 
   /**
    * EVERY SESSION IS A CANDIDATE COORDINATOR, but only one that coordinates nothing yet can be chosen.
@@ -66,10 +68,12 @@
         name: newName.trim(),
         coordinator: newCoordinator,
         createdBy: 'user',
+        intro: newIntro.trim(),
       })
       creating = false
       newName = ''
       newCoordinator = ''
+      newIntro = ''
       showToast(t('groupCreated'))
       await load()
       store.pushPage({ kind: 'group_chat', key: 'group_chat', id: g.name })
@@ -148,6 +152,10 @@
         <label class="block">
           <span class="mb-1 block text-meta text-muted-foreground">{t('groupNameLabel')}</span>
           <Input bind:value={newName} placeholder={t('groupNamePlaceholder')} />
+        </label>
+        <label class="block">
+          <span class="mb-1 block text-meta text-muted-foreground">{t('groupIntroLabel')}</span>
+          <Input bind:value={newIntro} placeholder={t('groupIntroPlaceholder')} />
         </label>
         <label class="block">
           <span class="mb-1 block text-meta text-muted-foreground"
