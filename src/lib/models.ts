@@ -675,4 +675,11 @@ export interface GroupMessage {
   /** Position within the group, starting at 1. The resume cursor for a watch. */
   seq: number
   createdAt: string
+  /**
+   * Files posted with the message: a picture, a voice note, a document.
+   *
+   * EACH ONE IS A `file:<code>` REFERENCE, not bytes. The blob lives once in the tenant's store, so the same
+   * recording is not copied for every member who opens the transcript.
+   */
+  attachments?: FileRef[]
 }

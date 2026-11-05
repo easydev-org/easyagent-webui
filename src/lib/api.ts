@@ -27,6 +27,7 @@ import type {
   ChannelSubscription,
   Denial,
   ExtensionInfo,
+  FileRef,
   Identity,
   MailboxEntry,
   Message,
@@ -844,13 +845,30 @@ export class AgentApi {
    * There is no "to": a user writes to the group, and the coordinator decides who works on it. A field here
    * would promise a reach the server does not grant.
    */
+  /**
+   * sendGroupMessage posts into a group.
+   *
+   * `attachments` are ALREADY-UPLOADED blob codes: the console uploads first, so a message is posted with
+   * everything it needs or not at all. Sending a half-uploaded message would leave the transcript pointing at
+   * a blob that does not exist yet, and a member woken by it would find nothing to read.
+   */
   async sendGroupMessage(
     group: string,
     text: string,
     sender = '',
+    attachments: FileRef[] = [],
   ): Promise<GroupMessage> {
     const r = await this._guard(() =>
-      this._c.sendGroupMessage({ group, text, sender }),
+      this._c.sendGroupMessage({
+        group,
+        text,
+        sender,
+        attachments: attachments.map(a => ({
+          code: a.code,
+          name: a.name ?? '',
+          size: a.size ?? 0,
+        })),
+      }),
     )
     return groupMessageFromPb(r.message!)
   }

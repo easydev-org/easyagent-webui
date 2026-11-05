@@ -412,5 +412,13 @@ export function groupMessageFromPb(
     body: m.body,
     seq: Number(m.seq),
     createdAt: m.createdAt,
+    // AN ATTACHMENT IS A `file:<code>` REFERENCE, the same shape a session message's file part uses — so the
+    // same renderer draws both and a picture in a group looks like a picture in a chat.
+    attachments: (m.attachments ?? []).map(a => ({
+      code: a.code,
+      name: a.name || null,
+      mime: null,
+      size: Number(a.size) || null,
+    })),
   }
 }

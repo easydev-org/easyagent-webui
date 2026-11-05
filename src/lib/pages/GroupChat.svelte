@@ -11,11 +11,15 @@
   import { untrack } from 'svelte'
   import type { PageProps } from '$lib/page-props'
   import { t } from '$lib/i18n.svelte'
-  import { showErrorToast } from '$lib/toast.svelte'
+  import { showErrorToast, showToast } from '$lib/toast.svelte'
   import { now } from '$lib/clock.svelte'
-  import type { GroupMember, GroupMessage } from '$lib/models'
+  import { guessMime } from '$lib/media'
+  import type { FileRef, GroupMember, GroupMessage } from '$lib/models'
   import PageHeader from '$lib/components/layout/PageHeader.svelte'
   import ChatAvatar from '$lib/components/ChatAvatar.svelte'
+  import MediaAttachment from '$lib/components/MediaAttachment.svelte'
+  import { VoiceRecorder } from '$lib/voice'
+  import { fmtElapsed } from '$lib/chat-helpers'
   import { AppIcons } from '$lib/icons'
 
   let { store, initialId }: PageProps = $props()
@@ -28,6 +32,97 @@
   let sending = $state(false)
   let text = $state('')
   let failed = $state('')
+  /**
+   * ATTACHMENTS ARE UPLOADED BEFORE THE MESSAGE IS POSTED.
+   *
+   * A group message carries `file:<code>` references, so the bytes have to exist before the transcript can
+   * point at them. Uploading first also means a message is posted with everything it needs or not at all —
+   * a half-uploaded message would wake a member that finds nothing to read.
+   */
+  let attachments = $state<FileRef[]>([])
+  let uploading = $state(false)
+  let voiceMode = $state(false)
+  let recording = $state(false)
+  let recordElapsed = $state(0)
+  let recordTimer: ReturnType<typeof setInterval> | null = null
+  const recorder = new VoiceRecorder()
+
+  /** Upload one file and hold its reference for the next send. */
+  async function uploadOne(file: File) {
+    uploading = true
+    try {
+      const bytes = new Uint8Array(await file.arrayBuffer())
+      const done = await store.api.uploadFile({
+        path: '',
+        name: file.name || 'file',
+        mimeType: file.type || guessMime(file.name),
+        bytes,
+      })
+      // DEDUPE BY CODE: identical bytes yield the same code, and two entries sharing one break the keyed list.
+      if (!attachments.some(a => a.code === done.code)) attachments = [...attachments, done]
+    } catch (e) {
+      showErrorToast(String(e))
+    } finally {
+      uploading = false
+    }
+  }
+
+  function pickFiles(accept: string) {
+    const input = document.createElement('input')
+    input.type = 'file'
+    input.multiple = true
+    if (accept) input.accept = accept
+    input.onchange = () => {
+      for (const f of input.files ?? []) void uploadOne(f)
+    }
+    input.click()
+  }
+
+  /** Hold-to-talk: press starts, release uploads. The same recorder the chat uses. */
+  async function startRecording() {
+    if (recording) return
+    recording = true
+    recordElapsed = 0
+    recordTimer = setInterval(() => (recordElapsed += 200), 200)
+    const ok = await recorder.start()
+    if (!ok) {
+      if (recordTimer) {
+        clearInterval(recordTimer)
+        recordTimer = null
+      }
+      recording = false
+      showErrorToast(t('voicePermission'))
+    }
+  }
+
+  async function stopRecording() {
+    if (recordTimer) {
+      clearInterval(recordTimer)
+      recordTimer = null
+    }
+    if (!recording) return
+    recording = false
+    const src = await recorder.stop()
+    if (!src) {
+      showToast(t('voiceTooShort'))
+      return
+    }
+    // A VOICE NOTE IS A FILE LIKE ANY OTHER: it uploads, and the message carries its reference.
+    uploading = true
+    try {
+      const done = await store.api.uploadFile({
+        path: '',
+        name: src.name,
+        mimeType: src.mimeType,
+        bytes: src.bytes,
+      })
+      if (!attachments.some(a => a.code === done.code)) attachments = [...attachments, done]
+    } catch (e) {
+      showErrorToast(String(e))
+    } finally {
+      uploading = false
+    }
+  }
 
   // The sender: the user posts with NO sender, which the server treats as "reaches the coordinator".
   const sendAs = ''
@@ -126,11 +221,13 @@
 
   async function send() {
     const body = text.trim()
-    if (!body || sending) return
+    // A MESSAGE NEEDS SOMETHING IN IT: words, a file, or both.
+    if ((!body && attachments.length === 0) || sending || uploading) return
     sending = true
     try {
-      await store.api.sendGroupMessage(group, body, sendAs)
+      await store.api.sendGroupMessage(group, body, sendAs, attachments)
       text = ''
+      attachments = []
       followBottom = true
     } catch (e) {
       showErrorToast(String(e))
@@ -203,11 +300,16 @@
               <span class="text-micro text-muted-foreground">{stamp(m.createdAt)}</span>
             </div>
             <div
-              class="rounded-lg px-2.5 py-1.5 text-meta whitespace-pre-wrap break-words {mine
+              class="space-y-1.5 rounded-lg px-2.5 py-1.5 text-meta break-words {mine
                 ? 'bg-primary/14'
                 : 'bg-muted'}"
             >
-              {m.body}
+              {#if m.body}<div class="whitespace-pre-wrap">{m.body}</div>{/if}
+              <!-- AN ATTACHMENT IS A `file:<code>` REFERENCE, drawn by the same component a chat uses — so a
+                   picture in a group looks like a picture in a chat, and a voice note plays the same way. -->
+              {#each m.attachments ?? [] as f (f.code)}
+                <MediaAttachment api={store.api} file={f} siblings={m.attachments ?? []} />
+              {/each}
             </div>
           </div>
         </div>
@@ -217,35 +319,122 @@
     <!-- THE COMPOSER IS THE SAME COMPOSER AS A ONE-TO-ONE CHAT.
          A group is a conversation; a reader who has typed in one has already learned where the field is, how
          tall it grows, and what the send circle looks like. A second, smaller box here made the same act feel
-         like a different feature — and the field was visibly narrower than the messages above it. The geometry
-         below is copied from Chat's composer deliberately: same 42px slot, same shell, same inner metric
-         class, so the two cannot drift apart again. -->
+         like a different feature — and the field was visibly narrower than the messages above it.
+
+         A GROUP ALSO ACCEPTS WHAT A CHAT ACCEPTS: a picture, a voice note, a file. Those are attachments —
+         `file:<code>` references — so a voice note posted here plays, looks and behaves exactly like one
+         posted in a one-to-one chat. -->
     <div class="shrink-0 border-t border-border bg-card px-3 pt-1 pb-1">
+      {#if attachments.length}
+        <div class="mb-2 flex flex-wrap gap-1 pt-1">
+          {#each attachments as a (a.code)}
+            <div class="relative">
+              <MediaAttachment
+                api={store.api}
+                code={a.code}
+                name={a.name ?? ''}
+                mime={a.mime}
+                size={a.size ?? null}
+                dimension={64}
+              />
+              <button
+                type="button"
+                class="absolute top-0.5 right-0.5 flex size-4 items-center justify-center rounded-full bg-muted-foreground/70 text-white hover:bg-destructive"
+                title={t('delete')}
+                aria-label={t('delete')}
+                onclick={() => (attachments = attachments.filter(x => x.code !== a.code))}
+              >
+                <AppIcons.close class="size-2.5" />
+              </button>
+            </div>
+          {/each}
+        </div>
+      {/if}
+
       <div class="flex items-center gap-2">
-        <div class="relative min-h-[44px] flex-1 rounded-md border border-border/60 bg-muted">
+        <!-- Left: mic/keyboard toggle, in the same 42px slot the chat uses. -->
+        <button
+          type="button"
+          class="flex size-[42px] shrink-0 items-center justify-center rounded-full border border-border bg-card text-muted-foreground hover:bg-muted disabled:opacity-40"
+          title={voiceMode ? t('keyboardMode') : t('voiceMode')}
+          aria-label={voiceMode ? t('keyboardMode') : t('voiceMode')}
+          disabled={sending}
+          onclick={() => (voiceMode = !voiceMode)}
+        >
+          {#if voiceMode}<AppIcons.keyboard class="size-[22px]" />{:else}<AppIcons.mic
+              class="size-[22px]"
+            />{/if}
+        </button>
+
+        <div
+          class="relative min-h-[44px] flex-1 rounded-md border {recording
+            ? 'border-destructive bg-destructive/12'
+            : 'border-border/60 bg-muted'}"
+        >
           <textarea
             bind:value={text}
             rows="1"
-            class="block w-full min-h-[42px] max-h-40 resize-none border-0 bg-transparent px-3 py-[10px] text-sm leading-[21px] outline-none placeholder:text-muted-foreground"
-            placeholder={t('groupMessagePlaceholder')}
+            class="block w-full min-h-[42px] max-h-40 resize-none border-0 bg-transparent px-3 py-[10px] text-sm leading-[21px] outline-none placeholder:text-muted-foreground {voiceMode
+              ? 'invisible'
+              : ''}"
+            placeholder={attachments.length ? '' : t('groupMessagePlaceholder')}
             onkeydown={e => {
               if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault()
                 void send()
               }
             }}></textarea>
+
+          {#if voiceMode}
+            <!-- HOLD TO TALK, exactly as in the chat: press starts, release uploads. The label sits on top of
+                 the (invisible) textarea so the field's geometry cannot change between the two modes. -->
+            <button
+              type="button"
+              class="absolute inset-0 flex items-start justify-center touch-none select-none px-3 py-[10px] text-sm leading-[21px] [-webkit-touch-callout:none] {recording
+                ? 'font-semibold text-destructive'
+                : 'text-muted-foreground'}"
+              oncontextmenu={e => e.preventDefault()}
+              onpointerdown={e => {
+                e.preventDefault()
+                try {
+                  e.currentTarget.setPointerCapture(e.pointerId)
+                } catch {
+                  /* unsupported */
+                }
+                void startRecording()
+              }}
+              onpointerup={() => void stopRecording()}
+              onpointercancel={() => void stopRecording()}
+            >
+              {recording ? `${t('releaseToSend')} · ${fmtElapsed(recordElapsed)}` : t('holdToTalk')}
+            </button>
+          {/if}
         </div>
 
-        <!-- ONE MORPHING CIRCLE, exactly like the chat: send when there is something to send, a muted
-             attach-style circle when there is not. -->
         <button
           type="button"
-          class="flex size-[42px] shrink-0 items-center justify-center rounded-full border border-primary bg-card text-primary disabled:opacity-40"
-          class:border-border={!text.trim()}
-          class:text-muted-foreground={!text.trim()}
+          class="flex size-[42px] shrink-0 items-center justify-center rounded-full border border-border bg-card text-muted-foreground hover:bg-muted disabled:opacity-40"
+          title={t('attach')}
+          aria-label={t('attach')}
+          disabled={sending || uploading}
+          onclick={() => pickFiles('')}
+        >
+          {#if uploading}
+            <span
+              class="block size-5 animate-spin rounded-full border-2 border-border border-t-muted-foreground"
+            ></span>
+          {:else}
+            <AppIcons.add class="size-5" />
+          {/if}
+        </button>
+
+        <!-- Send: one circle, disabled until there is something to send — words or a file. -->
+        <button
+          type="button"
+          class="flex size-[42px] shrink-0 items-center justify-center rounded-full border border-primary bg-card text-primary disabled:border-border disabled:text-muted-foreground disabled:opacity-40"
           title={t('send')}
           aria-label={t('send')}
-          disabled={!text.trim() || sending}
+          disabled={(!text.trim() && attachments.length === 0) || sending || uploading}
           onclick={() => void send()}
         >
           {#if sending}
@@ -258,11 +447,5 @@
         </button>
       </div>
     </div>
-
-    {#if coordinator}
-      <p class="shrink-0 border-t border-border px-3 py-1 text-micro text-muted-foreground">
-        {t('groupRoutingHint')}
-      </p>
-    {/if}
   {/if}
 </div>
