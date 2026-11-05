@@ -262,7 +262,7 @@ export type Message = Message$1<"agent.v1.Message"> & {
    * agent authored itself. A user message carries the mailbox source it was
    * delivered with:
    *   `user`               — a human prompt (HTTP Prompt route)
-   *   `session:{session}`  — another session (subsession-create / mail-send)
+   *   `session:{id}`       — another session (spawn / group-send)
    *   `system:{name}`      — a system/automation source
    *   other                — extension-defined; clients degrade gracefully
    *
@@ -375,7 +375,7 @@ export type MailboxEntry = Message$1<"agent.v1.MailboxEntry"> & {
    * ORIGIN of the message, so a consumer can tell a person's prompt from
    * another session's hand-off or a system event. Open string:
    *   `user`                 — a human prompt (HTTP Prompt route)
-   *   `session:{session}`    — another session (subsession-create / mail-send)
+   *   `session:{id}`         — another session (spawn / group-send)
    *   `system:{name}`        — a system/automation source
    *   other                  — extension-defined; consumers degrade gracefully
    *
@@ -2317,7 +2317,7 @@ export const GroupSchema: GenMessage<Group> = /*@__PURE__*/
  * THE ROLE IS ABOUT MESSAGE ROUTING, NOT MANAGEMENT:
  *
  *   "coordinator"  RECEIVES what the user says to the group. It reads the instruction, decides how to
- *                  split the work, and hands pieces to individual members with `mail-send`. Exactly
+ *                  split the work, and hands pieces to individual members with `group-send`. Exactly
  *                  one per group — two would both answer the same message and talk past each other.
  *   "member"       receives nothing by default. It is addressed when the coordinator names it; that
  *                  is what "@" means in this design: the coordinator writes to that session's mailbox.
@@ -5465,7 +5465,7 @@ export const AgentService: GenService<{
   },
   /**
    * Send a message FROM A USER to a group. It is delivered to the COORDINATOR only; the coordinator
-   * decides how to split the work and addresses members itself with `mail-send`. "@" in this design
+   * decides how to split the work and addresses members itself with `group-send`. "@" in this design
    * means "the coordinator writes to that session's mailbox", not a string this layer parses.
    *
    * @generated from rpc agent.v1.AgentService.SendGroupMessage

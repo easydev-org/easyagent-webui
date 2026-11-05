@@ -180,35 +180,6 @@ const webFetch: CardHandler = ({ tool, data, input, output }) => {
   }
 }
 
-interface SearchResult {
-  title?: string
-  url?: string
-  description?: string
-}
-
-const braveSearch: CardHandler = ({ tool, data, input }) => {
-  if (tool !== 'brave-search') return null
-  const results = arr<SearchResult>(data, 'results')
-  const query = s(data, 'query') || s(input, 'query')
-  return {
-    subtitle: 'webSearch',
-    input: { fields: fields(field('compass', 'tcQuery', query)) },
-    result: {
-      fields: fields(field('list', 'tcResults', results.length)),
-      body: results.length
-        ? {
-            kind: 'list',
-            rows: results.map(r => ({
-              label: r.title ?? r.url ?? '',
-              sub: r.description ?? '',
-              url: r.url,
-            })),
-          }
-        : undefined,
-    },
-  }
-}
-
 // ---- media generation ----
 
 interface StoredFile {
@@ -279,39 +250,72 @@ function mediaCard(
   }
 }
 
-// ---- cross-session ----
+// ---- groups ----
+//
+// THE CROSS-SESSION TOOLS ARE group-create / spawn / group-send NOW. `subsession-create` and
+// `mail-send` are gone from the agent, so cards that matched them could never fire — a handler whose
+// `tool !==` guard can never be false is dead weight that reads as a supported feature.
 
-const subsessionCreate: CardHandler = ({ tool, data, input }) => {
-  if (tool !== 'subsession-create') return null
+const groupCreate: CardHandler = ({ tool, data, input, output }) => {
+  if (tool !== 'group-create') return null
   return {
-    subtitle: 'subsession',
+    subtitle: 'group',
+    input: {
+      fields: fields(
+        field('group', 'tcGroup', s(input, 'name'), { mono: true }),
+      ),
+    },
+    result: {
+      fields: fields(
+        field('group', 'tcGroup', s(data, 'group'), { mono: true }),
+      ),
+      body: output ? { kind: 'text', text: output } : undefined,
+    },
+  }
+}
+
+const spawn: CardHandler = ({ tool, data, input, output }) => {
+  if (tool !== 'spawn') return null
+  return {
+    subtitle: 'spawn',
     input: {
       fields: fields(
         field(
           'chat',
           'tcDescription',
-          firstLine(s(input, 'prompt') || s(input, 'description'), 60),
+          firstLine(s(input, 'task') || s(input, 'name'), 60),
         ),
       ),
     },
     result: {
+      // THE ID IS SHOWN because that is what group-send takes; the name is only a label.
       fields: fields(
-        field('chat', 'tcSession', s(data, 'name'), { mono: true }),
-        field('bot', 'tcDescription', firstLine(s(data, 'description'), 60)),
+        field('group', 'tcGroup', s(data, 'group'), { mono: true }),
+        field('robot', 'tcSession', s(data, 'worker'), { mono: true }),
+        field('bot', 'tcDescription', firstLine(s(data, 'name'), 60)),
       ),
+      body: output ? { kind: 'text', text: output } : undefined,
     },
   }
 }
 
-const mailSend: CardHandler = ({ tool, data, input, output }) => {
-  if (tool !== 'mail-send') return null
+const groupSend: CardHandler = ({ tool, data, input, output }) => {
+  if (tool !== 'group-send') return null
+  const to = arr<string>(data, 'to')
+  const inputTo = arr<string>(input, 'to')
+  const recipients = to.length ? to : inputTo
   return {
-    subtitle: 'mail',
+    subtitle: 'group',
     input: {
-      fields: fields(field('inbox', 'tcTo', s(input, 'to'), { mono: true })),
+      fields: fields(
+        field('group', 'tcGroup', s(input, 'group'), { mono: true }),
+      ),
     },
     result: {
-      fields: fields(field('inbox', 'tcTo', s(data, 'to'), { mono: true })),
+      fields: fields(
+        field('group', 'tcGroup', s(data, 'group'), { mono: true }),
+        field('inbox', 'tcTo', recipients.join(', '), { mono: true }),
+      ),
       body: output ? { kind: 'text', text: output } : undefined,
     },
   }
@@ -324,14 +328,14 @@ export const bundledHandlers: CardHandler[] = [
   todoWrite,
   history,
   webFetch,
-  braveSearch,
   mediaCard('image-generate', 'imageGenerate'),
   mediaCard('image-edit', 'imageEdit'),
   mediaCard('video-generate', 'videoGenerate'),
   mediaCard('tts-generate', 'ttsGenerate', { audio: true }),
   mediaCard('tts-clone', 'ttsClone', { audio: true }),
-  subsessionCreate,
-  mailSend,
+  groupCreate,
+  spawn,
+  groupSend,
 ]
 
 export type { CardCtx }
