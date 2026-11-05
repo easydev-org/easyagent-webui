@@ -433,6 +433,8 @@ export function groupFromPb(
     createdBy: g.createdBy,
     createdAt: g.createdAt,
     memberCount: Number(g.memberCount),
+    lastMessagePreview: g.lastMessagePreview || undefined,
+    lastMessageAt: g.lastMessageAt || undefined,
   }
 }
 

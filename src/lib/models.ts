@@ -672,6 +672,15 @@ export interface Group {
   createdBy: string
   createdAt: string
   memberCount: number
+  /**
+   * The newest message, for the list row — the same preview a session row shows.
+   *
+   * EMPTY MEANS "nothing was said, or the last few messages carried only files". A row without a preview said how
+   * many people were in the group and never what they were talking about.
+   */
+  lastMessagePreview?: string
+  /** When that message was sent; absent for a group with no messages. */
+  lastMessageAt?: string
 }
 
 export interface GroupMember {

@@ -19,6 +19,7 @@
   import EmptyState from '$lib/components/layout/EmptyState.svelte'
   import ReconnectBanner from '$lib/components/ReconnectBanner.svelte'
   import { AppIcons } from '$lib/icons'
+  import { now } from '$lib/clock.svelte'
   import ChatAvatar from '$lib/components/ChatAvatar.svelte'
 
   let { store }: PageProps = $props()
@@ -80,6 +81,24 @@
    * not a nesting relationship in a flat list.
    */
   const display = $derived(filtered)
+
+  /**
+   * A LIST ROW'S TIME LABEL — the same wording SessionRow uses for a session.
+   *
+   * It differs from a message's own timestamp on purpose: a list is scanned for "is this old or new", which is
+   * answered in hours and days, while a message in a conversation is read for "how long ago exactly".
+   */
+  function fmtTime(iso: string, at: number): string {
+    if (!iso) return ''
+    const d = new Date(iso)
+    if (isNaN(d.getTime())) return ''
+    const mins = Math.floor((at - d.getTime()) / 60000)
+    if (mins < 1) return t('timeJustNow')
+    if (mins < 60) return t('timeMinAgo', { arg1: mins })
+    if (mins < 60 * 24) return t('timeHour', { arg1: Math.floor(mins / 60) })
+    if (mins < 60 * 24 * 7) return t('timeDay', { arg1: Math.floor(mins / (60 * 24)) })
+    return `${d.getMonth() + 1}/${d.getDate()}`
+  }
 
   function exitSelect() {
     selectMode = false
@@ -282,8 +301,12 @@
       <SectionLabel class="normal-case">{t('groupsTitle')}</SectionLabel>
       <div class="space-y-1 px-2 pb-1" role="list">
         {#each store.groups as g (g.name)}
-          <!-- A GROUP ROW IS A CONVERSATION ROW: picture, name, and what it holds. Tapping opens the
-               transcript, which is the whole point of showing it here. -->
+          <!-- A GROUP ROW IS A CONVERSATION ROW, and it now reads like one: picture, name, WHAT WAS LAST SAID,
+               and when. It used to show a member count instead of the preview, so a reader scanning the list
+               learned how many people were in a group but not what they were talking about.
+
+               THE MEMBER COUNT IS STILL HERE, moved beside the name where a chat puts nothing: it is a fact
+               about the group rather than the thing a reader is looking for. -->
           <button
             type="button"
             class="flex w-full items-center gap-3 rounded-md px-2 py-2 text-left hover:bg-muted/50"
@@ -297,10 +320,19 @@
               fetchBytes={store.api.fetchFileBytes.bind(store.api)}
             />
             <span class="min-w-0 flex-1">
-              <span class="block truncate text-body font-medium">{g.name}</span>
-              <span class="block text-micro text-muted-foreground"
-                >{t('groupMemberCount', { arg1: g.memberCount })}</span
-              >
+              <span class="flex items-baseline gap-2">
+                <span class="min-w-0 flex-1 truncate text-body font-medium">{g.name}</span>
+                {#if g.lastMessageAt}
+                  <span class="shrink-0 text-micro text-muted-foreground tabular-nums"
+                    >{fmtTime(g.lastMessageAt, now())}</span
+                  >
+                {/if}
+              </span>
+              <span class="flex items-baseline gap-2">
+                <span class="min-w-0 flex-1 truncate text-micro text-muted-foreground"
+                  >{g.lastMessagePreview || t('groupMemberCount', { arg1: g.memberCount })}</span
+                >
+              </span>
             </span>
             <AppIcons.chevron_right class="size-4 shrink-0 text-muted-foreground" />
           </button>

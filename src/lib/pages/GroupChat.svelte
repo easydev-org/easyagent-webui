@@ -18,6 +18,7 @@
   import PageHeader from '$lib/components/layout/PageHeader.svelte'
   import ChatAvatar from '$lib/components/ChatAvatar.svelte'
   import MediaAttachment from '$lib/components/MediaAttachment.svelte'
+  import FileRefText from '$lib/components/FileRefText.svelte'
   import { VoiceRecorder } from '$lib/voice'
   import { fmtElapsed } from '$lib/chat-helpers'
   import { AppIcons } from '$lib/icons'
@@ -346,7 +347,13 @@
                 mine ? 'border-primary/40 bg-primary/12' : 'border-border/50 bg-card',
               )}
             >
-              {#if m.body}<div class="whitespace-pre-wrap">{m.body}</div>{/if}
+              <!-- MARKDOWN, EXACTLY AS A CHAT RENDERS IT: a session's reply is prose that uses lists, emphasis
+                   and code, and printing it as one pre-wrapped block lost all of it — a numbered plan arrived as
+                   a wall of asterisks. The user's own words stay plain: they are what a person typed, not a
+                   document, and running them through a renderer would make their asterisks mean something. -->
+              {#if m.body}
+                <FileRefText text={m.body} api={store.api} markdown={!mine} />
+              {/if}
               <!-- AN ATTACHMENT IS A `file:<code>` REFERENCE, drawn by the same component a chat uses — so a
                    picture in a group looks like a picture in a chat, and a voice note plays the same way.
 
