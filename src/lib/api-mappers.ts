@@ -101,7 +101,8 @@ export function sessionFromPb(
   s: import('../gen/agent/v1/agent_pb.js').Session,
 ): Session {
   return {
-    id: s.name,
+    id: s.id,
+    name: s.name,
     org: s.org,
     repo: s.repo,
     branch: s.branch,

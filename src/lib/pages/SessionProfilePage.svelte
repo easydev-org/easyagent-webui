@@ -41,6 +41,7 @@
   const fallbackLocale = Prefs.loadAgentLocale()
 
   let draft = $state<ProfileDraft>({
+    name: '',
     model: '',
     variant: '',
     preset: '',

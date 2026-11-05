@@ -43,7 +43,15 @@ export const kModelCapabilities = [
 // uses; legacy container/ops models are intentionally omitted).
 
 export interface Session {
+  /** The session's identity AND address: random, immutable, what every RPC takes. */
   id: string
+  /**
+   * The DISPLAY label. Not unique, editable, and not an address.
+   *
+   * EMPTY FALLS BACK TO THE ID, which is why `sessionName()` exists and why nothing should read this
+   * field directly: a session created without a label would otherwise render as a blank row.
+   */
+  name: string
   org: string
   repo: string
   branch: string
@@ -77,8 +85,17 @@ export interface Session {
   intro?: string
 }
 
+/**
+ * sessionName is what to SHOW for a session.
+ *
+ * THREE SOURCES, IN ORDER: an explicit org/repo/branch label (a git-backed session describes itself
+ * better than any user-typed name), then the user's display name, then the id as a last resort. The id
+ * is opaque, so showing it is a fallback rather than a choice — but a blank row is worse, and a session
+ * created without a label is a legal state.
+ */
 export function sessionName(s: Session): string {
-  return s.org ? `${s.org}:${s.repo}:${s.branch}` : s.id
+  if (s.org) return `${s.org}:${s.repo}:${s.branch}`
+  return s.name || s.id
 }
 
 // ---- messages ----

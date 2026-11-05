@@ -16,6 +16,8 @@
 export interface OptionalProfileFields {
   avatarFile?: string
   intro?: string
+  /** The display label. Empty means "show the id". */
+  name?: string
 }
 
 export function optionalProfileFields(
@@ -25,5 +27,6 @@ export function optionalProfileFields(
   if ('avatarFile' in settings)
     out.avatarFile = (settings['avatarFile'] as string) || ''
   if ('intro' in settings) out.intro = (settings['intro'] as string) || ''
+  if ('name' in settings) out.name = (settings['name'] as string) || ''
   return out
 }

@@ -707,7 +707,7 @@
             onclick={openProfile}
             title={t('sessionProfile')}
           >
-            {session?.id}
+            {session ? sessionName(session) : ''}
           </button>
         </div>
         <div class="ml-auto flex items-center gap-0.5">

@@ -143,7 +143,10 @@ export class AgentApi {
       ...(locale ? { locale } : {}),
     })
     return {
-      id: r.sessionName,
+      // THE ID IS SERVER-ASSIGNED AND RANDOM now, so it comes back from the call rather than from the
+      // name the caller typed. The name is kept as a label only.
+      id: r.sessionId,
+      name: r.name,
       model,
       variant,
       preset,
@@ -900,6 +903,7 @@ export class AgentApi {
 export function emptySession(id: string): Session {
   return {
     id,
+    name: '',
     org: '',
     repo: '',
     branch: '',

@@ -38,6 +38,7 @@ export class LocalStore {
       PRAGMA journal_mode = MEMORY;
       CREATE TABLE IF NOT EXISTS local_sessions (
         id TEXT PRIMARY KEY,
+        name TEXT NOT NULL DEFAULT '',
         model TEXT NOT NULL DEFAULT '',
         variant TEXT NOT NULL DEFAULT '',
         preset TEXT NOT NULL DEFAULT '',
@@ -80,11 +81,12 @@ export class LocalStore {
     if (!sessions.length) return
     for (const s of sessions) {
       this.run(
-        `INSERT INTO local_sessions (id, model, variant, preset, system_prompt, max_turns,
+        `INSERT INTO local_sessions (id, name, model, variant, preset, system_prompt, max_turns,
            locale, org, repo, branch, server_tip_id, message_seq, last_message_at,
            last_message_preview, updated_at, last_synced_at)
-         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
-         ON CONFLICT(id) DO UPDATE SET model=excluded.model, variant=excluded.variant,
+         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+         ON CONFLICT(id) DO UPDATE SET name=excluded.name, model=excluded.model,
+           variant=excluded.variant,
            preset=excluded.preset, system_prompt=excluded.system_prompt,
            max_turns=excluded.max_turns, locale=excluded.locale, org=excluded.org,
            repo=excluded.repo, branch=excluded.branch,
@@ -94,6 +96,7 @@ export class LocalStore {
            updated_at=excluded.updated_at, last_synced_at=excluded.last_synced_at`,
         [
           s.id,
+          s.name,
           s.model,
           s.variant,
           s.preset,
@@ -120,6 +123,7 @@ export class LocalStore {
     )
     return rows.map(r => ({
       id: String(r['id'] ?? ''),
+      name: String(r['name'] ?? ''),
       model: String(r['model'] ?? ''),
       variant: String(r['variant'] ?? ''),
       preset: String(r['preset'] ?? ''),

@@ -16,6 +16,8 @@
 import type { Session } from './models'
 
 export interface ProfileDraft {
+  /** The DISPLAY label. Editable; the id below it is not. */
+  name: string
   model: string
   variant: string
   preset: string
@@ -33,11 +35,12 @@ export interface ProfileDraft {
 export function draftFromSession(
   session: Pick<
     Session,
-    'model' | 'variant' | 'preset' | 'locale' | 'avatarFile' | 'intro'
+    'name' | 'model' | 'variant' | 'preset' | 'locale' | 'avatarFile' | 'intro'
   >,
   fallbackLocale: string,
 ): ProfileDraft {
   return {
+    name: session.name,
     model: session.model,
     variant: session.variant,
     preset: session.preset,
@@ -64,6 +67,9 @@ export function settingsPatch(draft: ProfileDraft): Record<string, unknown> {
     locale: draft.locale,
     avatarFile: draft.avatarFile,
     intro: draft.intro.trim(),
+    // SENT EVERY TIME for the same reason as the two above: an empty name is a real value ("show the
+    // id"), and omitting the key is the only way to say "leave it alone".
+    name: draft.name.trim(),
   }
 }
 
@@ -78,12 +84,13 @@ export function isDirty(
   draft: ProfileDraft,
   session: Pick<
     Session,
-    'model' | 'variant' | 'preset' | 'locale' | 'avatarFile' | 'intro'
+    'name' | 'model' | 'variant' | 'preset' | 'locale' | 'avatarFile' | 'intro'
   >,
   fallbackLocale: string,
 ): boolean {
   const base = draftFromSession(session, fallbackLocale)
   return (
+    draft.name !== base.name ||
     draft.model !== base.model ||
     draft.variant !== base.variant ||
     draft.preset !== base.preset ||

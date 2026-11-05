@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { draftFromSession, isDirty, settingsPatch } from './session-profile'
 
 const stored = {
+  name: 'ci',
   model: 'gw/one',
   variant: 'high',
   preset: 'default',
@@ -13,6 +14,7 @@ const stored = {
 describe('draftFromSession', () => {
   it('copies what is stored', () => {
     expect(draftFromSession(stored, 'en')).toEqual({
+      name: 'ci',
       model: 'gw/one',
       variant: 'high',
       preset: 'default',
@@ -55,6 +57,7 @@ describe('settingsPatch', () => {
       variant: '',
       preset: '',
       locale: 'zh',
+      name: '',
       avatarFile: '',
       intro: '',
     })
@@ -68,6 +71,7 @@ describe('settingsPatch', () => {
       variant: '',
       preset: '',
       locale: 'zh',
+      name: 'x',
       avatarFile: 'file:x',
       intro: 'x',
     })
@@ -82,6 +86,7 @@ describe('settingsPatch', () => {
       variant: '',
       preset: 'default',
       locale: 'zh',
+      name: 'ci',
       avatarFile: 'file:abc',
       intro: '  CI triage  ',
     })
@@ -115,5 +120,25 @@ describe('isDirty', () => {
     expect(isDirty({ ...base, intro: '  CI triage  ' }, stored, 'en')).toBe(
       false,
     )
+  })
+})
+
+/**
+ * THE DISPLAY NAME IS PART OF THE PROFILE, SO IT PARTICIPATES IN DIRTY TRACKING.
+ *
+ * A Save that is disabled after the user retyped the name would be a bug the user sees and cannot
+ * explain — the field they just changed is the only one that looks unchanged.
+ */
+describe('isDirty: name', () => {
+  it('notices a name change', () => {
+    const base = draftFromSession(stored, 'en')
+    expect(isDirty({ ...base, name: 'something else' }, stored, 'en')).toBe(
+      true,
+    )
+  })
+
+  it('is clean when the name is unchanged', () => {
+    const base = draftFromSession(stored, 'en')
+    expect(isDirty(base, stored, 'en')).toBe(false)
   })
 })

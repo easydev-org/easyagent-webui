@@ -56,3 +56,26 @@ describe('optionalProfileFields', () => {
     })
   })
 })
+
+/**
+ * `name` FOLLOWS THE SAME PRESENCE RULE AS THE AVATAR AND THE INTRO.
+ *
+ * It is `optional` on the wire for the same reason: absent = leave it alone, present-but-empty = clear
+ * it. And clearing is meaningful here — an empty display name means "show the id", which is what a
+ * session created without a label looks like.
+ */
+describe('optionalProfileFields: name', () => {
+  it('is not sent when the caller did not mention it', () => {
+    expect(optionalProfileFields({ model: 'a/b' })).not.toHaveProperty('name')
+  })
+
+  it('is sent when cleared, so the id can show through', () => {
+    expect(optionalProfileFields({ name: '' })).toEqual({ name: '' })
+  })
+
+  it('is sent verbatim when set', () => {
+    expect(optionalProfileFields({ name: 'check the build' })).toEqual({
+      name: 'check the build',
+    })
+  })
+})
