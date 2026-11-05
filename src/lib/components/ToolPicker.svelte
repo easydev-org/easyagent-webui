@@ -5,6 +5,7 @@
   import type { ToolInfo } from '$lib/models'
   import { t } from '$lib/i18n.svelte'
   import { cn } from '$lib/utils'
+  import type { ToolEffect } from '$lib/models'
   import {
     canonicalizeSelection,
     disqualifiedByConfig,
@@ -88,6 +89,23 @@
     selected = next
   })
 
+  /**
+   * effectClass colours the effect chip by how much it can disturb.
+   *
+   * `medium` and `high` are the two that confirm before running, so they are the two that must be visible
+   * at a glance; `none` and `low` stay muted so the eye lands on what matters.
+   */
+  function effectClass(e: ToolEffect): string {
+    switch (e) {
+      case 'high':
+        return 'bg-destructive/15 text-destructive'
+      case 'medium':
+        return 'bg-warning/15 text-warning'
+      default:
+        return 'bg-muted text-muted-foreground'
+    }
+  }
+
   function toggleAll(on: boolean) {
     selected = on ? new Set(tools.filter(eligible).map(valueOf)) : new Set()
   }
@@ -132,7 +150,21 @@
               title={ok ? tl.description : t('toolNeedsConfig')}
             >
               <Switch checked={canonical.has(v)} disabled={!ok} onchange={on => toggle(v, on)} />
+              <!--
+                THE EFFECT IS SHOWN NEXT TO THE NAME because "what does this do" is the question a user
+                asks when granting a preset wholesale. A destructive tool inside a group of twenty reads
+                exactly like the harmless ones otherwise, and the description is a hover away.
+              -->
               <span class="min-w-0 flex-1 truncate font-mono text-micro">{tl.name}</span>
+              {#if tl.effect}
+                <span
+                  class={cn(
+                    'shrink-0 rounded px-1 py-px text-[9px] leading-none',
+                    effectClass(tl.effect),
+                  )}
+                  title={t('toolEffectHint')}>{tl.effect}</span
+                >
+              {/if}
               {#if isColliding(tools, tl.name)}
                 <span class="shrink-0 text-micro text-warning" title={t('collisionNote')}
                   >({g.extId})</span

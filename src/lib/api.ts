@@ -42,7 +42,7 @@ import type {
   UploadedFile,
   UploadedFileSource,
 } from './models'
-import { type ConfigFieldSchema, modelRefOf } from './models'
+import { type ConfigFieldSchema, modelRefOf, type ToolEffect } from './models'
 import { optionalProfileFields } from './session-settings'
 
 /**
@@ -803,6 +803,7 @@ export class AgentApi {
         }),
       ),
       requiredConfig: [...t.requiredConfig],
+      effect: (t.effect || undefined) as ToolEffect | undefined,
     }))
   }
 

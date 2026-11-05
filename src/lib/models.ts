@@ -384,6 +384,32 @@ export interface ToolInfo {
   configFields?: ToolConfigField[] | null
   config?: ToolConfig[] | null
   requiredConfig: string[]
+  /**
+   * What CALLING this tool does, independent of who may call it.
+   *
+   * SEPARATE FROM PERMISSIONS. `requires` says whether the session may call it; this says what happens
+   * once it does — so a user can be told "this one only reads" without having to open the extension.
+   *
+   *   'none'    nothing changes
+   *   'low'     only the caller's own state changes
+   *   'medium'  state others already depend on changes
+   *   'high'    an asset is consumed
+   */
+  effect?: ToolEffect
+}
+
+export type ToolEffect = 'none' | 'low' | 'medium' | 'high'
+
+/** Whether a call at this effect should be confirmed before it runs. */
+export function effectNeedsConfirmation(
+  e: ToolEffect | undefined | null,
+): boolean {
+  // AN UNKNOWN EFFECT IS TREATED AS THE WORST, not the best: a tool that did not say what it does must
+  // not be presented as harmless. `null` counts as unknown alongside `undefined` and '' — a server that
+  // sent the field as null is telling us the same thing as one that omitted it.
+  if (e === 'medium' || e === 'high') return true
+  if (e === 'none' || e === 'low') return false
+  return true
 }
 
 /** A discovered extension's whole config surface (not per-tool). */
