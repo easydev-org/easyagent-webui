@@ -29,6 +29,7 @@
     onRegenerate,
     onOpenSession,
     sessionExists,
+    sessionLabel,
     sessionId = '',
     store,
   }: {
@@ -46,6 +47,8 @@
     onOpenSession?: ((sessionId: string) => void) | null
     /** Whether a `session:{name}` source still resolves to a live session. */
     sessionExists?: ((sessionId: string) => boolean) | null
+    /** Resolves a session id to its display name, for a chip or an avatar caption. */
+    sessionLabel?: ((sessionId: string) => string) | null
     /** Id of the OPEN session, used to seed the assistant avatar on the left. */
     sessionId?: string
   } = $props()
@@ -71,28 +74,54 @@
   // SENDER's avatar) even though its role is `user`; `system:X` renders as a
   // centred notice. Only the reader's OWN prompts stay right-aligned — and,
   // per spec, carry NO avatar (avatars live on the LEFT only).
-  const sourceKind = $derived<'user' | 'session' | 'system' | 'other'>(
-    msg.source.startsWith('session:')
-      ? 'session'
-      : msg.source.startsWith('system:')
-        ? 'system'
-        : msg.source === '' || msg.source === 'user'
-          ? 'user'
-          : 'other',
+  /**
+   * WHERE THE MESSAGE CAME FROM.
+   *
+   * `group:<name>/<sender>` IS ITS OWN KIND, not a session hand-off: a group message came from a
+   * CONVERSATION, and the reader should be able to open that conversation — a `session:` source only knows
+   * the sender, so the group half would be lost and the message would look like a private message.
+   */
+  const sourceKind = $derived<'user' | 'session' | 'system' | 'group' | 'other'>(
+    msg.source.startsWith('group:')
+      ? 'group'
+      : msg.source.startsWith('session:')
+        ? 'session'
+        : msg.source.startsWith('system:')
+          ? 'system'
+          : msg.source === '' || msg.source === 'user'
+            ? 'user'
+            : 'other',
   )
-  /** The bare name after `session:` / `system:` ('' for user/other). */
+  /** The bare name after `session:` / `system:`; the GROUP name for `group:`. */
   const sourceName = $derived(
     sourceKind === 'session'
       ? msg.source.slice('session:'.length)
       : sourceKind === 'system'
         ? msg.source.slice('system:'.length)
-        : '',
+        : sourceKind === 'group'
+          ? msg.source.slice('group:'.length).split('/')[0] || ''
+          : '',
+  )
+  /** The sending session for a `group:` source ('' when the user posted it). */
+  const groupSender = $derived(
+    sourceKind === 'group' ? msg.source.slice('group:'.length).split('/')[1] || '' : '',
   )
   // A system-sourced message renders like a system notice (centred).
   const isSystem = $derived(isRoleSystem || sourceKind === 'system')
   // The reader's OWN prompt: right-aligned, no avatar, retry/edit allowed.
   // A session hand-off has role `user` but is NOT ours.
-  const isOwn = $derived(isUser && sourceKind !== 'session')
+  const isOwn = $derived(isUser && sourceKind !== 'session' && sourceKind !== 'group')
+
+  /**
+   * senderLabel renders a session id as the name a reader knows it by.
+   *
+   * THE ID IS WHAT THE WIRE CARRIES and the name is what a person recognises; showing the id in a chip would
+   * make the reader match a 32-character string against a list. Falls back to the id so an unresolvable
+   * sender is still attributable rather than blank.
+   */
+  function senderLabel(id: string): string {
+    return sessionLabel?.(id) || id
+  }
   // An agent-authored assistant step (never a hand-off / system / compaction).
   // Undo applies to it too (withdraw this step and everything after); the
   // regenerate action re-runs the turn from here.
@@ -103,11 +132,21 @@
 
   // Jump-to-session is offered only while the source session still exists.
   const canOpenSession = $derived(
-    sourceKind === 'session' && !!onOpenSession && (!sessionExists || sessionExists(sourceName)),
+    (sourceKind === 'session' ||
+      (sourceKind === 'group' &&
+        !!groupSender &&
+        (!sessionExists || sessionExists(groupSender)))) &&
+      !!onOpenSession,
   )
   // Every LEFT-side avatar: a session hand-off uses the SOURCE session id; an
   // assistant reply (or any other incoming row) uses the OPEN session id.
-  const avatarSeed = $derived(sourceKind === 'session' ? sourceName : sessionId || 'assistant')
+  const avatarSeed = $derived(
+    sourceKind === 'session'
+      ? sourceName
+      : sourceKind === 'group' && groupSender
+        ? groupSender
+        : sessionId || 'assistant',
+  )
   const showAvatar = $derived(incoming && !isError && !isSending)
 
   // Source chip tone: sky for a session hand-off, violet for a system notice.
@@ -192,14 +231,22 @@
 </script>
 
 {#snippet chipBody()}
-  {#if sourceKind === 'session'}
+  {#if sourceKind === 'group'}
+    <!-- A GROUP MESSAGE NAMES THE GROUP AND THE SPEAKER: "which conversation" and "who said it" are two
+         different questions, and a chip that answered only one of them left the reader guessing. -->
+    <AppIcons.users class="size-3" />
+    {t('mailboxFromGroup')}
+    {#if sourceName}<span class="opacity-80">· {sourceName}</span>{/if}
+    {#if groupSender}<span class="opacity-80">· {senderLabel(groupSender)}</span>{/if}
+  {:else if sourceKind === 'session'}
     <AppIcons.chat class="size-3" />
     {t('mailboxFromSession')}
+    {#if sourceName}<span class="opacity-80">· {sourceName}</span>{/if}
   {:else}
     <AppIcons.bolt class="size-3" />
     {t('mailboxFromSystem')}
+    {#if sourceName}<span class="opacity-80">· {sourceName}</span>{/if}
   {/if}
-  {#if sourceName}<span class="opacity-80">· {sourceName}</span>{/if}
 {/snippet}
 
 {#if isCompaction}

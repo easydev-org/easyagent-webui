@@ -834,6 +834,10 @@
                   : null}
                 onOpenSession={name => store.pickSession(name)}
                 sessionExists={name => store.sessionById(name) !== null}
+                sessionLabel={id => {
+                  const s = store.sessionById(id)
+                  return s ? s.name || s.id : ''
+                }}
               />
             {/each}
           {/if}
