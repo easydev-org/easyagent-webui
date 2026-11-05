@@ -863,11 +863,10 @@ export class AgentApi {
         group,
         text,
         sender,
-        attachments: attachments.map(a => ({
-          code: a.code,
-          name: a.name ?? '',
-          size: a.size ?? 0,
-        })),
+        // ONLY THE CODE IS SENT. Name and size are advisory on the wire and the type is the agent's to
+        // derive from the stored bytes — a caller that claimed a type could get a document rendered as a
+        // picture.
+        attachments: attachments.map(a => ({ code: a.code })),
       }),
     )
     return groupMessageFromPb(r.message!)

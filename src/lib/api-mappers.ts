@@ -417,7 +417,9 @@ export function groupMessageFromPb(
     attachments: (m.attachments ?? []).map(a => ({
       code: a.code,
       name: a.name || null,
-      mime: null,
+      // THE TYPE THE AGENT DERIVED AT INGEST. Without it the card cannot tell a picture from a document and
+      // draws a generic file chip — which is exactly what an attachment without a type used to look like.
+      mime: a.mime || null,
       size: Number(a.size) || null,
     })),
   }
