@@ -21,6 +21,7 @@
   import { VoiceRecorder } from '$lib/voice'
   import { fmtElapsed } from '$lib/chat-helpers'
   import { AppIcons } from '$lib/icons'
+  import { cn } from '$lib/utils'
 
   let { store, initialId }: PageProps = $props()
 
@@ -276,42 +277,48 @@
       {/if}
       {#each messages as m (m.seq)}
         {@const mine = !m.sender}
-        <div class="flex gap-2 {mine ? 'flex-row-reverse' : ''}">
-          {#if m.sender}
-            <!-- A MEMBER'S PICTURE OPENS THEIR CARD. The user's own messages have no sender, so there is
-                 nothing to open and the avatar stays a plain picture. -->
-            <button
-              type="button"
-              class="shrink-0 rounded-full"
-              title={labelOf(m)}
-              aria-label={labelOf(m)}
-              onclick={() => openMemberProfile(m)}
-            >
-              <ChatAvatar
-                seed={m.sender}
-                size={28}
-                label={labelOf(m)}
-                avatar={avatarOf(m)}
-                fetchBytes={store.api.fetchFileBytes.bind(store.api)}
-              />
-            </button>
-          {:else}
-            <ChatAvatar
-              seed={group}
-              size={28}
-              label={labelOf(m)}
-              fetchBytes={store.api.fetchFileBytes.bind(store.api)}
-            />
-          {/if}
-          <div class="min-w-0 max-w-[78%]">
-            <div class="mb-0.5 flex items-baseline gap-2 {mine ? 'justify-end' : ''}">
-              <span class="text-micro font-semibold">{labelOf(m)}</span>
-              <span class="text-micro text-muted-foreground">{stamp(m.createdAt)}</span>
+        <!-- THE SAME SHAPE AS A ONE-TO-ONE CHAT.
+             A bubble is a block you read down, not a row you read across: the picture sits ABOVE the bubble,
+             flush to its left edge, and the bubble below it. Side-by-side was the layout that made the two
+             screens feel like different apps — same conversation, two different grammars for who said what.
+
+             THE SENDER'S NAME AND TIME STAY, because this is the one place several people speak; a session
+             chat has a single counterpart and needs neither. They sit on the bubble's own edge so the eye
+             reads name, then words, down one line. -->
+        <div class={cn('mb-3 flex flex-col', mine ? 'items-end' : 'items-start')}>
+          {#if !mine}
+            <div class="mb-1 flex w-full items-center">
+              <!-- A MEMBER'S PICTURE OPENS THEIR CARD, the same gesture as every other avatar in this app. -->
+              <button
+                type="button"
+                class="shrink-0 rounded-full outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                title={labelOf(m)}
+                aria-label={labelOf(m)}
+                onclick={() => openMemberProfile(m)}
+              >
+                <ChatAvatar
+                  seed={m.sender}
+                  size={28}
+                  label={labelOf(m)}
+                  avatar={avatarOf(m)}
+                  fetchBytes={store.api.fetchFileBytes.bind(store.api)}
+                />
+              </button>
             </div>
+          {/if}
+
+          <div class="flex max-w-[85%] flex-col {mine ? 'items-end' : 'items-start'}">
+            {#if !mine}
+              <div class="mb-0.5 flex items-baseline gap-2">
+                <span class="text-micro font-semibold">{labelOf(m)}</span>
+                <span class="text-micro text-muted-foreground">{stamp(m.createdAt)}</span>
+              </div>
+            {/if}
             <div
-              class="space-y-1.5 rounded-lg px-2.5 py-1.5 text-meta break-words {mine
-                ? 'bg-primary/14'
-                : 'bg-muted'}"
+              class={cn(
+                'min-w-0 max-w-full space-y-1.5 rounded-md border px-3 py-2.5 break-words',
+                mine ? 'border-primary/40 bg-primary/12' : 'border-border/50 bg-card',
+              )}
             >
               {#if m.body}<div class="whitespace-pre-wrap">{m.body}</div>{/if}
               <!-- AN ATTACHMENT IS A `file:<code>` REFERENCE, drawn by the same component a chat uses — so a
@@ -320,6 +327,9 @@
                 <MediaAttachment api={store.api} file={f} siblings={m.attachments ?? []} />
               {/each}
             </div>
+            {#if mine}
+              <span class="mt-0.5 text-[10px] text-muted-foreground">{stamp(m.createdAt)}</span>
+            {/if}
           </div>
         </div>
       {/each}
