@@ -604,16 +604,26 @@ export class AgentApi {
     }
   }
 
+  /**
+   * watchSessions streams the whole list page: sessions AND groups.
+   *
+   * THEY ARRIVE TOGETHER because they are rendered together. A second stream for groups would make the page
+   * appear in two steps and jump when the second answer landed.
+   */
   async *watchSessions(): AsyncGenerator<{
     snapshot: boolean
     upserts: Session[]
     removed: string[]
+    groups: Group[]
+    removedGroups: string[]
   }> {
     for await (const e of this._c.watchSessions({})) {
       yield {
         snapshot: e.snapshot,
         upserts: e.upserts.map(sessionFromPb),
         removed: [...e.removed],
+        groups: e.groups.map(groupFromPb),
+        removedGroups: [...e.removedGroups],
       }
     }
   }

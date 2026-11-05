@@ -109,7 +109,13 @@ export class AppStore {
       try {
         for await (const ev of this.api.watchSessions()) {
           if (ac.signal.aborted) return
-          this.applySessionEvent(ev.snapshot, ev.upserts, ev.removed)
+          this.applySessionEvent(
+            ev.snapshot,
+            ev.upserts,
+            ev.removed,
+            ev.groups,
+            ev.removedGroups,
+          )
         }
         this.onSessionStreamClosed()
       } catch {
@@ -141,6 +147,31 @@ export class AppStore {
    *  snapshot is ordered by `updated_at`, but a live upsert only advances a
    *  row's `lastMessageAt` in place — without this re-sort the row's timestamp
    *  changes while its position does not. */
+  /**
+   * applyGroupEvent merges a frame's groups into the list.
+   *
+   * A SNAPSHOT REPLACES. That is what makes a deletion recoverable: a client that missed the removal frame gets
+   * the truth on reconnect, because the snapshot never contains a row that no longer exists.
+   */
+  private applyGroupEvent(
+    snapshot: boolean,
+    upserts: Group[],
+    removed: string[],
+  ) {
+    let next = snapshot ? [] : [...this.groups]
+    for (const g of upserts) {
+      const i = next.findIndex(x => x.name === g.name)
+      if (i === -1) next.push(g)
+      else next[i] = g
+    }
+    if (removed.length) {
+      const gone = new Set(removed)
+      next = next.filter(g => !gone.has(g.name))
+    }
+    next.sort((a, b) => a.name.localeCompare(b.name))
+    this.groups = next
+  }
+
   private setSessions(list: Session[]) {
     this.sessions = sortSessionsByRecency(list)
   }
@@ -149,7 +180,14 @@ export class AppStore {
     snapshot: boolean,
     upserts: Session[],
     removed: string[],
+    groupUpserts: Group[] = [],
+    removedGroups: string[] = [],
   ) {
+    /**
+     * GROUPS ARRIVE ON THE SAME FRAME and are applied in the same way: a snapshot replaces, anything else merges.
+     * The page shows the two kinds in one list, so they must go stale and recover together.
+     */
+    this.applyGroupEvent(snapshot, groupUpserts, removedGroups)
     this.sessionAttempt = 0
     // A frame arrived: the list stream is healthy again.
     connection.sessions = false
@@ -193,11 +231,18 @@ export class AppStore {
    * A FAILURE IS NOT AN ERROR TOAST: the session list is the page, and a group lookup that failed should not
    * replace a working list with an error about a section of it. The groups section simply does not appear.
    */
+  /**
+   * refreshGroups reloads the list from the RPC.
+   *
+   * IT NO LONGER CLEARS ON FAILURE. A failed request used to empty the section, which is the one outcome a reader
+   * can act on least — and now that the watch also feeds this list, a transient failure would wipe rows that are
+   * still perfectly valid. The previous rows are kept, and the next frame or refresh corrects them.
+   */
   async refreshGroups() {
     try {
-      this.groups = await this.api.groups()
+      this.applyGroupEvent(true, await this.api.groups(), [])
     } catch {
-      this.groups = []
+      /* keep what we have: a stale group list beats an empty one */
     }
   }
 
