@@ -803,7 +803,7 @@ export class AgentApi {
         }),
       ),
       requiredConfig: [...t.requiredConfig],
-      effect: (t.effect || undefined) as ToolEffect | undefined,
+      effect: (t.effect || 'none') as ToolEffect,
     }))
   }
 

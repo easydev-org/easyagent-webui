@@ -15,6 +15,7 @@ const t = (category: string, name: string): ToolInfo => ({
   description: '',
   category,
   requiredConfig: [],
+  effect: 'none',
 })
 
 function render(tools: ToolInfo[], selected: Set<string>): () => void {

@@ -394,22 +394,33 @@ export interface ToolInfo {
    *   'low'     only the caller's own state changes
    *   'medium'  state others already depend on changes
    *   'high'    an asset is consumed
+   *
+   * REQUIRED. The agent does not register a tool that omits it, so a tool without one cannot reach this
+   * type — and a client that tolerated its absence would hide exactly the defect the server refuses.
    */
-  effect?: ToolEffect
+  effect: ToolEffect
 }
 
 export type ToolEffect = 'none' | 'low' | 'medium' | 'high'
 
 /** Whether a call at this effect should be confirmed before it runs. */
-export function effectNeedsConfirmation(
-  e: ToolEffect | undefined | null,
-): boolean {
-  // AN UNKNOWN EFFECT IS TREATED AS THE WORST, not the best: a tool that did not say what it does must
-  // not be presented as harmless. `null` counts as unknown alongside `undefined` and '' — a server that
-  // sent the field as null is telling us the same thing as one that omitted it.
-  if (e === 'medium' || e === 'high') return true
-  if (e === 'none' || e === 'low') return false
-  return true
+/**
+ * Whether a tool with this effect asks for confirmation before running.
+ *
+ * THERE IS NO FALLBACK LEVEL. The agent refuses to register a tool whose effect is missing or invalid, so
+ * a tool in this list always carries one — an unknown value here means the client and the server disagree
+ * about the protocol, which is a bug to surface rather than a level to guess. Guessing `high` would have
+ * made every such bug look like a cautious UI instead of a mismatch.
+ */
+export function effectNeedsConfirmation(e: ToolEffect): boolean {
+  switch (e) {
+    case 'none':
+    case 'low':
+      return false
+    case 'medium':
+    case 'high':
+      return true
+  }
 }
 
 /** A discovered extension's whole config surface (not per-tool). */
