@@ -20,7 +20,7 @@
   import { Prefs } from '$lib/prefs'
   import { guessMime } from '$lib/media'
   import { modelRefOf, sessionName } from '$lib/models'
-  import type { ModelInfo, Session } from '$lib/models'
+  import type { ModelInfo, ModelVariantInfo, Session } from '$lib/models'
   import { buildModelOptions, variantsFor } from '$lib/chat-helpers'
   import { draftFromSession, isDirty, settingsPatch, type ProfileDraft } from '$lib/session-profile'
   import PageHeader from '$lib/components/layout/PageHeader.svelte'
@@ -51,6 +51,15 @@
   })
 
   let allModels = $state<ModelInfo[]>([])
+  /**
+   * THE SELECTED MODEL'S VARIANTS, loaded on their own.
+   *
+   * The variant picker used to derive from `allModels`, which only fills once EVERY provider has answered — so
+   * the field appeared seconds after the rest of the page, and the card visibly changed shape while the reader
+   * was looking at it. A variant belongs to one model, so one provider's answer is enough, and it is fetched
+   * first: the field is there when the page is.
+   */
+  let currentVariants = $state<ModelVariantInfo[]>([])
   let presetOptions = $state<string[]>([])
   let loadingModels = $state(false)
   let saving = $state(false)
@@ -79,6 +88,11 @@
 
   // MODELS ARE LOADED LAZILY, once, on first use: the catalogue is one call per provider and this
   // page is not on the path of sending a message.
+  //
+  // THE SESSION'S OWN PROVIDER IS ASKED FIRST, ALONE. That single answer fills the variant picker, so the
+  // field is present in the page's first paint instead of appearing after the whole catalogue has arrived.
+  // The rest are fetched afterwards, IN PARALLEL, for the model picker — sequential requests were what made
+  // the wait long enough to watch.
   $effect(() => {
     if (!session || allModels.length > 0 || loadingModels) return
     void (async () => {
@@ -86,29 +100,82 @@
       const out: ModelInfo[] = []
       try {
         const provs = await store.api.providers()
-        for (const pid of Object.keys(provs)) {
+        const pids = Object.keys(provs)
+
+        const own = providerOf(draft.model)
+        if (own && pids.includes(own)) {
           try {
-            out.push(...(await store.api.models(pid)))
+            const mine = await store.api.models(own)
+            currentVariants = variantsFor(mine, draft.model)
+            variantsKnown = true
+            out.push(...mine)
           } catch {
-            /* one provider's failure must not empty the picker */
+            /* the model picker still fills from the parallel pass below */
           }
         }
+
+        const rest = pids.filter(p => p !== own)
+        const answers = await Promise.all(
+          rest.map(pid =>
+            store.api.models(pid).catch(() => {
+              // ONE PROVIDER'S FAILURE MUST NOT EMPTY THE PICKER.
+              return [] as ModelInfo[]
+            }),
+          ),
+        )
+        for (const models of answers) out.push(...models)
       } catch (e) {
         showErrorToast(String(e))
       }
       allModels = out
+      variantsKnown = true
       loadingModels = false
     })()
   })
 
   const modelOptions = $derived(buildModelOptions(allModels, draft.model))
-  const variants = $derived(variantsFor(allModels, draft.model))
   const dirty = $derived(session ? isDirty(draft, session, fallbackLocale) : false)
 
+  /**
+   * THE VARIANTS FOLLOW THE SELECTED MODEL, not the catalogue's arrival order.
+   *
+   * Switching models must not carry "high" onto one that has no reasoning levels, and switching TO one must
+   * offer its own — from the first provider answer if the model is in it, otherwise from the catalogue once
+   * it lands.
+   */
+  const variants = $derived.by(() => {
+    const fromCatalogue = variantsFor(allModels, draft.model)
+    return fromCatalogue.length ? fromCatalogue : currentVariants
+  })
+
+  /** The provider half of a `provider/model` reference ('' when the ref is empty or bare). */
+  function providerOf(ref: string): string {
+    const i = ref.indexOf('/')
+    return i > 0 ? ref.slice(0, i) : ''
+  }
+
+  /**
+   * A VARIANT IS PRUNED ONLY ONCE THE VARIANTS ARE KNOWN.
+   *
+   * This used to run against an EMPTY list while the catalogue was still loading, which read as "this model has
+   * no levels" and cleared the session's saved variant — the page then showed "default" for a session that had
+   * one, and the next Save wrote that loss back. Waiting for an answer is what distinguishes "none offered"
+   * from "not asked yet".
+   */
+  let variantsKnown = $state(false)
   $effect(() => {
-    // A variant belongs to a model; switching models must not carry "high" onto one without it.
-    if (variants.length && !variants.some(v => v.id === draft.variant)) draft.variant = ''
-    if (!variants.length && draft.variant) draft.variant = ''
+    if (!variantsKnown) return
+    if (variants.length ? !variants.some(v => v.id === draft.variant) : !!draft.variant) {
+      draft.variant = ''
+    }
+  })
+
+  // A MODEL CHANGE MAY BELONG TO A PROVIDER WHOSE ANSWER IS ALREADY IN: read the variants immediately rather
+  // than waiting for a fetch that will not happen (the catalogue is loaded once).
+  $effect(() => {
+    const ref = draft.model
+    if (!ref || allModels.length === 0) return
+    currentVariants = variantsFor(allModels, ref)
   })
 
   function pickAvatar() {

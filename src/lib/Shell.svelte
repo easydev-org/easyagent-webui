@@ -44,8 +44,15 @@
   })
 
   const isCompact = $derived(width < 640)
+  /**
+   * THE BOTTOM BAR IS NOT FOR "A CHAT IS OPEN", it is for "the reader is browsing".
+   *
+   * It used to appear for a session only, so opening a GROUP on a phone left the tab bar sitting under the
+   * composer — two navigation bars stacked at the bottom, and the composer squeezed above them. The condition
+   * is now "a conversation is open", whichever kind: any page deeper than the list in the chat tab.
+   */
   const hideBottomBar = $derived(
-    isCompact && store.siderTab === 'chat' && store.activeSessionId != null,
+    isCompact && store.siderTab === 'chat' && store.currentStack.length > 1,
   )
 
   const tabs = [

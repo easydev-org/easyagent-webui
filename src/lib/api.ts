@@ -362,6 +362,8 @@ export class AgentApi {
         ...(model ? { model } : {}),
         ...(preset ? { preset } : {}),
         locale: (settings['locale'] as string) || '',
+        // SENT ALWAYS, INCLUDING WHEN EMPTY: '' means "use the model's default", which is the only way back
+        // from a chosen level. An omitted key means "leave it alone", which would make "default" unselectable.
         variant: (settings['variant'] as string) || '',
         ...optionalProfileFields(settings),
       }),

@@ -46,6 +46,22 @@
   }
 
   /**
+   * Open a member's own profile page from their picture.
+   *
+   * A GROUP IS WHERE SEVERAL SESSIONS ARE SEEN SIDE BY SIDE, and the picture is the thing the reader
+   * recognises them by. Tapping it doing nothing is the one place that feels broken: every other avatar in
+   * this app — the session list, the chat header — is a doorway to that session's card.
+   *
+   * THE PROFILE PAGE READS THE ACTIVE SESSION, so it must be selected first. Setting it here rather than
+   * navigating blind is what makes the page show THIS member instead of whoever was selected before.
+   */
+  function openMemberProfile(m: GroupMessage) {
+    if (!m.sender) return
+    store.activeSessionId = m.sender
+    store.pushPage({ kind: 'session_profile', key: 'session_profile' })
+  }
+
+  /**
    * THE SENDER'S OWN PICTURE, if they have one.
    *
    * A message carries the sender's NAME as it was when sent, but not their avatar — the picture is a property
@@ -155,13 +171,32 @@
       {#each messages as m (m.seq)}
         {@const mine = !m.sender}
         <div class="flex gap-2 {mine ? 'flex-row-reverse' : ''}">
-          <ChatAvatar
-            seed={m.sender || group}
-            size={28}
-            label={labelOf(m)}
-            avatar={avatarOf(m)}
-            fetchBytes={store.api.fetchFileBytes.bind(store.api)}
-          />
+          {#if m.sender}
+            <!-- A MEMBER'S PICTURE OPENS THEIR CARD. The user's own messages have no sender, so there is
+                 nothing to open and the avatar stays a plain picture. -->
+            <button
+              type="button"
+              class="shrink-0 rounded-full"
+              title={labelOf(m)}
+              aria-label={labelOf(m)}
+              onclick={() => openMemberProfile(m)}
+            >
+              <ChatAvatar
+                seed={m.sender}
+                size={28}
+                label={labelOf(m)}
+                avatar={avatarOf(m)}
+                fetchBytes={store.api.fetchFileBytes.bind(store.api)}
+              />
+            </button>
+          {:else}
+            <ChatAvatar
+              seed={group}
+              size={28}
+              label={labelOf(m)}
+              fetchBytes={store.api.fetchFileBytes.bind(store.api)}
+            />
+          {/if}
           <div class="min-w-0 max-w-[78%]">
             <div class="mb-0.5 flex items-baseline gap-2 {mine ? 'justify-end' : ''}">
               <span class="text-micro font-semibold">{labelOf(m)}</span>
@@ -179,26 +214,49 @@
       {/each}
     </div>
 
-    <div class="flex shrink-0 items-end gap-2 border-t border-border px-3 py-2">
-      <textarea
-        bind:value={text}
-        rows="1"
-        placeholder={t('groupMessagePlaceholder')}
-        class="min-h-9 flex-1 resize-none rounded-md border border-border bg-transparent px-2 py-1.5 text-meta outline-none focus:border-primary"
-        onkeydown={e => {
-          if (e.key === 'Enter' && !e.shiftKey) {
-            e.preventDefault()
-            void send()
-          }
-        }}></textarea>
-      <button
-        type="button"
-        class="rounded-md bg-primary px-3 py-1.5 text-sm text-primary-foreground hover:bg-primary/80 disabled:opacity-40"
-        disabled={!text.trim() || sending}
-        onclick={() => void send()}
-      >
-        <AppIcons.send class="size-4" />
-      </button>
+    <!-- THE COMPOSER IS THE SAME COMPOSER AS A ONE-TO-ONE CHAT.
+         A group is a conversation; a reader who has typed in one has already learned where the field is, how
+         tall it grows, and what the send circle looks like. A second, smaller box here made the same act feel
+         like a different feature — and the field was visibly narrower than the messages above it. The geometry
+         below is copied from Chat's composer deliberately: same 42px slot, same shell, same inner metric
+         class, so the two cannot drift apart again. -->
+    <div class="shrink-0 border-t border-border bg-card px-3 pt-1 pb-1">
+      <div class="flex items-center gap-2">
+        <div class="relative min-h-[44px] flex-1 rounded-md border border-border/60 bg-muted">
+          <textarea
+            bind:value={text}
+            rows="1"
+            class="block w-full min-h-[42px] max-h-40 resize-none border-0 bg-transparent px-3 py-[10px] text-sm leading-[21px] outline-none placeholder:text-muted-foreground"
+            placeholder={t('groupMessagePlaceholder')}
+            onkeydown={e => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault()
+                void send()
+              }
+            }}></textarea>
+        </div>
+
+        <!-- ONE MORPHING CIRCLE, exactly like the chat: send when there is something to send, a muted
+             attach-style circle when there is not. -->
+        <button
+          type="button"
+          class="flex size-[42px] shrink-0 items-center justify-center rounded-full border border-primary bg-card text-primary disabled:opacity-40"
+          class:border-border={!text.trim()}
+          class:text-muted-foreground={!text.trim()}
+          title={t('send')}
+          aria-label={t('send')}
+          disabled={!text.trim() || sending}
+          onclick={() => void send()}
+        >
+          {#if sending}
+            <span
+              class="block size-5 animate-spin rounded-full border-2 border-primary/30 border-t-primary"
+            ></span>
+          {:else}
+            <AppIcons.send class="size-5" />
+          {/if}
+        </button>
+      </div>
     </div>
 
     {#if coordinator}
