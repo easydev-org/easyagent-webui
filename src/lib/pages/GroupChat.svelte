@@ -170,10 +170,39 @@
     return store.sessions.find(x => x.id === m.sender)?.avatarFile ?? ''
   }
 
-  function stamp(iso: string): string {
+  /**
+   * RELATIVE TIME, WORDED EXACTLY AS A CHAT WORDS IT.
+   *
+   * `10:56` is a clock reading, which asks the reader to compare it against their own. "3 minutes ago" is what
+   * they actually wanted to know — and the two screens are the same conversation in two shapes, so they say it
+   * the same way.
+   *
+   * THIS IS A COPY OF MessageBubble's fmtTime, deliberately: the group's transcript does not use that component
+   * (its rows are not a session chain), and duplicating four lines is cheaper than a shared helper whose only
+   * caller is a component that cannot be reused. The wording comes from the same i18n keys, so it cannot
+   * drift in translation.
+   */
+  function fmtTime(iso: string, at: number): string {
     const d = new Date(iso)
     if (isNaN(d.getTime())) return ''
-    return `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`
+    const atDate = new Date(at)
+    const mins = Math.floor((at - d.getTime()) / 60000)
+    const hm = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+    if (mins < 1) return t('timeJustNow')
+    if (mins < 60) return t('timeMinAgo', { arg1: mins })
+    if (d.toDateString() === atDate.toDateString()) return hm
+    return `${d.getMonth() + 1}/${d.getDate()} ${hm}`
+  }
+
+  /**
+   * copyBody puts a message's words on the clipboard, with the same toast a chat shows.
+   *
+   * THE SAME SHAPE AS MessageBubble's copy, including the absence of an error branch: a clipboard write that
+   * the browser refuses is not something this page can act on, and a toast about it would report a failure the
+   * reader can do nothing about. The chat made that call first; the group follows it.
+   */
+  function copyBody(text: string) {
+    void navigator.clipboard.writeText(text).then(() => showToast(t('copied')))
   }
 
   $effect(() => {
@@ -277,17 +306,19 @@
       {/if}
       {#each messages as m (m.seq)}
         {@const mine = !m.sender}
-        <!-- THE SAME SHAPE AS A ONE-TO-ONE CHAT.
-             A bubble is a block you read down, not a row you read across: the picture sits ABOVE the bubble,
-             flush to its left edge, and the bubble below it. Side-by-side was the layout that made the two
-             screens feel like different apps — same conversation, two different grammars for who said what.
+        <!-- THE SAME SHAPE AS A ONE-TO-ONE CHAT, with the two things a group needs on top.
+             A bubble is a block you read down: the picture and the speaker's name share one row ABOVE the
+             bubble, flush left, and the bubble sits under them.
 
-             THE SENDER'S NAME AND TIME STAY, because this is the one place several people speak; a session
-             chat has a single counterpart and needs neither. They sit on the bubble's own edge so the eye
-             reads name, then words, down one line. -->
+             THE NAME SITS BESIDE THE PICTURE, not below it. Below read as a caption on the avatar rather than
+             as the author of the message, and it pushed the bubble a line further down for no gain.
+
+             THE TIME MOVES TO THE ACTION ROW, under the bubble, next to copy — the same place and the same
+             wording as a chat ("just now", "3 minutes ago"). A group has no undo (there is nothing to withdraw
+             from a transcript several people have read), so copy is the only action there. -->
         <div class={cn('mb-3 flex flex-col', mine ? 'items-end' : 'items-start')}>
           {#if !mine}
-            <div class="mb-1 flex w-full items-center">
+            <div class="mb-1 flex w-full items-center gap-2">
               <!-- A MEMBER'S PICTURE OPENS THEIR CARD, the same gesture as every other avatar in this app. -->
               <button
                 type="button"
@@ -304,16 +335,11 @@
                   fetchBytes={store.api.fetchFileBytes.bind(store.api)}
                 />
               </button>
+              <span class="truncate text-micro font-semibold">{labelOf(m)}</span>
             </div>
           {/if}
 
           <div class="flex max-w-[85%] flex-col {mine ? 'items-end' : 'items-start'}">
-            {#if !mine}
-              <div class="mb-0.5 flex items-baseline gap-2">
-                <span class="text-micro font-semibold">{labelOf(m)}</span>
-                <span class="text-micro text-muted-foreground">{stamp(m.createdAt)}</span>
-              </div>
-            {/if}
             <div
               class={cn(
                 'min-w-0 max-w-full space-y-1.5 rounded-md border px-3 py-2.5 break-words',
@@ -347,9 +373,27 @@
                 </div>
               {/if}
             </div>
-            {#if mine}
-              <span class="mt-0.5 text-[10px] text-muted-foreground">{stamp(m.createdAt)}</span>
-            {/if}
+            <div
+              class={cn(
+                'mt-1 flex items-center gap-0.5 text-micro text-muted-foreground',
+                mine ? 'justify-end' : 'justify-start',
+              )}
+            >
+              <!-- COPY, because a group message can be quoted somewhere else. NO UNDO: a group has a
+                   transcript several sessions have already read, and withdrawing it would not unsend it. -->
+              {#if m.body}
+                <button
+                  type="button"
+                  class="rounded p-0.5 hover:bg-muted"
+                  title={t('copy')}
+                  aria-label={t('copy')}
+                  onclick={() => void copyBody(m.body)}
+                >
+                  <AppIcons.copy class="size-3.5" />
+                </button>
+              {/if}
+              <span class="ml-1 tabular-nums opacity-70">{fmtTime(m.createdAt, now())}</span>
+            </div>
           </div>
         </div>
       {/each}
