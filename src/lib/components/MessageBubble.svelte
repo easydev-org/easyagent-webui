@@ -185,18 +185,18 @@
   const ordered = $derived.by<ChatPart[]>(() => {
     const rest = msg.parts.filter(p => p.type !== 'reasoning' && p.type !== 'channel')
     // The event stands in for the rendered prompt, so the rendered prompt is dropped — not appended after it.
-    const body = channelPart
-      ? rest.filter(p => p.type !== 'text')
-      : rest
+    const body = channelPart ? rest.filter(p => p.type !== 'text') : rest
     const lead: ChatPart[] = [
       ...msg.parts.filter(p => p.type === 'reasoning'),
       ...(channelPart
-        ? [{
-            id: channelPart.id,
-            type: 'text',
-            text: channelPart.text ?? '',
-            tool: '',
-          } as ChatPart]
+        ? [
+            {
+              id: channelPart.id,
+              type: 'text',
+              text: channelPart.text ?? '',
+              tool: '',
+            } as ChatPart,
+          ]
         : []),
     ]
     return [...lead, ...body]
