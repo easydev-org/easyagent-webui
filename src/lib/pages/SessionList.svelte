@@ -26,8 +26,6 @@
   let q = $state('')
   let selectMode = $state(false)
   let selected = $state<Set<string>>(new Set())
-  // Subsession tree: ids the user manually expanded (collapsed by default).
-  let expanded = $state<Set<string>>(new Set())
   // Pull-to-refresh (flutter RefreshIndicator): refresh when dragged from top.
   let refreshStartY: number | null = null
   let refreshing = $state(false)
@@ -59,42 +57,16 @@
     )
   })
 
-  // Top-level sessions with subsessions (group == parent id) nested below when
-  // expanded; orphans are promoted so nothing disappears; flat while searching.
-  const display = $derived.by(() => {
-    const sessions = filtered
-    if (searching) return sessions
-    const byId = new Map(sessions.map(s => [s.id, s]))
-    const childrenOf = new Map<string, typeof sessions>()
-    const top: typeof sessions = []
-    for (const s of sessions) {
-      if (s.group && byId.has(s.group)) {
-        const list = childrenOf.get(s.group) ?? []
-        list.push(s)
-        childrenOf.set(s.group, list)
-      } else {
-        top.push(s)
-      }
-    }
-    const out: typeof sessions = []
-    for (const s of top) {
-      out.push(s)
-      const kids = childrenOf.get(s.id)
-      if (kids?.length && expanded.has(s.id)) out.push(...kids)
-    }
-    return out
-  })
-
-  function childCount(id: string): number {
-    return filtered.filter(s => s.group === id).length
-  }
-
-  function toggleExpand(id: string) {
-    const next = new Set(expanded)
-    if (next.has(id)) next.delete(id)
-    else next.add(id)
-    expanded = next
-  }
+  /**
+   * THE LIST IS FLAT NOW.
+   *
+   * It used to nest a session under whichever one named it in its `group` column, which is the model
+   * that was removed: that column conflated "which group am I in" with "which session forked me", and
+   * a list built on it could not show a session that belongs to TWO groups at all. Groups live in
+   * their own table with real membership, so a session's group affiliations are a page of their own,
+   * not a nesting relationship in a flat list.
+   */
+  const display = $derived(filtered)
 
   function exitSelect() {
     selectMode = false
@@ -288,7 +260,6 @@
       <EmptyState>{t('noSessions')}</EmptyState>
     {:else}
       {#each display as s (s.id)}
-        {@const isChild = !searching && !!s.group && filtered.some(x => x.id === s.group)}
         <SessionRow
           session={s}
           isActive={s.id === store.activeSessionId}
@@ -297,10 +268,6 @@
           unreadCount={store.unreadCountFor(s)}
           selectable={selectMode}
           selected={selected.has(s.id)}
-          childCount={isChild || searching ? 0 : childCount(s.id)}
-          expanded={expanded.has(s.id)}
-          {isChild}
-          onToggleExpand={() => toggleExpand(s.id)}
           onTap={() => (selectMode ? toggle(s.id) : store.pickSession(s.id))}
           fetchBytes={store.api.fetchFileBytes.bind(store.api)}
           onAvatarTap={() => openProfile(s.id)}

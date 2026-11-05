@@ -67,9 +67,6 @@ export interface Session {
   lastMessagePreview: string
   /** Monotonic server-owned counter; unread = messageSeq - readSeq. */
   messageSeq: number
-  /** Generic grouping key (empty = ungrouped). A subsession records its
-   *  parent's session name here. */
-  group: string
   /** Runtime status from the server's run lease: 'busy' while a turn holds it
    *  (including mid-retry), 'idle' otherwise, 'unknown' when the lease could
    *  not be read. Empty on a reply that did not read the lease. */

@@ -120,7 +120,6 @@ export function sessionFromPb(
     lastMessageAt: s.lastMessageAt,
     lastMessagePreview: s.lastMessagePreview,
     messageSeq: s.messageSeq,
-    group: s.group,
     avatarFile: s.avatarFile || undefined,
     intro: s.intro || undefined,
     // 'unknown' (a transient read error) is surfaced so the row shows a

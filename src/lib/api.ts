@@ -156,7 +156,6 @@ export class AgentApi {
       lastMessageAt: '',
       lastMessagePreview: '',
       messageSeq: 0,
-      group: '',
     }
   }
 
@@ -913,7 +912,6 @@ export function emptySession(id: string): Session {
     lastMessageAt: '',
     lastMessagePreview: '',
     messageSeq: 0,
-    group: '',
   }
 }
 
