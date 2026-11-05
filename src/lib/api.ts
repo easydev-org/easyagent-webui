@@ -839,8 +839,9 @@ export class AgentApi {
   /**
    * Posts to a group.
    *
-   * `to` IS THE "@": the members this message addresses. Empty means the default recipient for the sender —
-   * for a user that is the coordinator — so the UI can leave it empty and the message still reaches someone.
+   * `to` IS FOR SESSIONS ONLY — the members a COORDINATOR addresses. A user's message is delivered to the
+   * group's coordinator, which is what "writing to the group" means; the console never passes `to`, and the
+   * server refuses it from an empty sender rather than silently ignoring it.
    */
   async sendGroupMessage(
     group: string,
