@@ -633,3 +633,46 @@ export function backendNameFor(baseUrl: string): string {
     return baseUrl
   }
 }
+
+// ---- groups ----
+
+/**
+ * A group: a named set of sessions that can see each other, with ONE coordinator that receives what a user
+ * says to the group and hands pieces to members.
+ *
+ * THE ROLE IS A ROUTING FACT, not a permission tier: the coordinator is where the group's messages arrive.
+ */
+export interface Group {
+  name: string
+  avatarFile?: string
+  createdBy: string
+  createdAt: string
+  memberCount: number
+}
+
+export interface GroupMember {
+  session: string
+  /** 'coordinator' | 'member' */
+  role: 'coordinator' | 'member' | string
+  joinedAt: string
+  joinedBy: string
+}
+
+/**
+ * One message in a group's transcript.
+ *
+ * A GROUP HAS ITS OWN TRANSCRIPT — not an index over member sessions — so a member that joins later can read
+ * what was said before it arrived, and a message outlives the departure of everyone who saw it.
+ */
+export interface GroupMessage {
+  id: string
+  group: string
+  /** The sending session's id, or empty when a user posted it. */
+  sender: string
+  /** The sender's label at the time of sending; survives a later rename. */
+  senderName?: string
+  body: string
+  /** Position within the group, starting at 1. The resume cursor for a watch. */
+  seq: number
+  createdAt: string
+}

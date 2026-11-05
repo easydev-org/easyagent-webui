@@ -8,7 +8,13 @@ import {
   IngestFileResponseSchema,
 } from '../gen/agent/v1/agent_pb.js'
 import { t } from './i18n.svelte'
-import type { Message, MessagePart, Session, SessionGrant } from './models'
+import type {
+  GroupMessage,
+  Message,
+  MessagePart,
+  Session,
+  SessionGrant,
+} from './models'
 
 /**
  * Map a grant from the wire.
@@ -386,4 +392,25 @@ export function encodeIngestRequest(
     IngestFileRequestSchema,
     create(IngestFileRequestSchema, { data: bytes, name }),
   )
+}
+
+/**
+ * groupMessageFromPb maps one transcript row.
+ *
+ * `sender` IS EMPTY FOR A USER POST, and that is a real value rather than a missing one: the console renders
+ * a user's message differently from a session's, and treating "no sender" as an unknown session would put an
+ * avatar on something a person typed.
+ */
+export function groupMessageFromPb(
+  m: import('../gen/agent/v1/agent_pb.js').GroupMessage,
+): GroupMessage {
+  return {
+    id: m.id,
+    group: m.group,
+    sender: m.sender,
+    senderName: m.senderName || undefined,
+    body: m.body,
+    seq: Number(m.seq),
+    createdAt: m.createdAt,
+  }
 }

@@ -231,6 +231,14 @@
         variant="primary"
         onclick={() => (searching = true)}
       />
+      <!-- GROUPS SIT BESIDE "NEW SESSION" because they are the other way to start a conversation: a group
+           with a coordinator, rather than a session of your own. -->
+      <IconButton
+        icon={AppIcons.users}
+        label={t('groupsTitle')}
+        variant="primary"
+        onclick={() => store.pushPage({ kind: 'group_list', key: 'group_list' })}
+      />
       <IconButton
         icon={AppIcons.list}
         label={t('selectSessions')}

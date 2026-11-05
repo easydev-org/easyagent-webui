@@ -9,6 +9,7 @@ import {
   emptyGrant,
   encodeIngestRequest,
   grantFromPb,
+  groupMessageFromPb,
   messageFromPb,
   n,
   sessionFromPb,
@@ -42,7 +43,14 @@ import type {
   UploadedFile,
   UploadedFileSource,
 } from './models'
-import { type ConfigFieldSchema, modelRefOf, type ToolEffect } from './models'
+import {
+  type ConfigFieldSchema,
+  type Group,
+  type GroupMember,
+  type GroupMessage,
+  modelRefOf,
+  type ToolEffect,
+} from './models'
 import { optionalProfileFields } from './session-settings'
 
 /**
@@ -742,6 +750,117 @@ export class AgentApi {
         description: v.description,
       })),
     }))
+  }
+
+  // ---- groups ----
+
+  async groups(session?: string): Promise<Group[]> {
+    const r = await this._guard(() =>
+      this._c.listGroups({ session: session ?? '' }),
+    )
+    return r.groups.map(g => ({
+      name: g.name,
+      avatarFile: g.avatarFile || undefined,
+      createdBy: g.createdBy,
+      createdAt: g.createdAt,
+      memberCount: g.memberCount,
+    }))
+  }
+
+  async createGroup(input: {
+    name: string
+    coordinator: string
+    members?: string[]
+    createdBy?: string
+  }): Promise<Group> {
+    const r = await this._guard(() =>
+      this._c.createGroup({
+        name: input.name,
+        coordinator: input.coordinator,
+        members: input.members ?? [],
+        createdBy: input.createdBy ?? 'user',
+      }),
+    )
+    const g = r.group!
+    return {
+      name: g.name,
+      avatarFile: g.avatarFile || undefined,
+      createdBy: g.createdBy,
+      createdAt: g.createdAt,
+      memberCount: g.memberCount,
+    }
+  }
+
+  async group(
+    name: string,
+    session?: string,
+  ): Promise<{ group: Group; members: GroupMember[] }> {
+    const r = await this._guard(() =>
+      this._c.getGroup({ name, session: session ?? '' }),
+    )
+    const g = r.group!
+    return {
+      group: {
+        name: g.name,
+        avatarFile: g.avatarFile || undefined,
+        createdBy: g.createdBy,
+        createdAt: g.createdAt,
+        memberCount: g.memberCount,
+      },
+      members: r.members.map(m => ({
+        session: m.session,
+        role: m.role as GroupMember['role'],
+        joinedAt: m.joinedAt,
+        joinedBy: m.joinedBy,
+      })),
+    }
+  }
+
+  async groupMessages(
+    group: string,
+    afterSeq = 0,
+    limit = 100,
+    session?: string,
+  ): Promise<{ messages: GroupMessage[]; latestSeq: number }> {
+    const r = await this._guard(() =>
+      this._c.listGroupMessages({
+        group,
+        afterSeq: BigInt(afterSeq),
+        limit,
+        session: session ?? '',
+      }),
+    )
+    return {
+      messages: r.messages.map(groupMessageFromPb),
+      latestSeq: Number(r.latestSeq),
+    }
+  }
+
+  async sendGroupMessage(
+    group: string,
+    text: string,
+    sender = '',
+  ): Promise<GroupMessage> {
+    const r = await this._guard(() =>
+      this._c.sendGroupMessage({ group, text, sender }),
+    )
+    return groupMessageFromPb(r.message!)
+  }
+
+  /** Stream a group's transcript: retained messages after `sinceSeq`, then live. */
+  async *watchGroup(
+    group: string,
+    sinceSeq = 0,
+    session = '',
+  ): AsyncGenerator<GroupMessage> {
+    for await (const frame of this._c.watchGroup({
+      group,
+      sinceSeq: BigInt(sinceSeq),
+      session,
+    })) {
+      if (frame.event === 'message' && frame.message)
+        yield groupMessageFromPb(frame.message)
+    }
   }
 
   async presets(locale?: string): Promise<Preset[]> {

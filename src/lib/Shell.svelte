@@ -13,6 +13,8 @@
   import SessionList from './pages/SessionList.svelte'
   import Chat from './pages/Chat.svelte'
   import SessionProfilePage from './pages/SessionProfilePage.svelte'
+  import GroupsList from './pages/GroupsList.svelte'
+  import GroupChat from './pages/GroupChat.svelte'
   import Mailbox from './pages/Mailbox.svelte'
   import Permissions from './pages/Permissions.svelte'
   import Channels from './pages/Channels.svelte'
@@ -73,6 +75,10 @@
         return Chat as Component<PageProps>
       case 'session_profile':
         return SessionProfilePage as Component<PageProps>
+      case 'group_list':
+        return GroupsList as Component<PageProps>
+      case 'group_chat':
+        return GroupChat as Component<PageProps>
       case 'chat_overlay':
         // ONE PLACE PER OVERLAY. The page carries which overlay it is; the component table would
         // otherwise need an entry per combination of "chat page" and "what is on top of it".
@@ -150,7 +156,9 @@
           {onUiLocale}
           {onAddUser}
           showBack={p.isTop}
-          initialId={p.page.kind === 'config_sub' ? p.page.id : undefined}
+          initialId={p.page.kind === 'config_sub' || p.page.kind === 'group_chat'
+            ? p.page.id
+            : undefined}
           overlay={p.page.kind === 'chat_overlay' ? p.page.overlay : undefined}
           view={p.page.kind === 'ext_view' ? p.page : undefined}
           modelId={p.page.kind === 'provider_models' ? p.page.modelId : undefined}

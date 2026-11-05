@@ -26,6 +26,14 @@ export type AppPage =
   // info sheet whose only action was "Edit", and the settings form behind it — which made changing one
   // field a two-step ritual and left neither able to show the picture it was letting you choose.
   | { kind: 'session_profile'; key: 'session_profile' }
+  /**
+   * The group list and one group's transcript.
+   *
+   * THEY LIVE UNDER THE CHAT TAB rather than in the sidebar: a group is a conversation, and putting it beside
+   * "settings" would say it is a place to configure rather than a place to talk.
+   */
+  | { kind: 'group_list'; key: 'group_list' }
+  | { kind: 'group_chat'; key: 'group_chat'; id: string }
   | { kind: 'chat_overlay'; key: 'chat_overlay'; overlay: SessionOverlay }
   // An extension's own UI, as a PAGE rather than a floating panel.
   //
