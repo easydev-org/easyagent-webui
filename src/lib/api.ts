@@ -836,13 +836,20 @@ export class AgentApi {
     }
   }
 
+  /**
+   * Posts to a group.
+   *
+   * `to` IS THE "@": the members this message addresses. Empty means the default recipient for the sender —
+   * for a user that is the coordinator — so the UI can leave it empty and the message still reaches someone.
+   */
   async sendGroupMessage(
     group: string,
     text: string,
     sender = '',
+    to: string[] = [],
   ): Promise<GroupMessage> {
     const r = await this._guard(() =>
-      this._c.sendGroupMessage({ group, text, sender }),
+      this._c.sendGroupMessage({ group, text, sender, to }),
     )
     return groupMessageFromPb(r.message!)
   }

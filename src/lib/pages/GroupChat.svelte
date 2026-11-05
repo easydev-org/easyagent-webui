@@ -35,6 +35,31 @@
   let listEl: HTMLDivElement | null = $state(null)
   let followBottom = $state(true)
 
+  /**
+   * THE "@" — members this message addresses.
+   *
+   * A USER MAY NAME MEMBERS, and they are heard ALONGSIDE the coordinator rather than instead of it: pointing at
+   * the person who owns a service should reach that person, and the coordinator still hears it because it is the
+   * one that knows what work is outstanding.
+   *
+   * THE COORDINATOR IS NOT IN THE LIST because it always hears the group; offering it would suggest a message
+   * could be hidden from it.
+   */
+  let mentions = $state<string[]>([])
+
+  const mentionable = $derived(
+    members
+      .filter(m => m.role !== 'coordinator')
+      .map(m => {
+        const s = store.sessions.find(x => x.id === m.session)
+        return { value: m.session, label: s ? s.name || s.id : m.session }
+      }),
+  )
+
+  function toggleMention(id: string) {
+    mentions = mentions.includes(id) ? mentions.filter(x => x !== id) : [...mentions, id]
+  }
+
   const coordinator = $derived(members.find(m => m.role === 'coordinator')?.session ?? '')
 
   /** A member's display name, falling back to the id when the session cannot be resolved. */
@@ -100,8 +125,9 @@
     if (!body || sending) return
     sending = true
     try {
-      await store.api.sendGroupMessage(group, body, sendAs)
+      await store.api.sendGroupMessage(group, body, sendAs, mentions)
       text = ''
+      mentions = []
       followBottom = true
     } catch (e) {
       showErrorToast(String(e))
@@ -164,6 +190,23 @@
         </div>
       {/each}
     </div>
+
+    {#if mentionable.length}
+      <div class="flex shrink-0 flex-wrap items-center gap-1 border-t border-border px-3 pt-2">
+        <span class="text-micro text-muted-foreground">{t('groupMentionLabel')}</span>
+        {#each mentionable as m (m.value)}
+          <button
+            type="button"
+            class="rounded-full px-2 py-0.5 text-micro {mentions.includes(m.value)
+              ? 'bg-primary text-primary-foreground'
+              : 'bg-muted text-muted-foreground hover:bg-muted/70'}"
+            onclick={() => toggleMention(m.value)}
+          >
+            @{m.label}
+          </button>
+        {/each}
+      </div>
+    {/if}
 
     <div class="flex shrink-0 items-end gap-2 border-t border-border px-3 py-2">
       <textarea
