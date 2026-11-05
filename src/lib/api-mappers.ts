@@ -395,6 +395,25 @@ export function encodeIngestRequest(
 }
 
 /**
+ * groupFromPb maps a group row.
+ *
+ * `intro` is the one line saying what the group is for — the same idea as a session's intro, and the reason a
+ * woken coordinator does not have to infer its job from the names of the sessions it is writing to.
+ */
+export function groupFromPb(
+  g: import('../gen/agent/v1/agent_pb.js').Group,
+): import('./models.js').Group {
+  return {
+    name: g.name,
+    avatarFile: g.avatarFile || undefined,
+    intro: g.intro || undefined,
+    createdBy: g.createdBy,
+    createdAt: g.createdAt,
+    memberCount: Number(g.memberCount),
+  }
+}
+
+/**
  * groupMessageFromPb maps one transcript row.
  *
  * `sender` IS EMPTY FOR A USER POST, and that is a real value rather than a missing one: the console renders

@@ -9,6 +9,7 @@ import {
   emptyGrant,
   encodeIngestRequest,
   grantFromPb,
+  groupFromPb,
   groupMessageFromPb,
   messageFromPb,
   n,
@@ -761,13 +762,7 @@ export class AgentApi {
     const r = await this._guard(() =>
       this._c.listGroups({ session: session ?? '' }),
     )
-    return r.groups.map(g => ({
-      name: g.name,
-      avatarFile: g.avatarFile || undefined,
-      createdBy: g.createdBy,
-      createdAt: g.createdAt,
-      memberCount: g.memberCount,
-    }))
+    return r.groups.map(groupFromPb)
   }
 
   async createGroup(input: {
@@ -775,6 +770,7 @@ export class AgentApi {
     coordinator: string
     members?: string[]
     createdBy?: string
+    intro?: string
   }): Promise<Group> {
     const r = await this._guard(() =>
       this._c.createGroup({
@@ -782,16 +778,31 @@ export class AgentApi {
         coordinator: input.coordinator,
         members: input.members ?? [],
         createdBy: input.createdBy ?? 'user',
+        intro: input.intro ?? '',
       }),
     )
-    const g = r.group!
-    return {
-      name: g.name,
-      avatarFile: g.avatarFile || undefined,
-      createdBy: g.createdBy,
-      createdAt: g.createdAt,
-      memberCount: g.memberCount,
-    }
+    return groupFromPb(r.group!)
+  }
+
+  /**
+   * updateGroup saves the group's picture and one-line intro.
+   *
+   * BOTH ARE SENT EVERY TIME, INCLUDING WHEN EMPTY: '' means "clear it", and the only way to say "leave it
+   * alone" is to omit the key — which a profile save never wants, because it always sends the whole card.
+   */
+  async updateGroup(input: {
+    name: string
+    avatarFile: string
+    intro: string
+  }): Promise<Group> {
+    const r = await this._guard(() =>
+      this._c.updateGroup({
+        name: input.name,
+        avatarFile: input.avatarFile,
+        intro: input.intro,
+      }),
+    )
+    return groupFromPb(r.group!)
   }
 
   async group(
@@ -803,13 +814,7 @@ export class AgentApi {
     )
     const g = r.group!
     return {
-      group: {
-        name: g.name,
-        avatarFile: g.avatarFile || undefined,
-        createdBy: g.createdBy,
-        createdAt: g.createdAt,
-        memberCount: g.memberCount,
-      },
+      group: groupFromPb(g),
       members: r.members.map(m => ({
         session: m.session,
         role: m.role as GroupMember['role'],

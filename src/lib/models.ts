@@ -645,6 +645,8 @@ export function backendNameFor(baseUrl: string): string {
 export interface Group {
   name: string
   avatarFile?: string
+  /** One line saying what the group is for (empty = say nothing). */
+  intro?: string
   createdBy: string
   createdAt: string
   memberCount: number

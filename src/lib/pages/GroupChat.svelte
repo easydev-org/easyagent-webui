@@ -246,9 +246,18 @@
 <div class="flex h-full min-h-0 w-full min-w-0 flex-col">
   <PageHeader title={group} onBack={() => store.popPage()}>
     {#snippet right()}
-      <span class="text-micro text-muted-foreground"
-        >{t('groupMemberCount', { arg1: members.length })}</span
+      <!-- THE HEADER OPENS THE GROUP'S CARD, the same gesture a chat header already has: clicking the name
+           there opens the session's profile. A group's picture, purpose and member list live one page in, and
+           this is where a reader looks for them. -->
+      <button
+        type="button"
+        class="rounded p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground"
+        title={t('groupInfo')}
+        aria-label={t('groupInfo')}
+        onclick={() => store.pushPage({ kind: 'group_info', key: 'group_info', id: group })}
       >
+        <AppIcons.info class="size-[18px]" />
+      </button>
     {/snippet}
   </PageHeader>
 

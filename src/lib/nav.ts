@@ -34,6 +34,14 @@ export type AppPage =
    */
   | { kind: 'group_list'; key: 'group_list' }
   | { kind: 'group_chat'; key: 'group_chat'; id: string }
+  /**
+   * A group's own page: picture, intro, member list — the same card a session has.
+   *
+   * A GROUP IS A CONVERSATION AND A SET OF PEOPLE, and both halves need somewhere to be looked at. The
+   * member list in particular answers "who am I talking to", which the transcript alone cannot: it shows the
+   * ones who spoke, not the ones who did not.
+   */
+  | { kind: 'group_info'; key: 'group_info'; id: string }
   | { kind: 'chat_overlay'; key: 'chat_overlay'; overlay: SessionOverlay }
   // An extension's own UI, as a PAGE rather than a floating panel.
   //
