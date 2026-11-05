@@ -322,10 +322,30 @@
             >
               {#if m.body}<div class="whitespace-pre-wrap">{m.body}</div>{/if}
               <!-- AN ATTACHMENT IS A `file:<code>` REFERENCE, drawn by the same component a chat uses — so a
-                   picture in a group looks like a picture in a chat, and a voice note plays the same way. -->
-              {#each m.attachments ?? [] as f (f.code)}
-                <MediaAttachment api={store.api} file={f} siblings={m.attachments ?? []} />
-              {/each}
+                   picture in a group looks like a picture in a chat, and a voice note plays the same way.
+
+                   ONE ATTACHMENT FILLS THE BUBBLE; SEVERAL ARE A GRID. Stacking them at full width pushed the
+                   conversation off the screen — three photos became three screens of scrolling — while a single
+                   one at tile size was too small to see. The grid is the shape an IM app uses for the same
+                   reason: the bubble stays about the size of its contents. -->
+              {#if (m.attachments ?? []).length === 1}
+                <MediaAttachment
+                  api={store.api}
+                  file={m.attachments![0]}
+                  siblings={m.attachments ?? []}
+                />
+              {:else if (m.attachments ?? []).length > 1}
+                <div class="flex flex-wrap gap-1">
+                  {#each m.attachments! as f (f.code)}
+                    <MediaAttachment
+                      api={store.api}
+                      file={f}
+                      siblings={m.attachments ?? []}
+                      dimension={96}
+                    />
+                  {/each}
+                </div>
+              {/if}
             </div>
             {#if mine}
               <span class="mt-0.5 text-[10px] text-muted-foreground">{stamp(m.createdAt)}</span>

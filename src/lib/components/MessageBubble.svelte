@@ -185,6 +185,17 @@
       })),
   )
 
+  /**
+   * HOW MANY ATTACHMENTS THIS MESSAGE CARRIES, and which part opens the block.
+   *
+   * ONE FILLS THE BUBBLE; SEVERAL ARE A GRID. Stacking them at full width turns three photos into three screens
+   * of scrolling, while drawing a single one at tile size makes it too small to see. The block is rendered once,
+   * at the position of the first file part — the place a reader expects the attachments, after the text that
+   * introduces them.
+   */
+  const fileParts = $derived(msg.parts.filter(p => p.type === 'file' && p.code))
+  const fileBlockAt = $derived(fileParts[0]?.id ?? '')
+
   let reasoningOpen = $state(false)
   let editOpen = $state(false)
   let editText = $state('')
@@ -346,14 +357,20 @@
           {#each ordered as part (part.id)}
             {#if part.type === 'text'}
               <FileRefText text={part.text} {api} markdown={!isUser} streaming={isStreaming} />
+            {:else if part.type === 'file' && part.id === fileBlockAt}
+              <!-- EVERY ATTACHMENT OF THIS MESSAGE, drawn once. A single one fills the bubble; several share a
+                   grid row, which is how a message with three photos stays the size of a message. -->
+              {#if fileRefs.length === 1}
+                <MediaAttachment {api} file={fileRefs[0]!} siblings={fileRefs} />
+              {:else}
+                <div class="flex flex-wrap gap-1">
+                  {#each fileRefs as f (f.code)}
+                    <MediaAttachment {api} file={f} siblings={fileRefs} dimension={96} />
+                  {/each}
+                </div>
+              {/if}
             {:else if part.type === 'file'}
-              {@const f = fileRefs.find(r => r.code === part.code) ?? {
-                code: part.code ?? '',
-                name: part.name ?? null,
-                mime: part.mime ?? null,
-                size: part.size ?? null,
-              }}
-              <MediaAttachment {api} file={f} siblings={fileRefs} />
+              <!-- DRAWN BY THE BLOCK ABOVE. A file part after the first is part of that same block. -->
             {:else if part.type === 'reasoning'}
               <!-- flutter `_ReasoningBlock`: amber LEFT border, warning tint,
                  right-only radius, auto-expanded while streaming. -->
