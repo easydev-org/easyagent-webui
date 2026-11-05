@@ -833,6 +833,8 @@
                   ? () => void ctrl!.regenerateFrom(ctrl!.messages.find(m => m.id === msg.id)!)
                   : null}
                 onOpenSession={name => store.pickSession(name)}
+                onOpenGroup={name =>
+                  store.pushPage({ kind: 'group_chat', key: 'group_chat', id: name })}
                 sessionExists={name => store.sessionById(name) !== null}
                 sessionLabel={id => {
                   const s = store.sessionById(id)

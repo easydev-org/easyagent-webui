@@ -133,6 +133,17 @@ export interface MessagePart {
   toolCallId?: string | null
   state?: ToolState | null
   metadata?: Record<string, unknown> | null
+  /**
+   * A CHANNEL EVENT (`type='channel'`): the message a session heard, as the object it was.
+   *
+   * The `text` part beside it is the PROMPT RENDERING written for the model; this is the message itself, so the
+   * console can draw what was said instead of the envelope it was wrapped in.
+   */
+  channel?: string | null
+  topic?: string | null
+  group?: string | null
+  from?: string | null
+  fromName?: string | null
   // Compaction (`type='compaction'`) display metadata.
   compactionReason?: 'manual' | 'overflow' | null
   foldedCount?: number | null
@@ -217,6 +228,17 @@ export interface ChatPart {
   durationMs?: number | null
   thumbCode?: string | null
   thumbhash?: string | null
+  /**
+   * A CHANNEL EVENT (`type='channel'`): the message a session heard, as the object it was.
+   *
+   * The `text` part beside it is the PROMPT RENDERING written for the model; this is the message itself, so the
+   * console can draw what was said instead of the envelope it was wrapped in.
+   */
+  channel?: string | null
+  topic?: string | null
+  group?: string | null
+  from?: string | null
+  fromName?: string | null
   // Compaction (`type='compaction'`) display metadata.
   compactionReason?: 'manual' | 'overflow' | null
   foldedCount?: number | null

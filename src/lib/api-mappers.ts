@@ -209,6 +209,29 @@ export function messageFromPb(m: PbMessage): Message {
             typeof d['folded_tokens'] === 'number' ? d['folded_tokens'] : null,
         })
         break
+      case 'channel': {
+        /**
+         * A CHANNEL EVENT, STORED AS THE OBJECT IT WAS.
+         *
+         * The `text` part beside it is the PROMPT RENDERING — "The user posted to group "release": … [Posted
+         * in group …]" — written for the model. Drawing that in a bubble made the console show the envelope and
+         * the routing notice as if the reader had typed them.
+         *
+         * The event carries the message and who sent it, so the console can draw the message itself.
+         */
+        const data = (d['data'] as Record<string, unknown> | undefined) ?? {}
+        parts.push({
+          id: p.id,
+          type: 'channel',
+          text: (data['text'] as string) || '',
+          channel: (d['channel'] as string) || '',
+          topic: (d['topic'] as string) || '',
+          group: (data['group'] as string) || '',
+          from: (data['from'] as string) || '',
+          fromName: (data['from_name'] as string) || '',
+        })
+        break
+      }
       case 'file':
         parts.push({
           id: p.id,

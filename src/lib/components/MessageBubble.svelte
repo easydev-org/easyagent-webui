@@ -28,6 +28,7 @@
     onEdit,
     onRegenerate,
     onOpenSession,
+    onOpenGroup,
     sessionExists,
     sessionLabel,
     sessionId = '',
@@ -45,6 +46,8 @@
     onRegenerate?: (() => void) | null
     /** Open the session named by a `session:{name}` source (jump to it). */
     onOpenSession?: ((sessionId: string) => void) | null
+    /** Opens a GROUP by name, for a `group:` source. */
+    onOpenGroup?: ((group: string) => void) | null
     /** Whether a `session:{name}` source still resolves to a live session. */
     sessionExists?: ((sessionId: string) => boolean) | null
     /** Resolves a session id to its display name, for a chip or an avatar caption. */
@@ -149,21 +152,55 @@
   )
   const showAvatar = $derived(incoming && !isError && !isSending)
 
-  // Source chip tone: sky for a session hand-off, violet for a system notice.
+  /**
+   * Source chip tone: sky for a session hand-off, violet for a system notice, emerald for a group.
+   *
+   * THE GROUP CASE WAS MISSING, so a group message would have drawn the system notice's violet — and the chip
+   * itself was not rendered at all, because the condition below only knew two kinds.
+   */
   const sourceChipClass = $derived(
     cn(
       'flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[10px] leading-none font-medium',
       sourceKind === 'session'
         ? 'bg-sky-500/15 text-sky-600 dark:text-sky-400'
-        : 'bg-violet-500/15 text-violet-600 dark:text-violet-400',
+        : sourceKind === 'group'
+          ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400'
+          : 'bg-violet-500/15 text-violet-600 dark:text-violet-400',
     ),
   )
 
   // Reasoning always renders ABOVE the rest (stable partition).
-  const ordered = $derived<ChatPart[]>([
-    ...msg.parts.filter(p => p.type === 'reasoning'),
-    ...msg.parts.filter(p => p.type !== 'reasoning'),
-  ])
+  /**
+   * A GROUP MESSAGE IS DRAWN FROM THE EVENT, NOT FROM THE PROMPT WRITTEN ABOUT IT.
+   *
+   * The `text` part of a channel-delivered message is a rendering for the model: it names the sender, quotes
+   * the body, and appends the routing instruction. Drawn in a bubble, that showed the reader the envelope —
+   * including a note about how to reply — as if they had typed it.
+   *
+   * WHEN A `channel` PART EXISTS IT REPLACES THE TEXT PART. The prompt rendering stays in the record, because
+   * the model still reads it; the console reads the event.
+   */
+  const channelPart = $derived(msg.parts.find(p => p.type === 'channel') ?? null)
+
+  const ordered = $derived.by<ChatPart[]>(() => {
+    const rest = msg.parts.filter(p => p.type !== 'reasoning' && p.type !== 'channel')
+    // The event stands in for the rendered prompt, so the rendered prompt is dropped — not appended after it.
+    const body = channelPart
+      ? rest.filter(p => p.type !== 'text')
+      : rest
+    const lead: ChatPart[] = [
+      ...msg.parts.filter(p => p.type === 'reasoning'),
+      ...(channelPart
+        ? [{
+            id: channelPart.id,
+            type: 'text',
+            text: channelPart.text ?? '',
+            tool: '',
+          } as ChatPart]
+        : []),
+    ]
+    return [...lead, ...body]
+  })
 
   const hasText = $derived(msg.parts.some(p => p.type === 'text' || p.type === 'reasoning'))
 
@@ -338,10 +375,22 @@
               {msg.errorKind === 'send' ? t('sendFailedTitle') : t('modelError')}
             </span>
           {/if}
-          {#if sourceKind === 'session' || sourceKind === 'system'}
+          {#if sourceKind === 'session' || sourceKind === 'system' || sourceKind === 'group'}
             <!-- Source chip: "来自会话 · {name}" / "来自系统 · {name}". The
                session chip opens that session when it still exists. -->
-            {#if canOpenSession}
+            <!-- A GROUP CHIP OPENS THE GROUP, NOT THE SENDER: the chip names which conversation this came
+                 from, so that is where a click should land. The sender's own card is one click away from the
+                 group's member list. -->
+            {#if sourceKind === 'group' && onOpenGroup && sourceName}
+              <button
+                type="button"
+                onclick={() => onOpenGroup?.(sourceName)}
+                title={sourceName}
+                class={sourceChipClass}
+              >
+                {@render chipBody()}
+              </button>
+            {:else if canOpenSession}
               <button
                 type="button"
                 onclick={() => onOpenSession?.(sourceName)}
