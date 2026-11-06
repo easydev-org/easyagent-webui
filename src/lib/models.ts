@@ -718,6 +718,12 @@ export interface GroupMessage {
    * nor a session's, so it renders as a notice rather than in anybody's bubble.
    */
   kind?: string
+  /**
+   * WHETHER THIS ASKS OR ANSWERS: "request" | "reply" | empty.
+   *
+   * A REQUEST LEAVES SOMEONE OWING AN ANSWER; a reply closes that. Empty is a person's message or a system notice.
+   */
+  intent?: string
   /** The group's display name, for a transcript header. */
   groupName?: string
   /** The sending session's id, or empty when a user posted it. */

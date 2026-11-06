@@ -400,6 +400,20 @@
                   </span>
                 </button>
                 <span class="truncate text-micro font-semibold">{labelOf(m)}</span>
+                <!-- WHAT THIS MESSAGE IS, next to who wrote it. A request leaves somebody owing an answer and a reply
+                     closes that; without the label a reader cannot tell "waiting on a reply" from "answered already"
+                     except by reading every message in order. The platform's reminders then make sense instead of
+                     appearing to be nagging for no reason. -->
+                {#if m.intent === 'request'}
+                  <span
+                    class="shrink-0 rounded bg-sky-500/15 px-1 text-[9px] text-sky-600 dark:text-sky-400"
+                    >{t('groupIntentRequest')}</span
+                  >
+                {:else if m.intent === 'reply'}
+                  <span class="shrink-0 rounded bg-muted px-1 text-[9px] text-muted-foreground"
+                    >{t('groupIntentReply')}</span
+                  >
+                {/if}
               </div>
             {/if}
 

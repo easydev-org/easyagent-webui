@@ -422,6 +422,7 @@ export function groupMessageFromPb(
     id: m.id,
     groupId: m.groupId,
     kind: m.kind || undefined,
+    intent: m.intent || undefined,
     groupName: m.groupName || undefined,
     sender: m.sender,
     senderName: m.senderName || undefined,
