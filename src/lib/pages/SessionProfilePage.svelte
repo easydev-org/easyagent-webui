@@ -20,8 +20,8 @@
   import { Prefs } from '$lib/prefs'
   import { guessMime } from '$lib/media'
   import { modelRefOf, sessionName } from '$lib/models'
-  import type { ModelInfo, ModelVariantInfo, Session } from '$lib/models'
-  import { buildModelOptions, variantsFor } from '$lib/chat-helpers'
+  import type { ModelInfo, Session } from '$lib/models'
+  import { buildModelOptions } from '$lib/chat-helpers'
   import { draftFromSession, isDirty, settingsPatch, type ProfileDraft } from '$lib/session-profile'
   import PageHeader from '$lib/components/layout/PageHeader.svelte'
   import ChatAvatar from '$lib/components/ChatAvatar.svelte'
@@ -59,7 +59,6 @@
    * was looking at it. A variant belongs to one model, so one provider's answer is enough, and it is fetched
    * first: the field is there when the page is.
    */
-  let currentVariants = $state<ModelVariantInfo[]>([])
   let presetOptions = $state<string[]>([])
   let loadingModels = $state(false)
   let saving = $state(false)
@@ -86,13 +85,15 @@
     })()
   })
 
-  // MODELS ARE LOADED LAZILY, once, on first use: the catalogue is one call per provider and this
-  // page is not on the path of sending a message.
+  // MODELS ARE LOADED LAZILY, once, for the MODEL PICKER ONLY.
   //
-  // THE SESSION'S OWN PROVIDER IS ASKED FIRST, ALONE. That single answer fills the variant picker, so the
-  // field is present in the page's first paint instead of appearing after the whole catalogue has arrived.
-  // The rest are fetched afterwards, IN PARALLEL, for the model picker — sequential requests were what made
-  // the wait long enough to watch.
+  // THE REASONING FIELD NO LONGER WAITS FOR THIS. It offers the same four choices for every model, because a
+  // variant is a value the turn merges into the request body and whether the provider acts on it is the
+  // provider's business — so making the field depend on a catalogue answer was a dependency that bought
+  // nothing and cost a visible layout shift on every visit.
+  //
+  // The providers are still fetched in parallel: the picker is the only thing waiting, and one slow provider
+  // should not hold up the rest.
   $effect(() => {
     if (!session || allModels.length > 0 || loadingModels) return
     void (async () => {
@@ -102,21 +103,8 @@
         const provs = await store.api.providers()
         const pids = Object.keys(provs)
 
-        const own = providerOf(draft.model)
-        if (own && pids.includes(own)) {
-          try {
-            const mine = await store.api.models(own)
-            currentVariants = variantsFor(mine, draft.model)
-            variantsKnown = true
-            out.push(...mine)
-          } catch {
-            /* the model picker still fills from the parallel pass below */
-          }
-        }
-
-        const rest = pids.filter(p => p !== own)
         const answers = await Promise.all(
-          rest.map(pid =>
+          pids.map(pid =>
             store.api.models(pid).catch(() => {
               // ONE PROVIDER'S FAILURE MUST NOT EMPTY THE PICKER.
               return [] as ModelInfo[]
@@ -128,7 +116,6 @@
         showErrorToast(String(e))
       }
       allModels = out
-      variantsKnown = true
       loadingModels = false
     })()
   })
@@ -137,45 +124,33 @@
   const dirty = $derived(session ? isDirty(draft, session, fallbackLocale) : false)
 
   /**
-   * THE VARIANTS FOLLOW THE SELECTED MODEL, not the catalogue's arrival order.
+   * THE REASONING CHOICES ARE A CONSTANT, NOT A PROPERTY OF THE MODEL.
    *
-   * Switching models must not carry "high" onto one that has no reasoning levels, and switching TO one must
-   * offer its own — from the first provider answer if the model is in it, otherwise from the catalogue once
-   * it lands.
+   * Four entries, always: "default" (the empty id — the absence of a choice) and the three levels the backend
+   * accepts. Nothing is fetched to know this, so the field is in the page's FIRST PAINT.
+   *
+   * A MODEL THAT DOES NOT REASON IGNORES THE VALUE. That is a provider's business; hiding the control until a
+   * catalogue answered made the page grow a row a second after it rendered, which is what the reader noticed.
+   *
+   * "default" IS `''` because that is what the wire treats as "no variant": the backend sends nothing, and the
+   * provider applies its own default. A separate "default" id would be a fourth value the model has to interpret.
    */
-  const variants = $derived.by(() => {
-    const fromCatalogue = variantsFor(allModels, draft.model)
-    return fromCatalogue.length ? fromCatalogue : currentVariants
-  })
-
-  /** The provider half of a `provider/model` reference ('' when the ref is empty or bare). */
-  function providerOf(ref: string): string {
-    const i = ref.indexOf('/')
-    return i > 0 ? ref.slice(0, i) : ''
-  }
+  const REASONING_VARIANTS: { id: string; name: string }[] = [
+    { id: '', name: '' },
+    { id: 'low', name: 'low' },
+    { id: 'medium', name: 'medium' },
+    { id: 'high', name: 'high' },
+  ]
 
   /**
-   * A VARIANT IS PRUNED ONLY ONCE THE VARIANTS ARE KNOWN.
+   * A SAVED LEVEL IS PRUNED ONLY WHEN IT IS NO LONGER OFFERED.
    *
-   * This used to run against an EMPTY list while the catalogue was still loading, which read as "this model has
-   * no levels" and cleared the session's saved variant — the page then showed "default" for a session that had
-   * one, and the next Save wrote that loss back. Waiting for an answer is what distinguishes "none offered"
-   * from "not asked yet".
+   * The stored value comes from the database and may predate a level being withdrawn. Clearing it unconditionally
+   * on mount — which an earlier version did while the catalogue was still empty — turned a session's "high" into
+   * "default" and the next Save wrote that loss back.
    */
-  let variantsKnown = $state(false)
   $effect(() => {
-    if (!variantsKnown) return
-    if (variants.length ? !variants.some(v => v.id === draft.variant) : !!draft.variant) {
-      draft.variant = ''
-    }
-  })
-
-  // A MODEL CHANGE MAY BELONG TO A PROVIDER WHOSE ANSWER IS ALREADY IN: read the variants immediately rather
-  // than waiting for a fetch that will not happen (the catalogue is loaded once).
-  $effect(() => {
-    const ref = draft.model
-    if (!ref || allModels.length === 0) return
-    currentVariants = variantsFor(allModels, ref)
+    if (draft.variant && !REASONING_VARIANTS.some(v => v.id === draft.variant)) draft.variant = ''
   })
 
   function pickAvatar() {
@@ -320,20 +295,25 @@
           />
         </label>
 
-        {#if variants.length}
-          <label class="block">
-            <span class="mb-1 block text-meta font-medium text-muted-foreground"
-              >{t('variantLabel')}</span
-            >
-            <Select
-              bind:value={draft.variant}
-              items={[
-                { value: '', label: t('variantNone') },
-                ...variants.map(v => ({ value: v.id, label: v.name || v.id })),
-              ]}
-            />
-          </label>
-        {/if}
+        <!-- ALWAYS PRESENT, WITH A FIXED SET OF CHOICES.
+             This used to be wrapped in `{#if variants.length}`, so the page rendered WITHOUT the field and grew a
+             row when a model catalogue answered — the visible jump this page was known for, and a dependency
+             that bought nothing: the choices are the same for every model.
+
+             "Default" is the empty value, and it is listed first because it is the state a session is in until
+             someone chooses otherwise. -->
+        <label class="block">
+          <span class="mb-1 block text-meta font-medium text-muted-foreground"
+            >{t('variantLabel')}</span
+          >
+          <Select
+            bind:value={draft.variant}
+            items={REASONING_VARIANTS.map(v => ({
+              value: v.id,
+              label: v.id === '' ? t('variantNone') : v.name,
+            }))}
+          />
+        </label>
 
         <label class="block">
           <span class="mb-1 block text-meta font-medium text-muted-foreground"
