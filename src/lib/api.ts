@@ -356,12 +356,22 @@ export class AgentApi {
     id: string,
     settings: Record<string, unknown>,
   ): Promise<Session> {
-    const model = (settings['model'] as string) || ''
+    /**
+     * `model` FOLLOWS THE SAME RULE AS THE PROFILE FIELDS: present-but-empty clears it.
+     *
+     * THE PROFILE PAGE ALWAYS SENDS IT, so "no model" is a state a save can express — which it has to be, because
+     * a session may legitimately have none and the picker must be able to return to that. A save that omits it
+     * would silently keep whatever was there, which is why the key travels even when blank.
+     */
+    const model =
+      settings['model'] === undefined
+        ? undefined
+        : String(settings['model'] ?? '')
     const preset = (settings['preset'] as string) || ''
     const r = await this._guard(() =>
       this._c.updateSettings({
         id,
-        ...(model ? { model } : {}),
+        ...(model === undefined ? {} : { model }),
         ...(preset ? { preset } : {}),
         locale: (settings['locale'] as string) || '',
         // SENT ALWAYS, INCLUDING WHEN EMPTY: '' means "use the model's default", which is the only way back

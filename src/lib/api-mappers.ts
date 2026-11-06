@@ -112,7 +112,9 @@ export function sessionFromPb(
     org: s.org,
     repo: s.repo,
     branch: s.branch,
-    model: s.model,
+    // A SESSION MAY HAVE NO MODEL, and the server sends it as an absent field rather than ''. The console renders
+    // that as "not chosen yet" — see the profile page's picker, where the placeholder IS that state.
+    model: s.model ?? '',
     variant: s.variant,
     preset: s.preset,
     tipId: s.tipId || undefined,

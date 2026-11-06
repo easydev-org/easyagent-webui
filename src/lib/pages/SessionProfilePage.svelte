@@ -307,9 +307,12 @@
           <span class="mb-1 block text-meta font-medium text-muted-foreground"
             >{t('modelLabel')}</span
           >
+          <!-- THE PLACEHOLDER IS THE "NO MODEL" STATE, and it is reachable: an empty value both displays as the
+               placeholder and writes NULL, so a model picked by accident can be undone. -->
           <Select
             bind:value={draft.model}
-            placeholder={loadingModels ? t('loading') : t('none')}
+            placeholder={loadingModels ? t('loading') : t('modelNone')}
+            disabled={loadingModels}
             items={modelOptions}
           />
         </label>
