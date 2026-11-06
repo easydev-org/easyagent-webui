@@ -928,9 +928,7 @@ export class AgentApi {
     sessionId: string,
     question: string,
   ): Promise<{ answer: string; message: GroupMessage | null }> {
-    const r = await this._guard(() =>
-      this._c.askInGroup({ groupId, sessionId, question }),
-    )
+    const r = await this._guard(() => this._c.askInGroup({ groupId, sessionId, question }))
     return {
       answer: r.answer,
       message: r.message ? groupMessageFromPb(r.message) : null,
