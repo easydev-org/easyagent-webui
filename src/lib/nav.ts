@@ -101,3 +101,58 @@ export function pushSibling(stack: AppPage[], page: AppPage): AppPage[] {
 export function popPage(stack: AppPage[]): AppPage[] {
   return stack.length > 1 ? stack.slice(0, -1) : [...stack]
 }
+
+/**
+ * THE DEPTH A PAGE BELONGS AT.
+ *
+ * A stack position is not an accident of click order — it is what the page IS. The chat tab has exactly three
+ * levels, and a page may only ever sit at its own:
+ *
+ *   1  the list            chat_list, group_list
+ *   2  a conversation      chat_session, group_chat
+ *   3  about it            session_profile, group_info, mailbox, permissions, channels, ext_view
+ *
+ * WHY THIS EXISTS. Pushing pages in click order let the chat tab hold two CONVERSATIONS at once — open a group,
+ * then a session, and a wide screen showed both side by side. They are alternatives, not a path: a reader is
+ * either in this conversation or that one. The same applied to two info pages, which is worse — two cards, no
+ * conversation, and neither Back button going anywhere useful.
+ *
+ * The rule below turns that from something every call site must remember into something the stack enforces.
+ */
+export function depthOf(page: AppPage): number {
+  switch (page.kind) {
+    case 'chat_list':
+    case 'group_list':
+      return 1
+    case 'chat_session':
+    case 'group_chat':
+      return 2
+    default:
+      // Everything that is ABOUT a conversation, or belongs to no conversation at all (the config and extension
+      // shelves have their own root and never mix with the chat tab's pages).
+      return 3
+  }
+}
+
+/**
+ * pushAtDepth pushes a page, keeping the stack consistent with the depth ladder.
+ *
+ * THE RULE, exactly as the console needs it:
+ *
+ *   · A PAGE DEEPER THAN THE STACK GROWS IT — that is a drill-in.
+ *   · A PAGE AT OR ABOVE AN EXISTING DEPTH TRUNCATES BACK TO IT, then pushes. Opening a session while an info
+ *     page is open therefore leaves [list, session], not [list, session, info, session].
+ *   · A PAGE AT THE SAME DEPTH THAT IS THE SAME PAGE IS A NO-OP. Re-opening the conversation you are already in
+ *     must not build a second copy of it, which is what "push and let it replace by key" did for pages whose key
+ *     carries an id.
+ *
+ * THE ROOT IS NEVER REPLACED. Popping to depth 0 would leave the tab with no page at all; a push at depth 1 is
+ * handled by the list's own navigation, which never pushes a second list.
+ */
+export function pushAtDepth(stack: AppPage[], page: AppPage): AppPage[] {
+  const depth = depthOf(page)
+  // Keep every page shallower than this one; a page AT this depth is being replaced, not stacked on.
+  const kept = stack.filter(p => depthOf(p) < depth)
+  kept.push(page)
+  return kept
+}

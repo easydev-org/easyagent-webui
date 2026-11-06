@@ -15,7 +15,7 @@ import {
 import {
   type AppPage,
   popPage,
-  pushPage,
+  pushAtDepth,
   pushSibling,
   rootPageFor,
   type SessionOverlay,
@@ -432,8 +432,16 @@ export class AppStore {
   }
 
   /** Push a page; same-key pages replace at their existing depth. */
+  /**
+   * pushPage places a page at ITS OWN DEPTH, not at whatever position the clicks happen to reach.
+   *
+   * The click order was never the invariant: a conversation and an info page are different LEVELS of the same
+   * tab, and pushing in sequence let two conversations — or two info pages — occupy the stack together. A wide
+   * screen then showed both side by side, which reads as "these are alternatives" while the UI said they were a
+   * path. See pushAtDepth for the ladder.
+   */
   pushPage(page: AppPage) {
-    this.stacks[this.siderTab] = pushPage(this.currentStack, page)
+    this.stacks[this.siderTab] = pushAtDepth(this.currentStack, page)
   }
 
   /** Push a SIBLING drill-in (replaces the current drill-in, keeps stack at
