@@ -160,13 +160,15 @@ export class AppStore {
   ) {
     let next = snapshot ? [] : [...this.groups]
     for (const g of upserts) {
-      const i = next.findIndex(x => x.name === g.name)
+      // MATCHED BY ID. A rename changes the name, so a name-keyed merge would treat the renamed group as a new one
+      // and leave the old row behind — the same confusion the identity split exists to remove.
+      const i = next.findIndex(x => x.id === g.id)
       if (i === -1) next.push(g)
       else next[i] = g
     }
     if (removed.length) {
       const gone = new Set(removed)
-      next = next.filter(g => !gone.has(g.name))
+      next = next.filter(g => !gone.has(g.id))
     }
     next.sort((a, b) => a.name.localeCompare(b.name))
     this.groups = next

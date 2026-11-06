@@ -84,7 +84,7 @@
       newIntro = ''
       showToast(t('groupCreated'))
       await load()
-      store.pushPage({ kind: 'group_chat', key: 'group_chat', id: g.name })
+      store.pushPage({ kind: 'group_chat', key: 'group_chat', id: g.id })
     } catch (e) {
       showErrorToast(String(e))
     } finally {
@@ -92,8 +92,8 @@
     }
   }
 
-  function open(name: string) {
-    store.pushPage({ kind: 'group_chat', key: 'group_chat', id: name })
+  function open(id: string) {
+    store.pushPage({ kind: 'group_chat', key: 'group_chat', id })
   }
 </script>
 
@@ -127,11 +127,11 @@
       </div>
     {:else}
       <div class="space-y-2">
-        {#each groups as g (g.name)}
+        {#each groups as g (g.id)}
           <button
             type="button"
             class="flex w-full items-center gap-3 rounded-md border border-border bg-card px-3 py-2.5 text-left hover:bg-muted/50"
-            onclick={() => open(g.name)}
+            onclick={() => open(g.id)}
           >
             <ChatAvatar
               seed={g.name}

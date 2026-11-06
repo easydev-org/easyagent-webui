@@ -665,6 +665,9 @@ export function backendNameFor(baseUrl: string): string {
  * THE ROLE IS A ROUTING FACT, not a permission tier: the coordinator is where the group's messages arrive.
  */
 export interface Group {
+  /** The group's identity: random and immutable, and what every API takes. */
+  id: string
+  /** The display label. Unique per tenant, and editable — nothing routes by it. */
   name: string
   avatarFile?: string
   /** One line saying what the group is for (empty = say nothing). */
@@ -699,7 +702,10 @@ export interface GroupMember {
  */
 export interface GroupMessage {
   id: string
-  group: string
+  /** The group's id. The NAME is on `groupName` and is the one current when the page loaded. */
+  groupId: string
+  /** The group's display name, for a transcript header. */
+  groupName?: string
   /** The sending session's id, or empty when a user posted it. */
   sender: string
   /** The sender's label at the time of sending; survives a later rename. */

@@ -26,7 +26,15 @@
 
   let { store, initialId }: PageProps = $props()
 
-  const group = $derived(initialId ?? '')
+  const groupId = $derived(initialId ?? '')
+
+  /**
+   * THE HEADER SHOWS THE NAME, THE PAGE ADDRESSES BY ID.
+   *
+   * The name is a label a person may change — the header must show the CURRENT one, not a copy taken when the route
+   * was pushed. It is loaded with the group and refreshed by the watch, like every other fact on this page.
+   */
+  let groupTitle = $state('')
 
   let messages = $state<GroupMessage[]>([])
   let members = $state<GroupMember[]>([])
@@ -216,19 +224,20 @@
   })
 
   $effect(() => {
-    const name = group
-    if (!name) return
+    const id = groupId
+    if (!id) return
     void (async () => {
       loading = true
       try {
-        const meta = await store.api.group(name)
+        const meta = await store.api.group(id)
         members = meta.members
+        groupTitle = meta.group.name
         // THE PAGE PROVIDES THE HISTORY, THE STREAM PROVIDES THE FUTURE. Loading a page first means the view
         // is populated even if the stream takes a moment to open.
-        const page = await store.api.groupMessages(name, 0, 100)
+        const page = await store.api.groupMessages(id, 0, 100)
         messages = page.messages
         // The watch starts from the newest message we hold, so nothing in the page is replayed.
-        void watch(name, page.latestSeq)
+        void watch(id, page.latestSeq)
       } catch (e) {
         failed = String(e)
       } finally {
@@ -237,9 +246,9 @@
     })()
   })
 
-  async function watch(name: string, sinceSeq: number) {
+  async function watch(id: string, sinceSeq: number) {
     try {
-      for await (const m of store.api.watchGroup(name, sinceSeq)) {
+      for await (const m of store.api.watchGroup(id, sinceSeq)) {
         // THE STREAM IS AUTHORITATIVE AND ALSO IDEMPOTENT: a reconnect replays from the cursor, so a message
         // may arrive twice. Deduping by seq keeps the list from growing duplicates after a dropped stream.
         if (messages.some(x => x.seq === m.seq)) continue
@@ -256,7 +265,7 @@
     if ((!body && attachments.length === 0) || sending || uploading) return
     sending = true
     try {
-      await store.api.sendGroupMessage(group, body, sendAs, attachments)
+      await store.api.sendGroupMessage(groupId, body, sendAs, attachments)
       text = ''
       attachments = []
       followBottom = true
@@ -275,7 +284,7 @@
 </script>
 
 <div class="flex h-full min-h-0 w-full min-w-0 flex-col">
-  <PageHeader title={group} onBack={() => store.popPage()}>
+  <PageHeader title={groupTitle || groupId} onBack={() => store.popPage()}>
     {#snippet right()}
       <!-- THE HEADER OPENS THE GROUP'S CARD, the same gesture a chat header already has: clicking the name
            there opens the session's profile. A group's picture, purpose and member list live one page in, and
@@ -285,7 +294,7 @@
         class="rounded p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground"
         title={t('groupInfo')}
         aria-label={t('groupInfo')}
-        onclick={() => store.pushPage({ kind: 'group_info', key: 'group_info', id: group })}
+        onclick={() => store.pushPage({ kind: 'group_info', key: 'group_info', id: groupId })}
       >
         <AppIcons.info class="size-[18px]" />
       </button>

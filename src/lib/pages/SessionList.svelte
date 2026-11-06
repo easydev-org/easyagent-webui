@@ -166,7 +166,7 @@
    * transcript, its card, and deletes the group. Sharing one menu state would have forced every item to check
    * which kind of row it came from, and the first item added in the wrong branch would act on the wrong object.
    */
-  let groupMenu = $state<{ name: string; anchor: MenuAnchor } | null>(null)
+  let groupMenu = $state<{ id: string; name: string; anchor: MenuAnchor } | null>(null)
 
   /**
    * Open a session's PROFILE from its picture in the list.
@@ -207,15 +207,18 @@
   })
 
   async function onGroupMenuPick(value: string) {
-    const name = groupMenu?.name
+    // THE ID ROUTES; THE NAME LABELS. A confirmation that said "delete 8f3a…?" would be unreadable, and a route
+    // built from a name would break the moment someone renamed the group.
+    const id = groupMenu?.id ?? ''
+    const name = groupMenu?.name ?? ''
     groupMenu = null
-    if (!name) return
+    if (!id) return
     if (value === 'open') {
-      store.pushPage({ kind: 'group_chat', key: 'group_chat', id: name })
+      store.pushPage({ kind: 'group_chat', key: 'group_chat', id })
     } else if (value === 'info') {
-      store.pushPage({ kind: 'group_info', key: 'group_info', id: name })
+      store.pushPage({ kind: 'group_info', key: 'group_info', id })
     } else if (value === 'delete') {
-      await deleteGroupFlow(name)
+      await deleteGroupFlow(id, name)
     }
   }
 
@@ -225,7 +228,7 @@
    * THE BODY SAYS WHAT GOES WITH IT — the transcript — because a deletion a reader did not expect to lose the
    * conversation is the kind of surprise that makes them distrust the next one.
    */
-  async function deleteGroupFlow(name: string) {
+  async function deleteGroupFlow(id: string, name: string) {
     const ok = await confirmDialog({
       title: t('groupDelete'),
       body: t('groupDeleteBody', { arg1: name }),
@@ -234,7 +237,7 @@
     })
     if (!ok) return
     try {
-      await store.api.deleteGroup(name)
+      await store.api.deleteGroup(id)
       await store.refreshGroups()
       showToast(t('groupDeleted'))
     } catch (e) {
@@ -359,7 +362,7 @@
     {#if !selectMode && !searching && store.groups.length > 0}
       <SectionLabel class="normal-case">{t('groupsTitle')}</SectionLabel>
       <div class="space-y-1 px-2 pb-1" role="list">
-        {#each store.groups as g (g.name)}
+        {#each store.groups as g (g.id)}
           <!-- A GROUP ROW IS A CONVERSATION ROW, and it now reads like one: picture, name, WHAT WAS LAST SAID,
                and when. It used to show a member count instead of the preview, so a reader scanning the list
                learned how many people were in a group but not what they were talking about.
@@ -367,16 +370,16 @@
                THE MEMBER COUNT IS STILL HERE, moved beside the name where a chat puts nothing: it is a fact
                about the group rather than the thing a reader is looking for. -->
           {@const groupHandlers = rowLongPress(
-            anchor => (groupMenu = { name: g.name, anchor }),
+            anchor => (groupMenu = { id: g.id, name: g.name, anchor }),
             !selectMode,
           )}
           <button
             type="button"
             class={cn(
               'flex w-full items-center gap-3 rounded-md px-2 py-2 text-left select-none [-webkit-touch-callout:none]',
-              groupMenu?.name === g.name ? 'bg-muted' : 'hover:bg-muted/50',
+              groupMenu?.id === g.id ? 'bg-muted' : 'hover:bg-muted/50',
             )}
-            onclick={() => store.pushPage({ kind: 'group_chat', key: 'group_chat', id: g.name })}
+            onclick={() => store.pushPage({ kind: 'group_chat', key: 'group_chat', id: g.id })}
             oncontextmenu={groupHandlers.oncontextmenu}
             ontouchstart={groupHandlers.ontouchstart}
             ontouchmove={groupHandlers.ontouchmove}

@@ -811,13 +811,16 @@ export class AgentApi {
    * alone" is to omit the key — which a profile save never wants, because it always sends the whole card.
    */
   async updateGroup(input: {
-    name: string
+    id: string
+    /** Absent = keep the current name. A rename is an ordinary edit now, because nothing is keyed by it. */
+    name?: string
     avatarFile: string
     intro: string
   }): Promise<Group> {
     const r = await this._guard(() =>
       this._c.updateGroup({
-        name: input.name,
+        id: input.id,
+        ...(input.name === undefined ? {} : { name: input.name }),
         avatarFile: input.avatarFile,
         intro: input.intro,
       }),
@@ -832,8 +835,8 @@ export class AgentApi {
    * a group that still routes rather than one the console says is gone while members keep receiving messages.
    * The console only has to refresh its list.
    */
-  async deleteGroup(name: string): Promise<void> {
-    await this._guard(() => this._c.deleteGroup({ name }))
+  async deleteGroup(id: string): Promise<void> {
+    await this._guard(() => this._c.deleteGroup({ id }))
   }
 
   /**
@@ -842,9 +845,9 @@ export class AgentApi {
    * NOT COORDINATORS: the coordinator is where traffic arrives, and there is exactly one. A new member listens
    * until it is addressed, which is what a group is for.
    */
-  async addGroupMembers(group: string, members: string[]): Promise<void> {
+  async addGroupMembers(groupId: string, members: string[]): Promise<void> {
     await this._guard(() =>
-      this._c.addGroupMember({ group, members, addedBy: 'user' }),
+      this._c.addGroupMember({ groupId, members, addedBy: 'user' }),
     )
   }
 
@@ -855,11 +858,11 @@ export class AgentApi {
    * messages to nobody. Moving the role first (`setGroupCoordinator`) is the way to hand a group over.
    */
   async removeGroupMember(
-    group: string,
+    groupId: string,
     member: string,
   ): Promise<GroupMember[]> {
     const r = await this._guard(() =>
-      this._c.removeGroupMember({ group, member }),
+      this._c.removeGroupMember({ groupId, member }),
     )
     return r.members.map(m => ({
       session: m.session,
@@ -870,11 +873,11 @@ export class AgentApi {
   }
 
   async group(
-    name: string,
+    id: string,
     session?: string,
   ): Promise<{ group: Group; members: GroupMember[] }> {
     const r = await this._guard(() =>
-      this._c.getGroup({ name, session: session ?? '' }),
+      this._c.getGroup({ id, session: session ?? '' }),
     )
     const g = r.group!
     return {
@@ -889,14 +892,14 @@ export class AgentApi {
   }
 
   async groupMessages(
-    group: string,
+    groupId: string,
     afterSeq = 0,
     limit = 100,
     session?: string,
   ): Promise<{ messages: GroupMessage[]; latestSeq: number }> {
     const r = await this._guard(() =>
       this._c.listGroupMessages({
-        group,
+        groupId,
         afterSeq: BigInt(afterSeq),
         limit,
         session: session ?? '',
@@ -922,14 +925,14 @@ export class AgentApi {
    * a blob that does not exist yet, and a member woken by it would find nothing to read.
    */
   async sendGroupMessage(
-    group: string,
+    groupId: string,
     text: string,
     sender = '',
     attachments: FileRef[] = [],
   ): Promise<GroupMessage> {
     const r = await this._guard(() =>
       this._c.sendGroupMessage({
-        group,
+        groupId,
         text,
         sender,
         // ONLY THE CODE IS SENT. Name and size are advisory on the wire and the type is the agent's to
@@ -943,12 +946,12 @@ export class AgentApi {
 
   /** Stream a group's transcript: retained messages after `sinceSeq`, then live. */
   async *watchGroup(
-    group: string,
+    groupId: string,
     sinceSeq = 0,
     session = '',
   ): AsyncGenerator<GroupMessage> {
     for await (const frame of this._c.watchGroup({
-      group,
+      groupId,
       sinceSeq: BigInt(sinceSeq),
       session,
     })) {

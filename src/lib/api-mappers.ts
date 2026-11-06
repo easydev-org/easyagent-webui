@@ -429,6 +429,7 @@ export function groupFromPb(
   g: import('../gen/agent/v1/agent_pb.js').Group,
 ): import('./models.js').Group {
   return {
+    id: g.id,
     name: g.name,
     avatarFile: g.avatarFile || undefined,
     intro: g.intro || undefined,
@@ -452,7 +453,8 @@ export function groupMessageFromPb(
 ): GroupMessage {
   return {
     id: m.id,
-    group: m.group,
+    groupId: m.groupId,
+    groupName: m.groupName || undefined,
     sender: m.sender,
     senderName: m.senderName || undefined,
     body: m.body,

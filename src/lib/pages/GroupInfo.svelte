@@ -23,7 +23,7 @@
 
   let { store, initialId }: PageProps = $props()
 
-  const name = $derived(initialId ?? '')
+  const groupId = $derived(initialId ?? '')
 
   let group = $state<Group | null>(null)
   let members = $state<GroupMember[]>([])
@@ -34,6 +34,8 @@
 
   // The editable fields, seeded once from the loaded group.
   let avatarFile = $state('')
+  /** The editable display name. Saving it is an ordinary edit now — nothing is keyed by it. */
+  let draftName = $state('')
   let intro = $state('')
   /** Whether the "add member" picker is open. */
   let adding = $state(false)
@@ -66,7 +68,7 @@
   }
 
   $effect(() => {
-    const g = name
+    const g = groupId
     if (!g) return
     void (async () => {
       loading = true
@@ -77,6 +79,7 @@
         if (seededFor !== g) {
           seededFor = g
           avatarFile = meta.group.avatarFile ?? ''
+          draftName = meta.group.name
           intro = meta.group.intro ?? ''
         }
       } catch (e) {
@@ -125,7 +128,10 @@
     saving = true
     try {
       const updated = await store.api.updateGroup({
-        name: group.name,
+        // THE ID IDENTIFIES; the name is an ordinary field, so it travels only when it changed. Sending it always
+        // would make every save a rename attempt, and a collision on an unchanged name would be reported as one.
+        id: group.id,
+        ...(draftName.trim() !== group.name ? { name: draftName.trim() } : {}),
         avatarFile,
         intro: intro.trim(),
       })
@@ -200,7 +206,7 @@
   }
 
   function openChat() {
-    if (name) store.pushPage({ kind: 'group_chat', key: 'group_chat', id: name })
+    if (groupId) store.pushPage({ kind: 'group_chat', key: 'group_chat', id: groupId })
   }
 </script>
 
@@ -215,7 +221,7 @@
         class="rounded p-1.5 text-primary hover:bg-muted disabled:opacity-40"
         title={t('openChat')}
         aria-label={t('openChat')}
-        disabled={!name}
+        disabled={!groupId}
         onclick={openChat}
       >
         <AppIcons.chat class="size-[18px]" />
@@ -258,9 +264,11 @@
           </span>
         </button>
 
-        <div class="text-center">
-          <div class="text-base font-semibold break-all">{group.name}</div>
-          <div class="mt-0.5 text-micro text-muted-foreground">
+        <!-- THE NAME IS AN EDITABLE FIELD NOW, not a heading. It used to be immutable because it was the group's
+             identity; it is a label, and editing it touches nothing else. -->
+        <div class="w-full max-w-sm text-center">
+          <Input bind:value={draftName} class="text-center text-base font-semibold" />
+          <div class="mt-1 text-micro text-muted-foreground">
             {t('groupMemberCount', { arg1: members.length })}
           </div>
         </div>
