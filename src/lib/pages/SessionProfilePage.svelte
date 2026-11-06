@@ -135,12 +135,28 @@
    * "default" IS `''` because that is what the wire treats as "no variant": the backend sends nothing, and the
    * provider applies its own default. A separate "default" id would be a fourth value the model has to interpret.
    */
+  /**
+   * THE SELECT HAS NO EMPTY OPTION, so "default" needs a real value.
+   *
+   * This component treats `''` as NOTHING SELECTED and renders its placeholder — which is why the field read
+   * blank while the session was on its default. `DEFAULT_LEVEL` is the value the control shows; it is mapped back
+   * to `''` on the way to the server, because `''` is what the wire and the store mean by "no variant".
+   */
+  const DEFAULT_LEVEL = 'default'
   const REASONING_VARIANTS: { id: string; name: string }[] = [
-    { id: '', name: '' },
+    { id: DEFAULT_LEVEL, name: '' },
     { id: 'low', name: 'low' },
     { id: 'medium', name: 'medium' },
     { id: 'high', name: 'high' },
   ]
+
+  /** The level the SELECT shows for a stored variant ('' → the default entry). */
+  const shownLevel = $derived(draft.variant || DEFAULT_LEVEL)
+
+  /** The level to STORE for a SELECT value ('default' → '', which is what "no variant" is). */
+  function storedLevel(shown: string): string {
+    return shown === DEFAULT_LEVEL ? '' : shown
+  }
 
   /**
    * A SAVED LEVEL IS PRUNED ONLY WHEN IT IS NO LONGER OFFERED.
@@ -149,8 +165,11 @@
    * on mount — which an earlier version did while the catalogue was still empty — turned a session's "high" into
    * "default" and the next Save wrote that loss back.
    */
+  const knownLevels = new Set(['low', 'medium', 'high'])
   $effect(() => {
-    if (draft.variant && !REASONING_VARIANTS.some(v => v.id === draft.variant)) draft.variant = ''
+    // A STORED LEVEL THAT IS NO LONGER OFFERED is cleared, so the saved value can never be one the picker cannot
+    // show. `''` is fine — it is the default.
+    if (draft.variant && !knownLevels.has(draft.variant)) draft.variant = ''
   })
 
   function pickAvatar() {
@@ -307,10 +326,11 @@
             >{t('variantLabel')}</span
           >
           <Select
-            bind:value={draft.variant}
+            value={shownLevel}
+            onchange={v => (draft.variant = storedLevel(v))}
             items={REASONING_VARIANTS.map(v => ({
               value: v.id,
-              label: v.id === '' ? t('variantNone') : v.name,
+              label: v.id === DEFAULT_LEVEL ? t('variantNone') : v.name,
             }))}
           />
         </label>
