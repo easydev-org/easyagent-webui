@@ -31,7 +31,10 @@ export class MessageSync {
         const r = await this.api.messagesAfter(sid, this.syncedTipId)
         if (r.resync) {
           await this.baseline(sid)
-        } else if (r.messages.length === 0 && this.store.messages.length === 0) {
+        } else if (
+          r.messages.length === 0 &&
+          this.store.messages.length === 0
+        ) {
           await this.baseline(sid)
         } else {
           this.store.mergeServer(r.messages)
@@ -52,7 +55,11 @@ export class MessageSync {
     try {
       const [msgs, more] = await this.api.messages(sid, undefined, 50)
       const chat = mapMessagesToChat(msgs)
-      this.store.messages = [...this.store.inFlightLocal(), ...this.store.errors, ...chat]
+      this.store.messages = [
+        ...this.store.inFlightLocal(),
+        ...this.store.errors,
+        ...chat,
+      ]
       this.store.renumber()
       this.store.hasMore = more
       this.syncedTipId = chat.length ? chat[chat.length - 1]!.id : ''
@@ -71,9 +78,16 @@ export class MessageSync {
       const chat = mapMessagesToChat(msgs)
       if (before != null) {
         const existing = new Set(this.store.messages.map(m => m.id))
-        this.store.messages = [...chat.filter(m => !existing.has(m.id)), ...this.store.messages]
+        this.store.messages = [
+          ...chat.filter(m => !existing.has(m.id)),
+          ...this.store.messages,
+        ]
       } else {
-        this.store.messages = [...this.store.inFlightLocal(), ...this.store.errors, ...chat]
+        this.store.messages = [
+          ...this.store.inFlightLocal(),
+          ...this.store.errors,
+          ...chat,
+        ]
       }
       this.store.renumber()
       this.store.hasMore = more

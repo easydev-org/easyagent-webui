@@ -24,7 +24,9 @@ describe('optionalProfileFields', () => {
   })
 
   it('sends a set value verbatim', () => {
-    expect(optionalProfileFields({ avatarFile: 'file:abc', intro: 'CI triage' })).toEqual({
+    expect(
+      optionalProfileFields({ avatarFile: 'file:abc', intro: 'CI triage' }),
+    ).toEqual({
       avatarFile: 'file:abc',
       intro: 'CI triage',
     })
@@ -46,7 +48,9 @@ describe('optionalProfileFields', () => {
   })
 
   it('treats null and undefined as empty rather than sending the word', () => {
-    expect(optionalProfileFields({ avatarFile: null, intro: undefined })).toEqual({
+    expect(
+      optionalProfileFields({ avatarFile: null, intro: undefined }),
+    ).toEqual({
       avatarFile: '',
       intro: '',
     })

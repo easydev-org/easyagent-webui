@@ -35,7 +35,10 @@ describe('draftFromSession', () => {
   })
 
   it('treats a missing avatar and intro as empty strings, not undefined', () => {
-    const d = draftFromSession({ ...stored, avatarFile: undefined, intro: undefined }, 'en')
+    const d = draftFromSession(
+      { ...stored, avatarFile: undefined, intro: undefined },
+      'en',
+    )
     expect(d.avatarFile).toBe('')
     expect(d.intro).toBe('')
   })
@@ -99,7 +102,14 @@ describe('isDirty', () => {
 
   it('notices each field independently', () => {
     const base = draftFromSession(stored, 'en')
-    for (const k of ['model', 'variant', 'preset', 'locale', 'avatarFile', 'intro'] as const) {
+    for (const k of [
+      'model',
+      'variant',
+      'preset',
+      'locale',
+      'avatarFile',
+      'intro',
+    ] as const) {
       expect(isDirty({ ...base, [k]: `${base[k]}x` }, stored, 'en')).toBe(true)
     }
   })
@@ -107,7 +117,9 @@ describe('isDirty', () => {
   /** Typing spaces into the intro and saving would store nothing new, so it is not a change. */
   it('ignores whitespace-only edits to the intro', () => {
     const base = draftFromSession(stored, 'en')
-    expect(isDirty({ ...base, intro: '  CI triage  ' }, stored, 'en')).toBe(false)
+    expect(isDirty({ ...base, intro: '  CI triage  ' }, stored, 'en')).toBe(
+      false,
+    )
   })
 })
 
@@ -120,7 +132,9 @@ describe('isDirty', () => {
 describe('isDirty: name', () => {
   it('notices a name change', () => {
     const base = draftFromSession(stored, 'en')
-    expect(isDirty({ ...base, name: 'something else' }, stored, 'en')).toBe(true)
+    expect(isDirty({ ...base, name: 'something else' }, stored, 'en')).toBe(
+      true,
+    )
   })
 
   it('is clean when the name is unchanged', () => {

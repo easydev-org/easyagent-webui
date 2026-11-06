@@ -43,10 +43,13 @@ export interface ExtCard {
  * Validated rather than trusted: a malformed entry must fall back to the plain rendering, not put a
  * broken frame in the message.
  */
-export function extCardFrom(data: Record<string, unknown> | null | undefined): ExtCard | null {
+export function extCardFrom(
+  data: Record<string, unknown> | null | undefined,
+): ExtCard | null {
   if (!data) return null
   const v = data['card'] as Partial<ExtCard> | undefined
-  if (!v || typeof v.ext !== 'string' || typeof v.template !== 'string') return null
+  if (!v || typeof v.ext !== 'string' || typeof v.template !== 'string')
+    return null
   if (v.ext === '' || v.template === '') return null
   return { ext: v.ext, template: v.template }
 }

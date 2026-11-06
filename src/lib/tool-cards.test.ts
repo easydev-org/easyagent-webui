@@ -17,7 +17,11 @@ describe('cardFor', () => {
     // No handler claims git-ws-clone (that is an extension tool), so this proves the PREFIX was
     // removed rather than the name being taken literally.
     expect(spec).toBeNull()
-    const mine = cardFor('bundled.file-info', { name: 'a.txt', size: 10 }, { code: 'x' })
+    const mine = cardFor(
+      'bundled.file-info',
+      { name: 'a.txt', size: 10 },
+      { code: 'x' },
+    )
     expect(mine).not.toBeNull()
   })
 
@@ -43,11 +47,17 @@ describe('cardFor', () => {
 
   it('omits rows whose value is missing instead of showing blanks', () => {
     const spec = cardFor('file-info', { name: 'only-name' }, { code: 'c1' })
-    expect(spec!.result.fields.map((f: { label: string }) => f.label)).toEqual(['tcName'])
+    expect(spec!.result.fields.map((f: { label: string }) => f.label)).toEqual([
+      'tcName',
+    ])
   })
 
   it('keeps a numeric zero, which is information', () => {
-    const spec = cardFor('file-read', { code: 'c', offset: 0, lines: 0 }, { code: 'c' })
+    const spec = cardFor(
+      'file-read',
+      { code: 'c', offset: 0, lines: 0 },
+      { code: 'c' },
+    )
     const labels = spec!.result.fields.map((f: { label: string }) => f.label)
     expect(labels).toContain('tcLines')
   })
@@ -64,7 +74,10 @@ describe('cardFor', () => {
       {},
     )
     const byLabel = Object.fromEntries(
-      spec!.result.fields.map((f: { label: string; value: string }) => [f.label, f.value]),
+      spec!.result.fields.map((f: { label: string; value: string }) => [
+        f.label,
+        f.value,
+      ]),
     )
     expect(byLabel['tcTotal']).toBe('2')
     expect(byLabel['tcDone']).toBe('1')

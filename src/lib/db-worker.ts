@@ -51,15 +51,20 @@ async function init(scope: string): Promise<void> {
 self.onmessage = (ev: MessageEvent<Msg>) => {
   const msg = ev.data
   if (msg.type === 'init') {
-    void init(msg.scope).catch(e => post({ type: 'ready', persistent: false, error: String(e) }))
+    void init(msg.scope).catch(e =>
+      post({ type: 'ready', persistent: false, error: String(e) }),
+    )
     return
   }
   if (msg.type === 'call') {
     void (async () => {
       try {
         if (!store) throw new Error('db not initialized')
-        const fn = (store as unknown as Record<string, (...a: unknown[]) => unknown>)[msg.method]
-        if (typeof fn !== 'function') throw new Error(`unknown method ${msg.method}`)
+        const fn = (
+          store as unknown as Record<string, (...a: unknown[]) => unknown>
+        )[msg.method]
+        if (typeof fn !== 'function')
+          throw new Error(`unknown method ${msg.method}`)
         const result = await fn.apply(store, msg.args)
         post({ type: 'result', id: msg.id, result })
       } catch (e) {

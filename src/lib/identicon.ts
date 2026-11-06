@@ -75,7 +75,11 @@ export function honeycombCells(seed: string, mirror: boolean): HexCell[] {
   return cells.map((c, i) => ({ ...c, on: on[i]! }))
 }
 
-function hsl(hue: number, sat: number, light: number): [number, number, number] {
+function hsl(
+  hue: number,
+  sat: number,
+  light: number,
+): [number, number, number] {
   const c = (1 - Math.abs(2 * light - 1)) * sat
   const hp = hue / 60
   const x = c * (1 - Math.abs((hp % 2) - 1))
@@ -103,7 +107,10 @@ function luminance([r, g, b]: [number, number, number]): number {
   return 0.2126 * ch(r) + 0.7152 * ch(g) + 0.0722 * ch(b)
 }
 
-function contrastRatio(a: [number, number, number], b: [number, number, number]): number {
+function contrastRatio(
+  a: [number, number, number],
+  b: [number, number, number],
+): number {
   const la = luminance(a)
   const lb = luminance(b)
   return (Math.max(la, lb) + 0.05) / (Math.min(la, lb) + 0.05)
@@ -131,7 +138,12 @@ export function avatarSpec(seed: string): AvatarSpec {
     }
     if (bestRatio >= 3.5) break
   }
-  const fgRgb = bestRatio < 3.0 ? (luminance(bgRgb) > 0.35 ? [23, 24, 28] : [255, 255, 255]) : best
+  const fgRgb =
+    bestRatio < 3.0
+      ? luminance(bgRgb) > 0.35
+        ? [23, 24, 28]
+        : [255, 255, 255]
+      : best
   return {
     bg: rgb(bgRgb),
     fg: rgb(fgRgb as [number, number, number]),

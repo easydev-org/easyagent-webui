@@ -57,7 +57,9 @@ async function writeCache(providers: MdProvider[]) {
   }
 }
 
-export async function loadModelsDev(forceRefresh = false): Promise<MdProvider[]> {
+export async function loadModelsDev(
+  forceRefresh = false,
+): Promise<MdProvider[]> {
   if (!forceRefresh) {
     const cached = await readCache()
     if (cached) return cached.providers

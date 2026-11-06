@@ -38,7 +38,9 @@ export interface ResolvedAvatar {
  * IT DOES NOT DECIDE ABOUT FAILURES — a fetch that errors falls back to the identicon in the
  * component, because that is a runtime fact this function cannot know.
  */
-export function resolveAvatar(avatar: string | undefined | null): ResolvedAvatar {
+export function resolveAvatar(
+  avatar: string | undefined | null,
+): ResolvedAvatar {
   const raw = (avatar ?? '').trim()
   if (!raw.startsWith('file:')) {
     return { source: 'identicon', code: '' }

@@ -46,7 +46,11 @@ describe('pushSibling', () => {
   it('keeps the stack at [root, current] then pushes the sibling', () => {
     const a: AppPage = { kind: 'config_sub', key: 'a', id: 'a' }
     const b: AppPage = { kind: 'config_sub', key: 'b', id: 'b' }
-    const stack: AppPage[] = [root, a, { kind: 'preset_form', key: 'preset_form_new' }]
+    const stack: AppPage[] = [
+      root,
+      a,
+      { kind: 'preset_form', key: 'preset_form_new' },
+    ]
     expect(pushSibling(stack, b)).toEqual([root, b])
   })
 
@@ -106,7 +110,11 @@ describe('pushAtDepth', () => {
     let stack = pushAtDepth([list], group)
     stack = pushAtDepth(stack, info)
     stack = pushAtDepth(stack, profile)
-    expect(stack.map(p => p.kind)).toEqual(['chat_list', 'group_chat', 'session_profile'])
+    expect(stack.map(p => p.kind)).toEqual([
+      'chat_list',
+      'group_chat',
+      'session_profile',
+    ])
   })
 
   // AND AN INFO PAGE FOR A DIFFERENT CONVERSATION DOES NOT SURVIVE THE SWITCH: the card belonged to the old one.
@@ -115,7 +123,11 @@ describe('pushAtDepth', () => {
     stack = pushAtDepth(stack, info)
     stack = pushAtDepth(stack, session)
     stack = pushAtDepth(stack, profile)
-    expect(stack.map(p => p.kind)).toEqual(['chat_list', 'chat_session', 'session_profile'])
+    expect(stack.map(p => p.kind)).toEqual([
+      'chat_list',
+      'chat_session',
+      'session_profile',
+    ])
   })
 
   // Drilling in still grows the stack — the ladder is not a cap of two.
@@ -123,7 +135,11 @@ describe('pushAtDepth', () => {
     let stack = pushAtDepth([list], session)
     stack = pushAtDepth(stack, profile)
     stack = pushAtDepth(stack, mailbox)
-    expect(stack.map(p => p.kind)).toEqual(['chat_list', 'chat_session', 'chat_overlay'])
+    expect(stack.map(p => p.kind)).toEqual([
+      'chat_list',
+      'chat_session',
+      'chat_overlay',
+    ])
   })
 
   /**
@@ -142,7 +158,11 @@ describe('pushAtDepth', () => {
     let stack = pushAtDepth([list], group)
     stack = pushAtDepth(stack, info)
     const again = pushAtDepth(stack, info)
-    expect(again.map(p => p.kind)).toEqual(['chat_list', 'group_chat', 'group_info'])
+    expect(again.map(p => p.kind)).toEqual([
+      'chat_list',
+      'group_chat',
+      'group_info',
+    ])
   })
 
   // The list is never replaced by a list: a push at depth 1 keeps exactly one root.

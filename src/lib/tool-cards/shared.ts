@@ -93,14 +93,20 @@ export function bareToolName(tool: string): string {
 // ---- readers ----
 
 /** A string field, or '' when absent or of another type. */
-export function s(o: Record<string, unknown> | null | undefined, k: string): string {
+export function s(
+  o: Record<string, unknown> | null | undefined,
+  k: string,
+): string {
   if (!o) return ''
   const v = o[k]
   return typeof v === 'string' ? v : ''
 }
 
 /** A number field, or 0. Accepts a numeric string, which is how JSON sub-objects often arrive. */
-export function n(o: Record<string, unknown> | null | undefined, k: string): number {
+export function n(
+  o: Record<string, unknown> | null | undefined,
+  k: string,
+): number {
   if (!o) return 0
   const v = o[k]
   if (typeof v === 'number') return Number.isFinite(v) ? v : 0
@@ -112,7 +118,10 @@ export function n(o: Record<string, unknown> | null | undefined, k: string): num
 }
 
 /** An array field, or [] when absent. */
-export function arr<T = unknown>(o: Record<string, unknown> | null | undefined, k: string): T[] {
+export function arr<T = unknown>(
+  o: Record<string, unknown> | null | undefined,
+  k: string,
+): T[] {
   if (!o) return []
   const v = o[k]
   return Array.isArray(v) ? (v as T[]) : []

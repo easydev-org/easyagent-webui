@@ -1,5 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { descriptionFor, discoverExtUis, type ExtUi } from './ext-catalog.svelte'
+import {
+  descriptionFor,
+  discoverExtUis,
+  type ExtUi,
+} from './ext-catalog.svelte'
 
 /**
  * The shelf is driven by one question per extension: does `/ext/<id>/api/v1/ui` answer? A 200 means
@@ -33,8 +37,12 @@ afterEach(() => {
  * `globalThis.fetch = …` rather than `vi.stubGlobal`, because stubGlobal's teardown clears
  * `localStorage` in this environment — which is the very thing these tests set up.
  */
-function withFetch(fn: (url: string, init?: RequestInit) => Promise<Response>): void {
-  vi.spyOn(globalThis, 'fetch').mockImplementation(fn as unknown as typeof fetch)
+function withFetch(
+  fn: (url: string, init?: RequestInit) => Promise<Response>,
+): void {
+  vi.spyOn(globalThis, 'fetch').mockImplementation(
+    fn as unknown as typeof fetch,
+  )
 }
 
 describe('discoverExtUis', () => {
@@ -78,7 +86,9 @@ describe('discoverExtUis', () => {
   it('survives a network failure for one extension', async () => {
     withFetch((url: string) =>
       url.includes('/ext/ok/')
-        ? Promise.resolve(new Response(JSON.stringify({ title: 'OK' }), { status: 200 }))
+        ? Promise.resolve(
+            new Response(JSON.stringify({ title: 'OK' }), { status: 200 }),
+          )
         : Promise.reject(new Error('boom')),
     )
     const got = await discoverExtUis(fakeApi(['ok', 'broken']))
@@ -86,7 +96,9 @@ describe('discoverExtUis', () => {
   })
 
   it('falls back to the id when an extension reports no title', async () => {
-    withFetch(() => Promise.resolve(new Response(JSON.stringify({}), { status: 200 })))
+    withFetch(() =>
+      Promise.resolve(new Response(JSON.stringify({}), { status: 200 })),
+    )
     const got = await discoverExtUis(fakeApi(['plain']))
     expect(got[0]).toEqual({
       id: 'plain',
@@ -102,13 +114,17 @@ describe('discoverExtUis', () => {
     // platform feature, which would be a test of jsdom rather than of this code.
     if (!globalThis.localStorage) return
     globalThis.localStorage.setItem('agent.token', 'secret-token')
-    const spy = vi.fn(() => Promise.resolve(new Response('{}', { status: 200 })))
+    const spy = vi.fn(() =>
+      Promise.resolve(new Response('{}', { status: 200 })),
+    )
     withFetch(spy)
     await discoverExtUis(fakeApi(['x']))
 
     const [url, init] = spy.mock.calls[0] as unknown as [string, RequestInit]
     expect(url).not.toContain('secret-token')
-    expect((init.headers as Record<string, string>).authorization).toBe('Bearer secret-token')
+    expect((init.headers as Record<string, string>).authorization).toBe(
+      'Bearer secret-token',
+    )
   })
 
   it('returns an empty shelf when the registry itself fails', async () => {
@@ -147,7 +163,10 @@ describe('discoverExtUis', () => {
   it('drops blank description entries rather than rendering an empty slot', async () => {
     withFetch(() =>
       Promise.resolve(
-        new Response(JSON.stringify({ descriptions: { en: 'Real', zh: '   ' } }), { status: 200 }),
+        new Response(
+          JSON.stringify({ descriptions: { en: 'Real', zh: '   ' } }),
+          { status: 200 },
+        ),
       ),
     )
     const [got] = await discoverExtUis(fakeApi(['x']))

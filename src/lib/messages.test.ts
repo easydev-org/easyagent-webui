@@ -89,15 +89,22 @@ class FakeServer {
         if (self.promptErr) throw self.promptErr
         return 'accepted'
       },
-      messages: async (): Promise<[Message[], boolean]> => [[...self.chain], false],
+      messages: async (): Promise<[Message[], boolean]> => [
+        [...self.chain],
+        false,
+      ],
       messagesAfter: async (
         _id: string,
         after: string,
       ): Promise<{ messages: Message[]; resync: boolean; tipId: string }> => {
-        const tip = self.chain.length ? self.chain[self.chain.length - 1]!.id : ''
-        if (after === '') return { messages: [...self.chain], resync: false, tipId: tip }
+        const tip = self.chain.length
+          ? self.chain[self.chain.length - 1]!.id
+          : ''
+        if (after === '')
+          return { messages: [...self.chain], resync: false, tipId: tip }
         const i = self.chain.findIndex(m => m.id === after)
-        if (i < 0) return { messages: [...self.chain], resync: true, tipId: tip }
+        if (i < 0)
+          return { messages: [...self.chain], resync: true, tipId: tip }
         return { messages: self.chain.slice(i + 1), resync: false, tipId: tip }
       },
       state: async (): Promise<[string, unknown[]]> => [self.status, []],
@@ -127,10 +134,18 @@ async function flush(rounds = 6): Promise<void> {
 
 const SID = 's1'
 let eid = 0
-const ev = (event: string, params: Record<string, unknown> = {}, runId = 'r1'): StreamEvent =>
-  makeStreamEvent(event, params, `e${eid++}`, runId)
+const ev = (
+  event: string,
+  params: Record<string, unknown> = {},
+  runId = 'r1',
+): StreamEvent => makeStreamEvent(event, params, `e${eid++}`, runId)
 
-function serverMsg(id: string, role: string, prevId: string, parts: Message['parts']): Message {
+function serverMsg(
+  id: string,
+  role: string,
+  prevId: string,
+  parts: Message['parts'],
+): Message {
   return {
     id,
     role,
@@ -211,7 +226,9 @@ describe('MessagesController (server-driven state machine)', () => {
     expect(ctrl.messages).toHaveLength(0)
 
     server.setStatus('busy')
-    server.persist(serverMsg('u1', 'user', '', [{ id: 'p0', type: 'text', text: 'hi' }]))
+    server.persist(
+      serverMsg('u1', 'user', '', [{ id: 'p0', type: 'text', text: 'hi' }]),
+    )
     server.chan.push(ev('status', { type: 'busy' }))
     server.chan.push(
       ev('message-added', {
@@ -229,9 +246,15 @@ describe('MessagesController (server-driven state machine)', () => {
         streaming: true,
       }),
     )
-    server.chan.push(ev('text-start', { id: 't0', message_id: 'a1', prev_id: 'u1' }))
-    server.chan.push(ev('text-delta', { id: 't0', text: 'Hello', message_id: 'a1' }))
-    server.chan.push(ev('text-delta', { id: 't0', text: ' world', message_id: 'a1' }))
+    server.chan.push(
+      ev('text-start', { id: 't0', message_id: 'a1', prev_id: 'u1' }),
+    )
+    server.chan.push(
+      ev('text-delta', { id: 't0', text: 'Hello', message_id: 'a1' }),
+    )
+    server.chan.push(
+      ev('text-delta', { id: 't0', text: ' world', message_id: 'a1' }),
+    )
     await flush(4)
 
     // Mid-stream: exactly one user + one streaming assistant bubble.
@@ -266,7 +289,9 @@ describe('MessagesController (server-driven state machine)', () => {
       }),
     )
     await flush(3)
-    const tool = ctrl.messages.find(m => m.id === 'a1')?.parts.find(p => p.id === 'tc1')
+    const tool = ctrl.messages
+      .find(m => m.id === 'a1')
+      ?.parts.find(p => p.id === 'tc1')
     expect(tool?.type).toBe('tool')
     expect(tool?.state?.status).toBe('complete')
     expect(tool?.state?.input).toEqual({ q: 'x' })
@@ -294,7 +319,9 @@ describe('MessagesController (server-driven state machine)', () => {
   it('replay reorder: a delta arriving before message-added does not duplicate the bubble', async () => {
     const { ctrl, server } = boot()
     await flush()
-    server.chan.push(ev('text-delta', { id: 't0', text: 'Hi', message_id: 'a1', prev_id: '' }))
+    server.chan.push(
+      ev('text-delta', { id: 't0', text: 'Hi', message_id: 'a1', prev_id: '' }),
+    )
     await flush(3)
     expect(ctrl.messages.filter(m => m.id === 'a1')).toHaveLength(1)
 
@@ -325,12 +352,18 @@ describe('MessagesController (server-driven state machine)', () => {
         streaming: true,
       }),
     )
-    server.chan.push(ev('text-delta', { id: 't0', text: 'step one', message_id: 'a1' }))
+    server.chan.push(
+      ev('text-delta', { id: 't0', text: 'step one', message_id: 'a1' }),
+    )
     await flush(3)
     expect(ctrl.messages.find(m => m.id === 'a1')?.status).toBe('streaming')
 
     // Step 1 is persisted before step 2 announces itself (server discipline).
-    server.persist(serverMsg('a1', 'assistant', '', [{ id: 't0', type: 'text', text: 'step one' }]))
+    server.persist(
+      serverMsg('a1', 'assistant', '', [
+        { id: 't0', type: 'text', text: 'step one' },
+      ]),
+    )
     server.chan.push(
       ev('message-added', {
         message_id: 'a2',
@@ -343,9 +376,13 @@ describe('MessagesController (server-driven state machine)', () => {
     expect(ctrl.messages.find(m => m.id === 'a1')?.status).toBe('complete')
     expect(ctrl.messages.find(m => m.id === 'a2')?.status).toBe('streaming')
 
-    server.chan.push(ev('text-delta', { id: 't1', text: 'step two', message_id: 'a2' }))
+    server.chan.push(
+      ev('text-delta', { id: 't1', text: 'step two', message_id: 'a2' }),
+    )
     server.persist(
-      serverMsg('a2', 'assistant', 'a1', [{ id: 't1', type: 'text', text: 'step two' }]),
+      serverMsg('a2', 'assistant', 'a1', [
+        { id: 't1', type: 'text', text: 'step two' },
+      ]),
     )
     server.chan.push(ev('turn-complete', { reason: 'stop' }))
     await flush()
@@ -396,8 +433,12 @@ describe('MessagesController (server-driven state machine)', () => {
         streaming: true,
       }),
     )
-    server.chan.push(ev('text-delta', { id: 't0', text: 'Hello', message_id: 'a1' }))
-    server.chan.push(ev('reasoning-delta', { id: 'r0', text: 'think', message_id: 'a1' }))
+    server.chan.push(
+      ev('text-delta', { id: 't0', text: 'Hello', message_id: 'a1' }),
+    )
+    server.chan.push(
+      ev('reasoning-delta', { id: 'r0', text: 'think', message_id: 'a1' }),
+    )
     server.persist(
       serverMsg('a1', 'assistant', '', [
         { id: 'srv-t0', type: 'text', text: 'Hello' },
@@ -412,8 +453,12 @@ describe('MessagesController (server-driven state machine)', () => {
 
     // Reconnect: the server replays the SAME deltas with the STREAM ids. They
     // must be ignored — the persisted parts use different ids.
-    server.chan.push(ev('text-delta', { id: 't0', text: 'Hello', message_id: 'a1' }))
-    server.chan.push(ev('reasoning-delta', { id: 'r0', text: 'think', message_id: 'a1' }))
+    server.chan.push(
+      ev('text-delta', { id: 't0', text: 'Hello', message_id: 'a1' }),
+    )
+    server.chan.push(
+      ev('reasoning-delta', { id: 'r0', text: 'think', message_id: 'a1' }),
+    )
     await flush(3)
     const after = ctrl.messages.find(m => m.id === 'a1')!
     expect(after.parts).toHaveLength(2)
@@ -437,8 +482,12 @@ describe('MessagesController (server-driven state machine)', () => {
         streaming: true,
       }),
     )
-    server.chan.push(ev('text-delta', { id: 't0', text: 'a', message_id: 'a1' }))
-    server.chan.push(ev('text-delta', { id: 't0', text: 'b', message_id: 'a1' }))
+    server.chan.push(
+      ev('text-delta', { id: 't0', text: 'a', message_id: 'a1' }),
+    )
+    server.chan.push(
+      ev('text-delta', { id: 't0', text: 'b', message_id: 'a1' }),
+    )
     await flush(3)
     const m = ctrl.messages.find(x => x.id === 'a1')!
     expect(m.isLocal).toBe(true)
@@ -457,7 +506,9 @@ describe('MessagesController (server-driven state machine)', () => {
       }),
     )
     // First attempt streams partial text, then the provider drops.
-    server.chan.push(ev('text-delta', { id: 't0', text: 'onetwo-partial', message_id: 'a1' }))
+    server.chan.push(
+      ev('text-delta', { id: 't0', text: 'onetwo-partial', message_id: 'a1' }),
+    )
     await flush(2)
     expect(
       ctrl.messages
@@ -482,8 +533,12 @@ describe('MessagesController (server-driven state machine)', () => {
     expect(mid.parts).toHaveLength(0)
     expect(mid.retrying?.attempt).toBe(1)
 
-    server.chan.push(ev('text-start', { id: 't1', message_id: 'a1', prev_id: '' }))
-    server.chan.push(ev('text-delta', { id: 't1', text: 'recovered', message_id: 'a1' }))
+    server.chan.push(
+      ev('text-start', { id: 't1', message_id: 'a1', prev_id: '' }),
+    )
+    server.chan.push(
+      ev('text-delta', { id: 't1', text: 'recovered', message_id: 'a1' }),
+    )
     await flush(2)
     const m = ctrl.messages.find(x => x.id === 'a1')!
     expect(m.parts.map(p => p.text).join('')).toBe('recovered')
@@ -519,7 +574,9 @@ describe('MessagesController (server-driven state machine)', () => {
       }),
     )
     await flush(3)
-    const tool = ctrl.messages.find(m => m.id === 'a1')?.parts.find(p => p.id === 'tc9')
+    const tool = ctrl.messages
+      .find(m => m.id === 'a1')
+      ?.parts.find(p => p.id === 'tc9')
     expect(tool?.state?.status).toBe('error')
     expect(tool?.state?.error).toBe('kaput')
   })
@@ -587,14 +644,20 @@ describe('MessagesController (server-driven state machine)', () => {
         consumedAt: null,
       }) as MailboxEntry
     const { ctrl, server } = boot()
-    server.setMailbox([mb('m1', 'pending'), mb('m2', 'pending'), mb('m3', 'consumed')])
+    server.setMailbox([
+      mb('m1', 'pending'),
+      mb('m2', 'pending'),
+      mb('m3', 'consumed'),
+    ])
     await flush()
     expect(ctrl.pendingMailbox).toBe(2)
   })
 
   it('chain-changed triggers an authoritative refetch', async () => {
     const { ctrl, server } = boot()
-    server.persist(serverMsg('u1', 'user', '', [{ id: 'p0', type: 'text', text: 'old' }]))
+    server.persist(
+      serverMsg('u1', 'user', '', [{ id: 'p0', type: 'text', text: 'old' }]),
+    )
     await flush()
     expect(ctrl.messages.map(m => m.id)).toEqual(['u1'])
     server.chan.push(ev('chain-changed', {}))
@@ -609,7 +672,9 @@ describe('MessagesController (server-driven state machine)', () => {
     await flush()
     // The server has already persisted the checkpoint as a chain row.
     server.persist(
-      serverMsg('cm1', 'compaction', '', [{ id: 'p0', type: 'compaction', text: 'folded Q&A' }]),
+      serverMsg('cm1', 'compaction', '', [
+        { id: 'p0', type: 'compaction', text: 'folded Q&A' },
+      ]),
     )
     server.chan.push(ev('compacted', { reason: 'manual', ok: true }, ''))
     await flush()
@@ -637,7 +702,9 @@ describe('MessagesController (server-driven state machine)', () => {
         streaming: true,
       }),
     )
-    server.chan.push(ev('text-delta', { id: 't0', text: 'partial', message_id: 'a1' }))
+    server.chan.push(
+      ev('text-delta', { id: 't0', text: 'partial', message_id: 'a1' }),
+    )
     await flush(3)
     expect(ctrl.messages.find(m => m.id === 'a1')?.prevId).toBe('tip0')
     expect(

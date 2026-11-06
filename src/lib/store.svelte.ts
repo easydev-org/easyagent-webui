@@ -7,7 +7,11 @@ import { connection } from './connection.svelte'
 import type { LocalStore } from './db'
 import { t } from './i18n.svelte'
 import type { ChatDraft, Group, ProviderDraft, Session } from './models'
-import { draftFromProvider, FALLBACK_API_TYPE_CAPABILITIES, type ProviderInfo } from './models'
+import {
+  draftFromProvider,
+  FALLBACK_API_TYPE_CAPABILITIES,
+  type ProviderInfo,
+} from './models'
 import {
   type AppPage,
   popPage,
@@ -105,7 +109,13 @@ export class AppStore {
       try {
         for await (const ev of this.api.watchSessions()) {
           if (ac.signal.aborted) return
-          this.applySessionEvent(ev.snapshot, ev.upserts, ev.removed, ev.groups, ev.removedGroups)
+          this.applySessionEvent(
+            ev.snapshot,
+            ev.upserts,
+            ev.removed,
+            ev.groups,
+            ev.removedGroups,
+          )
         }
         this.onSessionStreamClosed()
       } catch {
@@ -143,7 +153,11 @@ export class AppStore {
    * A SNAPSHOT REPLACES. That is what makes a deletion recoverable: a client that missed the removal frame gets
    * the truth on reconnect, because the snapshot never contains a row that no longer exists.
    */
-  private applyGroupEvent(snapshot: boolean, upserts: Group[], removed: string[]) {
+  private applyGroupEvent(
+    snapshot: boolean,
+    upserts: Group[],
+    removed: string[],
+  ) {
     let next = snapshot ? [] : [...this.groups]
     for (const g of upserts) {
       // MATCHED BY ID. A rename changes the name, so a name-keyed merge would treat the renamed group as a new one
@@ -188,7 +202,9 @@ export class AppStore {
         if (i === -1) next.push(s)
         else next[i] = s
       }
-      this.setSessions(removed.length ? next.filter(s => !removed.includes(s.id)) : next)
+      this.setSessions(
+        removed.length ? next.filter(s => !removed.includes(s.id)) : next,
+      )
     }
   }
 
@@ -327,7 +343,10 @@ export class AppStore {
     void this.local?.saveDraft(sessionId, d.text, d.attachments)
   }
 
-  saveDraftAttachments(sessionId: string, attachments: ChatDraft['attachments']) {
+  saveDraftAttachments(
+    sessionId: string,
+    attachments: ChatDraft['attachments'],
+  ) {
     const d = this.draftFor(sessionId)
     d.attachments = [...attachments]
     if (!d.text.trim() && !d.attachments.length) {
@@ -396,7 +415,9 @@ export class AppStore {
 
   /** Apply a settings/fork/rename result onto the live list. */
   applySession(updated: Session) {
-    this.setSessions(this.sessions.map(s => (s.id === updated.id ? updated : s)))
+    this.setSessions(
+      this.sessions.map(s => (s.id === updated.id ? updated : s)),
+    )
     this.bumpSessionRevision()
   }
 

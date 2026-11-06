@@ -17,7 +17,12 @@ import {
   uploadIngest,
   valueToJson,
 } from './api-mappers'
-import { fireAuthExpired, isAuthError, makeStreamEvent, type StreamEvent } from './events'
+import {
+  fireAuthExpired,
+  isAuthError,
+  makeStreamEvent,
+  type StreamEvent,
+} from './events'
 import type {
   ChannelDecl,
   ChannelSubscription,
@@ -78,7 +83,8 @@ function mapConfigFields(
     kind: f.kind || 'value',
     format: f.format,
     enumValues: [...f.enumValues],
-    defaultValue: f.default == null ? null : String(valueToJson(f.default) ?? ''),
+    defaultValue:
+      f.default == null ? null : String(valueToJson(f.default) ?? ''),
     required: f.required,
     description: f.description,
     fields: mapConfigFields(f.fields as Parameters<typeof mapConfigFields>[0]),
@@ -126,7 +132,9 @@ export class AgentApi {
     })
   }
 
-  async createSession(params: Record<string, unknown>): Promise<Session & { groupId: string }> {
+  async createSession(
+    params: Record<string, unknown>,
+  ): Promise<Session & { groupId: string }> {
     // Only forward fields actually set: an empty string would be written
     // verbatim (the agent treats empty preset/model as "tenant default").
     const model = (params['model'] as string) || ''
@@ -187,7 +195,11 @@ export class AgentApi {
     return r.session ? sessionFromPb(r.session) : emptySession('')
   }
 
-  async prompt(id: string, prompt: string, attachments: string[] = []): Promise<string> {
+  async prompt(
+    id: string,
+    prompt: string,
+    attachments: string[] = [],
+  ): Promise<string> {
     // File codes MUST be forwarded as attachment refs; omitting them silently
     // drops every picked image / file / recording.
     for await (const ev of this._c.prompt({
@@ -196,7 +208,9 @@ export class AgentApi {
       attachments: attachments.map(code => ({ code })),
     })) {
       if (ev.event === 'accepted') {
-        return ((ev.params as Record<string, unknown>)['message_id'] as string) || ''
+        return (
+          ((ev.params as Record<string, unknown>)['message_id'] as string) || ''
+        )
       }
     }
     return ''
@@ -226,8 +240,12 @@ export class AgentApi {
     const bytes = src.bytes
     if (!bytes?.length) throw new Error(`attachment has no bytes: ${src.name}`)
     const req = encodeIngestRequest(bytes, src.name)
-    const out = await uploadIngest(this.baseUrl, this.token, req, onProgress, () =>
-      this._c.ingestFile({ data: bytes, name: src.name }),
+    const out = await uploadIngest(
+      this.baseUrl,
+      this.token,
+      req,
+      onProgress,
+      () => this._c.ingestFile({ data: bytes, name: src.name }),
     )
     return {
       code: out.code,
@@ -304,7 +322,11 @@ export class AgentApi {
 
   // ---- messages ----
 
-  async messages(id: string, before?: string, limit = 30): Promise<[Message[], boolean]> {
+  async messages(
+    id: string,
+    before?: string,
+    limit = 30,
+  ): Promise<[Message[], boolean]> {
     const r = await this._c.listMessages({ id, limit, before: before ?? '' })
     const msgs = r.messages.map(messageFromPb)
     return [msgs, msgs.length >= limit]
@@ -339,7 +361,10 @@ export class AgentApi {
    * itself. So the key's PRESENCE decides, not its value: a caller that never touches the picture must
    * not clear it by saving the model, and a caller that does touch it must be able to clear it.
    */
-  async settings(id: string, settings: Record<string, unknown>): Promise<Session> {
+  async settings(
+    id: string,
+    settings: Record<string, unknown>,
+  ): Promise<Session> {
     /**
      * `model` FOLLOWS THE SAME RULE AS THE PROFILE FIELDS: present-but-empty clears it.
      *
@@ -347,7 +372,10 @@ export class AgentApi {
      * a session may legitimately have none and the picker must be able to return to that. A save that omits it
      * would silently keep whatever was there, which is why the key travels even when blank.
      */
-    const model = settings['model'] === undefined ? undefined : String(settings['model'] ?? '')
+    const model =
+      settings['model'] === undefined
+        ? undefined
+        : String(settings['model'] ?? '')
     const preset = (settings['preset'] as string) || ''
     const r = await this._guard(() =>
       this._c.updateSettings({
@@ -364,7 +392,10 @@ export class AgentApi {
     return r.session ? sessionFromPb(r.session) : emptySession('')
   }
 
-  async fork(id: string, branch: string): Promise<Session & { groupId: string }> {
+  async fork(
+    id: string,
+    branch: string,
+  ): Promise<Session & { groupId: string }> {
     const r = await this._guard(() => this._c.fork({ id, name: branch }))
     const session = r.session ? sessionFromPb(r.session) : emptySession('')
     // THE FORK'S OWN ROOM, created server-side for the same reason a new session's is.
@@ -491,7 +522,9 @@ export class AgentApi {
     pattern: string,
     wake: boolean,
   ): Promise<ChannelSubscription> {
-    const r = await this._guard(() => this._c.subscribeChannel({ id, channel, pattern, wake }))
+    const r = await this._guard(() =>
+      this._c.subscribeChannel({ id, channel, pattern, wake }),
+    )
     const s = r.subscription
     return {
       id: s?.id ?? '',
@@ -539,7 +572,10 @@ export class AgentApi {
   async state(id: string): Promise<[string, unknown[]]> {
     const r = await this._c.state({ id })
     const st = (r.state ?? {}) as Record<string, unknown>
-    return [(st['status'] as string) || 'idle', (st['parts'] as unknown[]) || []]
+    return [
+      (st['status'] as string) || 'idle',
+      (st['parts'] as unknown[]) || [],
+    ]
   }
 
   /** One page of the mailbox, newest-first. `before` is the id of the oldest
@@ -625,7 +661,11 @@ export class AgentApi {
 
   // ---- config / providers / models / presets / tools ----
 
-  async setToolConfigValue(extId: string, name: string, value: unknown): Promise<void> {
+  async setToolConfigValue(
+    extId: string,
+    name: string,
+    value: unknown,
+  ): Promise<void> {
     await this._c.setExtensionConfig({
       extId,
       name,
@@ -760,7 +800,9 @@ export class AgentApi {
   // ---- groups ----
 
   async groups(session?: string): Promise<Group[]> {
-    const r = await this._guard(() => this._c.listGroups({ session: session ?? '' }))
+    const r = await this._guard(() =>
+      this._c.listGroups({ session: session ?? '' }),
+    )
     return r.groups.map(groupFromPb)
   }
 
@@ -825,7 +867,9 @@ export class AgentApi {
    * until it is addressed, which is what a group is for.
    */
   async addGroupMembers(groupId: string, members: string[]): Promise<void> {
-    await this._guard(() => this._c.addGroupMember({ groupId, members, addedBy: 'user' }))
+    await this._guard(() =>
+      this._c.addGroupMember({ groupId, members, addedBy: 'user' }),
+    )
   }
 
   /**
@@ -834,8 +878,13 @@ export class AgentApi {
    * THE COORDINATOR CANNOT BE REMOVED — the server refuses, because a group with no coordinator routes its
    * messages to nobody. Moving the role first (`setGroupCoordinator`) is the way to hand a group over.
    */
-  async removeGroupMember(groupId: string, member: string): Promise<GroupMember[]> {
-    const r = await this._guard(() => this._c.removeGroupMember({ groupId, member }))
+  async removeGroupMember(
+    groupId: string,
+    member: string,
+  ): Promise<GroupMember[]> {
+    const r = await this._guard(() =>
+      this._c.removeGroupMember({ groupId, member }),
+    )
     return r.members.map(m => ({
       session: m.session,
       role: m.role as GroupMember['role'],
@@ -845,8 +894,13 @@ export class AgentApi {
     }))
   }
 
-  async group(id: string, session?: string): Promise<{ group: Group; members: GroupMember[] }> {
-    const r = await this._guard(() => this._c.getGroup({ id, session: session ?? '' }))
+  async group(
+    id: string,
+    session?: string,
+  ): Promise<{ group: Group; members: GroupMember[] }> {
+    const r = await this._guard(() =>
+      this._c.getGroup({ id, session: session ?? '' }),
+    )
     const g = r.group!
     return {
       group: groupFromPb(g),
@@ -914,18 +968,25 @@ export class AgentApi {
   }
 
   /** Stream a group's transcript: retained messages after `sinceSeq`, then live. */
-  async *watchGroup(groupId: string, sinceSeq = 0, session = ''): AsyncGenerator<GroupMessage> {
+  async *watchGroup(
+    groupId: string,
+    sinceSeq = 0,
+    session = '',
+  ): AsyncGenerator<GroupMessage> {
     for await (const frame of this._c.watchGroup({
       groupId,
       sinceSeq: BigInt(sinceSeq),
       session,
     })) {
-      if (frame.event === 'message' && frame.message) yield groupMessageFromPb(frame.message)
+      if (frame.event === 'message' && frame.message)
+        yield groupMessageFromPb(frame.message)
     }
   }
 
   async presets(locale?: string): Promise<Preset[]> {
-    const r = await this._guard(() => this._c.listPresets({ locale: locale ?? '' }))
+    const r = await this._guard(() =>
+      this._c.listPresets({ locale: locale ?? '' }),
+    )
     return r.presets.map(p => ({
       id: p.id,
       systemPrompt: p.systemPrompt,
@@ -952,28 +1013,34 @@ export class AgentApi {
   }
 
   async tools(locale?: string): Promise<ToolInfo[]> {
-    const r = await this._guard(() => this._c.listTools({ locale: locale ?? '' }))
+    const r = await this._guard(() =>
+      this._c.listTools({ locale: locale ?? '' }),
+    )
     return r.tools.map(t => ({
       name: t.name,
       description: t.description,
       category: t.category,
       parameters: (t.parameters ?? null) as Record<string, unknown> | null,
-      configFields: t.configFields.map((c): ToolConfigField => ({
-        key: c.name,
-        label: c.description || c.name,
-        type: c.type,
-        placeholder: '',
-      })),
-      config: t.configFields.map((c): ToolConfig => ({
-        name: c.name,
-        type: c.type,
-        kind: c.kind || 'value',
-        capability: c.capability,
-        enumValues: [...c.enumValues],
-        defaultValue: c.default ? valueToJson(c.default) : null,
-        description: c.description,
-        scope: c.scope,
-      })),
+      configFields: t.configFields.map(
+        (c): ToolConfigField => ({
+          key: c.name,
+          label: c.description || c.name,
+          type: c.type,
+          placeholder: '',
+        }),
+      ),
+      config: t.configFields.map(
+        (c): ToolConfig => ({
+          name: c.name,
+          type: c.type,
+          kind: c.kind || 'value',
+          capability: c.capability,
+          enumValues: [...c.enumValues],
+          defaultValue: c.default ? valueToJson(c.default) : null,
+          description: c.description,
+          scope: c.scope,
+        }),
+      ),
       requiredConfig: [...t.requiredConfig],
       effect: (t.effect || 'none') as ToolEffect,
     }))
@@ -1045,7 +1112,8 @@ export class AgentApi {
   }> {
     const r = await this._c.getExtensionConfig({ extId })
     const values: Record<string, unknown> = {}
-    for (const [k, v] of Object.entries(r.values ?? {})) values[k] = valueToJson(v)
+    for (const [k, v] of Object.entries(r.values ?? {}))
+      values[k] = valueToJson(v)
     // A secret knob's value is NEVER returned by the server; `secretSet` names
     // the ones that are set (the UI renders "set / not set" + a write-only
     // field, never the credential).

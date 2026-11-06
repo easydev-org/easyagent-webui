@@ -16,7 +16,11 @@ export interface ToolResultExtra {
 }
 
 /** Add an empty text/reasoning part if absent (idempotent by id). */
-export function ensurePartIn(parts: ChatPart[], partId: string, type: string): ChatPart[] {
+export function ensurePartIn(
+  parts: ChatPart[],
+  partId: string,
+  type: string,
+): ChatPart[] {
   return parts.some(p => p.id === partId)
     ? parts
     : [...parts, { id: partId, type, text: '', tool: '' }]
@@ -45,14 +49,22 @@ export function appendDeltaTo(
 }
 
 /** Create the tool part as soon as argument streaming begins (idempotent). */
-export function startToolPartIn(parts: ChatPart[], partId: string, name: string): ChatPart[] {
+export function startToolPartIn(
+  parts: ChatPart[],
+  partId: string,
+  name: string,
+): ChatPart[] {
   if (parts.some(p => p.id === partId)) return parts
   const state: ToolState = { status: 'running', title: name, inputText: '' }
   return [...parts, { id: partId, type: 'tool', text: '', tool: name, state }]
 }
 
 /** Accumulate streamed tool-argument JSON for the live preview. */
-export function appendToolInputTo(parts: ChatPart[], partId: string, delta: string): ChatPart[] {
+export function appendToolInputTo(
+  parts: ChatPart[],
+  partId: string,
+  delta: string,
+): ChatPart[] {
   return parts.map(p => {
     if (p.id !== partId) return p
     const old: ToolState = p.state ?? { status: '', title: '' }
@@ -99,7 +111,12 @@ export function applyToolResultTo(
   return parts.map(p => {
     if (p.id !== partId) return p
     const old = p.state ?? { status: '', title: '' }
-    const output = typeof result === 'string' ? result : result == null ? null : pretty(result)
+    const output =
+      typeof result === 'string'
+        ? result
+        : result == null
+          ? null
+          : pretty(result)
     return {
       ...p,
       state: {
@@ -195,10 +212,13 @@ export function applyToolOutputTo(
     // like a real tool called "tool" and is indistinguishable from a rendering bug. Logging the id
     // and the parts already present is the difference between "the tool-call never arrived" and
     // "it arrived under a different id" — and those need opposite fixes.
-    console.warn('[tool-output] no card for this call; creating a placeholder', {
-      partId,
-      presentIds: next.filter(p => p.type === 'tool').map(p => p.id),
-    })
+    console.warn(
+      '[tool-output] no card for this call; creating a placeholder',
+      {
+        partId,
+        presentIds: next.filter(p => p.type === 'tool').map(p => p.id),
+      },
+    )
 
     // BEFORE creating an orphan, adopt the one card that is waiting for exactly this.
     //
@@ -226,10 +246,13 @@ export function applyToolOutputTo(
           toolState: upd.state ?? null,
         },
       }
-      console.warn('[tool-output] adopted a waiting card instead of creating a placeholder', {
-        partId,
-        adopted: w.id,
-      })
+      console.warn(
+        '[tool-output] adopted a waiting card instead of creating a placeholder',
+        {
+          partId,
+          adopted: w.id,
+        },
+      )
       return next
     }
 

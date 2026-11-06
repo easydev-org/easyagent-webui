@@ -16,7 +16,11 @@ export interface LocalStore {
   upsertSessions(sessions: Session[]): Promise<void>
   loadSessions(): Promise<Session[]>
   removeSession(id: string): Promise<void>
-  saveDraft(sessionId: string, text: string, attachments: UploadedFile[]): Promise<void>
+  saveDraft(
+    sessionId: string,
+    text: string,
+    attachments: UploadedFile[],
+  ): Promise<void>
   loadDrafts(): Promise<Record<string, ChatDraft>>
   loadReadSeqs(): Promise<Record<string, number>>
   setReadSeq(sessionId: string, seq: number): Promise<void>
@@ -47,7 +51,9 @@ class WorkerLocalStore implements LocalStore {
       }
       worker.addEventListener('message', onReady)
     })
-    worker.addEventListener('message', ev => this.onMessage(ev as MessageEvent<WorkerReply>))
+    worker.addEventListener('message', ev =>
+      this.onMessage(ev as MessageEvent<WorkerReply>),
+    )
   }
 
   private onMessage(ev: MessageEvent<WorkerReply>): void {
@@ -82,11 +88,14 @@ class WorkerLocalStore implements LocalStore {
   upsertSessions = (s: Session[]) =>
     this.call('upsertSessions', [s]).then(() => {}) as Promise<void>
   loadSessions = () => this.call('loadSessions', []) as Promise<Session[]>
-  removeSession = (id: string) => this.call('removeSession', [id]).then(() => {}) as Promise<void>
+  removeSession = (id: string) =>
+    this.call('removeSession', [id]).then(() => {}) as Promise<void>
   saveDraft = (sid: string, text: string, atts: UploadedFile[]) =>
     this.call('saveDraft', [sid, text, atts]).then(() => {}) as Promise<void>
-  loadDrafts = () => this.call('loadDrafts', []) as Promise<Record<string, ChatDraft>>
-  loadReadSeqs = () => this.call('loadReadSeqs', []) as Promise<Record<string, number>>
+  loadDrafts = () =>
+    this.call('loadDrafts', []) as Promise<Record<string, ChatDraft>>
+  loadReadSeqs = () =>
+    this.call('loadReadSeqs', []) as Promise<Record<string, number>>
   setReadSeq = (sid: string, seq: number) =>
     this.call('setReadSeq', [sid, seq]).then(() => {}) as Promise<void>
 }

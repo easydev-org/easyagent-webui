@@ -35,7 +35,10 @@ export function buildModelOptions(
 }
 
 /** Reasoning variants advertised by the selected model ([] when unmatched). */
-export function variantsFor(allModels: ModelInfo[], selectedRef: string): ModelVariantInfo[] {
+export function variantsFor(
+  allModels: ModelInfo[],
+  selectedRef: string,
+): ModelVariantInfo[] {
   const sel = allModels.filter(m => modelRefOf(m) === selectedRef)
   return sel.length ? sel[0]!.variants : []
 }

@@ -118,7 +118,9 @@ export class LocalStore {
   }
 
   async loadSessions(): Promise<Session[]> {
-    const rows = this.all(`SELECT * FROM local_sessions ORDER BY updated_at DESC, id`)
+    const rows = this.all(
+      `SELECT * FROM local_sessions ORDER BY updated_at DESC, id`,
+    )
     return rows.map(r => ({
       id: String(r['id'] ?? ''),
       name: String(r['name'] ?? ''),
@@ -149,7 +151,11 @@ export class LocalStore {
 
   // ---- drafts ----
 
-  async saveDraft(sessionId: string, text: string, attachments: UploadedFile[]): Promise<void> {
+  async saveDraft(
+    sessionId: string,
+    text: string,
+    attachments: UploadedFile[],
+  ): Promise<void> {
     if (!text.trim() && !attachments.length) {
       this.run('DELETE FROM local_drafts WHERE session_id = ?', [sessionId])
       return
@@ -167,7 +173,10 @@ export class LocalStore {
     const rows = this.all('SELECT * FROM local_drafts')
     const out: Record<string, ChatDraft> = {}
     for (const r of rows) {
-      const arr = JSON.parse(String(r['attachments_json'] || '[]')) as Record<string, unknown>[]
+      const arr = JSON.parse(String(r['attachments_json'] || '[]')) as Record<
+        string,
+        unknown
+      >[]
       out[String(r['session_id'])] = {
         text: String(r['draft_text']),
         attachments: arr.map(fileFromJson),

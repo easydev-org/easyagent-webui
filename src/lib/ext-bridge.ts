@@ -59,11 +59,14 @@ export function serveBridge(
       // Say so rather than dropping it: a frame whose source does not match is indistinguishable
       // from a frame that never asked, and both look like "the panel loaded but shows nothing".
       if (data.type === BRIDGE_REQUEST) {
-        console.warn('[ext-bridge] REJECTED a request from an unrecognised frame', {
-          type: data.type,
-          origin: ev.origin,
-          sameAsTop: ev.source === window,
-        })
+        console.warn(
+          '[ext-bridge] REJECTED a request from an unrecognised frame',
+          {
+            type: data.type,
+            origin: ev.origin,
+            sameAsTop: ev.source === window,
+          },
+        )
       }
       return
     }
@@ -87,12 +90,22 @@ export function serveBridge(
     void handle(ev.source as Window, ext, data.id, data.path)
   }
 
-  async function handle(win: Window, ext: string, id: string, path: string): Promise<void> {
-    const reply = (r: Omit<BridgeResponse, 'id'>): void => post(win, { ...r, id })
+  async function handle(
+    win: Window,
+    ext: string,
+    id: string,
+    path: string,
+  ): Promise<void> {
+    const reply = (r: Omit<BridgeResponse, 'id'>): void =>
+      post(win, { ...r, id })
 
     // Only a path, never a URL: an absolute URL would let a frame request another origin with this
     // app's credential. `..` is refused for the same reason — it could climb out of the ext prefix.
-    if (path.startsWith('/') || path.startsWith('http') || path.includes('..')) {
+    if (
+      path.startsWith('/') ||
+      path.startsWith('http') ||
+      path.includes('..')
+    ) {
       reply({
         ok: false,
         status: 400,

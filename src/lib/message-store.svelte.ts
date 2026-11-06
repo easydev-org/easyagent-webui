@@ -89,7 +89,10 @@ export class MessageStore {
       this.deltaTimer = null
     }
     if (this.deltaBuf.size === 0) return
-    const byMsg = new Map<string, { partId: string; text: string; reasoning: boolean }[]>()
+    const byMsg = new Map<
+      string,
+      { partId: string; text: string; reasoning: boolean }[]
+    >()
     for (const v of this.deltaBuf.values()) {
       const list = byMsg.get(v.msgId) ?? []
       list.push({ partId: v.partId, text: v.text, reasoning: v.reasoning })
@@ -140,7 +143,8 @@ export class MessageStore {
   private bumpSeqAfter(history: ChatMessage[]) {
     let maxSeq = -1
     for (const m of history) {
-      if (m.seq != null && m.seq < this.nextSeq && m.seq > maxSeq) maxSeq = m.seq
+      if (m.seq != null && m.seq < this.nextSeq && m.seq > maxSeq)
+        maxSeq = m.seq
     }
     if (maxSeq >= 0) this.nextSeq = maxSeq + 1
   }
@@ -161,14 +165,16 @@ export class MessageStore {
     // Preserve: local error bubbles, and the LIVE streamed bubble (the server
     // copy of a step only lands AFTER its stream ends; until then the local
     // streaming row is the only copy and must survive the merge).
-    const streaming = this.messages.find(m => m.isLocal && m.id === this.streamingId) ?? null
+    const streaming =
+      this.messages.find(m => m.isLocal && m.id === this.streamingId) ?? null
     const byId = new Map<string, ChatMessage>()
     for (const m of this.messages) {
       if (m.isLocal) continue
       byId.set(m.id, m)
     }
     for (const m of chat) byId.set(m.id, m)
-    if (streaming !== null && !byId.has(streaming.id)) byId.set(streaming.id, streaming)
+    if (streaming !== null && !byId.has(streaming.id))
+      byId.set(streaming.id, streaming)
     for (const m of this.localErrors) byId.set(`err:${m.id}`, m)
     // Once the server holds the live step's id, the stream is over and the
     // server row supersedes our local copy (drop the flag).
@@ -197,11 +203,14 @@ export class MessageStore {
     const existing = this.messages.find(m => m.id === id)
     if (existing) {
       if (!existing.isLocal) return null // persisted step: replay duplicate
-      const reanchor = prevId != null && prevId !== '' && prevId !== existing.prevId
+      const reanchor =
+        prevId != null && prevId !== '' && prevId !== existing.prevId
       if (existing.status === 'streaming') {
         if (reanchor) {
           this.messages = this.messages.map(m =>
-            m.id === id ? { ...m, prevId, parts: [], status: 'streaming' as const } : m,
+            m.id === id
+              ? { ...m, prevId, parts: [], status: 'streaming' as const }
+              : m,
           )
           this.notify()
         }
@@ -239,7 +248,12 @@ export class MessageStore {
 
   /** Create a minimal server-authored bubble (used for a user message whose
    *  full body is fetched by the following `reconcile`). */
-  upsertServerMessage(id: string, prevId: string, role: string, source = ''): void {
+  upsertServerMessage(
+    id: string,
+    prevId: string,
+    role: string,
+    source = '',
+  ): void {
     if (this.messages.some(m => m.id === id)) return
     this.messages = [
       ...this.messages,
@@ -275,7 +289,9 @@ export class MessageStore {
   finishStreaming() {
     this.flushDeltas()
     this.messages = this.messages.map(m =>
-      m.status === 'streaming' ? { ...m, status: 'complete' as const, retrying: undefined } : m,
+      m.status === 'streaming'
+        ? { ...m, status: 'complete' as const, retrying: undefined }
+        : m,
     )
     this.streamingId = null
     this.sending = false
@@ -300,7 +316,12 @@ export class MessageStore {
     }))
   }
 
-  appendDelta(msgId: string, partId: string, delta: string, reasoning: boolean) {
+  appendDelta(
+    msgId: string,
+    partId: string,
+    delta: string,
+    reasoning: boolean,
+  ) {
     // Buffer; flushDeltas() applies it on the next animation frame (see above).
     const key = `${msgId}\u0000${partId}`
     const cur = this.deltaBuf.get(key)
@@ -354,7 +375,11 @@ export class MessageStore {
     }))
   }
 
-  updateToolResult(partId: string, result: unknown, extra: ToolResultExtra = {}) {
+  updateToolResult(
+    partId: string,
+    result: unknown,
+    extra: ToolResultExtra = {},
+  ) {
     const sid = this.streamingId
     if (!sid) return
     this.setMsg(sid, m => ({
@@ -378,7 +403,11 @@ export class MessageStore {
    * snapshots (the AI SDK's `preliminary` convention), so the latest frame is the
    * whole truth and a repeated one is idempotent.
    */
-  applyToolOutput(msgId: string | undefined, partId: string, upd: ToolOutputUpdate) {
+  applyToolOutput(
+    msgId: string | undefined,
+    partId: string,
+    upd: ToolOutputUpdate,
+  ) {
     const sid = msgId || this.streamingId
     if (!sid) return
     const apply = (parts: ChatPart[]) => applyToolOutputTo(parts, partId, upd)

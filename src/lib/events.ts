@@ -38,7 +38,9 @@ export type AuthExpiredReason = 'expired' | 'addedUser'
 let onAuthExpired: ((reason: AuthExpiredReason) => void) | null = null
 
 /** Global auth-expiry hook (mirrors flutter api.dart's onAuthExpired). */
-export function setAuthExpiredHandler(cb: ((reason: AuthExpiredReason) => void) | null) {
+export function setAuthExpiredHandler(
+  cb: ((reason: AuthExpiredReason) => void) | null,
+) {
   onAuthExpired = cb
 }
 

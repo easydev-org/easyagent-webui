@@ -33,12 +33,12 @@ describe('sessionRecency', () => {
   })
 
   it('falls back to updatedAt, then createdAt', () => {
-    expect(sessionRecency(s({ id: 'a', updatedAt: '2026-01-03T00:00:00Z' }))).toBe(
-      Date.parse('2026-01-03T00:00:00Z'),
-    )
-    expect(sessionRecency(s({ id: 'a', createdAt: '2026-01-04T00:00:00Z' }))).toBe(
-      Date.parse('2026-01-04T00:00:00Z'),
-    )
+    expect(
+      sessionRecency(s({ id: 'a', updatedAt: '2026-01-03T00:00:00Z' })),
+    ).toBe(Date.parse('2026-01-03T00:00:00Z'))
+    expect(
+      sessionRecency(s({ id: 'a', createdAt: '2026-01-04T00:00:00Z' })),
+    ).toBe(Date.parse('2026-01-04T00:00:00Z'))
   })
 
   it('is 0 for an unparseable/empty timestamp', () => {

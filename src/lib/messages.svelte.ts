@@ -145,7 +145,9 @@ export class MessagesController {
       // Newest page only: pending entries are the most recent, so the badge
       // reads correctly without paging the whole queue.
       const { entries } = await this.api.mailbox(sid)
-      this.store.pendingMailbox = entries.filter(e => e.status !== 'consumed').length
+      this.store.pendingMailbox = entries.filter(
+        e => e.status !== 'consumed',
+      ).length
     } catch {
       /* keep the previous count */
     }
@@ -190,7 +192,8 @@ export class MessagesController {
     // its deltas, so no client-invented placeholder is needed here.
     try {
       const [status] = await this.api.state(this.getSessionId())
-      this.store.runtimeStatus = status === 'busy' || status === 'running' ? 'busy' : 'idle'
+      this.store.runtimeStatus =
+        status === 'busy' || status === 'running' ? 'busy' : 'idle'
       if (this.store.runtimeStatus === 'busy') {
         this.store.sending = true
         this.store.notify()
@@ -260,7 +263,9 @@ export class MessagesController {
   }
 
   stop() {
-    void this.api.interrupt(this.getSessionId()).then(() => this.finishStreaming())
+    void this.api
+      .interrupt(this.getSessionId())
+      .then(() => this.finishStreaming())
   }
 
   async revert(messageId: string) {
