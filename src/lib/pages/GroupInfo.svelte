@@ -49,6 +49,19 @@
   const coordinator = $derived(members.find(m => m.role === 'coordinator')?.session ?? '')
 
   /**
+   * statusOf prefers the LIVE row the session list stream keeps current, and falls back to the snapshot that came
+   * with the member list.
+   *
+   * THE SNAPSHOT ALONE FREEZES. A member list is fetched when this page opens, so a dot read only from it would show
+   * whatever was true at that moment and never change — the opposite of what a status indicator is for. The list
+   * stream already carries every session's status (it is a `status` event, and the row is re-read), so this asks the
+   * store rather than opening a second subscription for a decoration on an avatar.
+   */
+  function statusOf(session: string): string | undefined {
+    return store.sessionById(session)?.status ?? members.find(x => x.session === session)?.status
+  }
+
+  /**
    * A member's display name and intro come from the STORE, not from the membership row.
    *
    * The row records who joined and when; the session row is what carries the label and the one-line
@@ -344,7 +357,7 @@
                        comes from the shared run lease — so it is right from any replica, not just the one that
                        happens to be running the turn. -->
                   <span class="absolute -top-0.5 -right-0.5">
-                    <StatusDot status={m.status} />
+                    <StatusDot status={statusOf(m.session)} />
                   </span>
                 </span>
               </button>

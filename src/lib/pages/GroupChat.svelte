@@ -144,14 +144,18 @@
   const coordinator = $derived(members.find(m => m.role === 'coordinator')?.session ?? '')
 
   /**
-   * statusOf answers "is this member working" from the member list the page already holds.
+   * statusOf answers "is this member working" — LIVE, from the session list the store already watches.
    *
-   * THE STATUS COMES WITH THE MEMBERS, not from a per-message call: a transcript of fifty messages from four
-   * sessions would otherwise be fifty status lookups for four answers. It is refreshed with the member list, which
-   * the page reloads — a live push would be a subscription per group for a decoration on an avatar.
+   * THE LIST STREAM ALREADY CARRIES THIS. `WatchSessions` pushes a row on every `status` event, and the row is read
+   * with `statusOf` on the server — so the store's `sessions` array holds each session's current lease state and
+   * updates it as turns start and end, on whichever replica is running them.
+   *
+   * THE MEMBER LIST'S OWN `status` IS THE SNAPSHOT FALLBACK, for a session this client's list does not have (a group
+   * member that is not in the visible list). Preferring the live row is the whole point: a member list fetched once
+   * would freeze every dot at whatever was true when the page opened, which is exactly the problem this fixes.
    */
   function statusOf(session: string): string | undefined {
-    return members.find(x => x.session === session)?.status
+    return store.sessionById(session)?.status ?? members.find(x => x.session === session)?.status
   }
 
   /** A member's display name, falling back to the id when the session cannot be resolved. */
