@@ -825,6 +825,65 @@ export class AgentApi {
     return groupFromPb(r.group!)
   }
 
+  /**
+   * deleteGroup removes a group, its transcript, and every member's subscription.
+   *
+   * THE SERVER DOES THE CLEANUP IN ORDER — unsubscribe, then rows, then transcript — so a partial failure leaves
+   * a group that still routes rather than one the console says is gone while members keep receiving messages.
+   * The console only has to refresh its list.
+   */
+  async deleteGroup(name: string): Promise<void> {
+    await this._guard(() => this._c.deleteGroup({ name }))
+  }
+
+  /**
+   * addGroupMembers enrolls sessions as plain members.
+   *
+   * NOT COORDINATORS: the coordinator is where traffic arrives, and there is exactly one. A new member listens
+   * until it is addressed, which is what a group is for.
+   */
+  async addGroupMembers(group: string, members: string[]): Promise<void> {
+    await this._guard(() =>
+      this._c.addGroupMember({ group, members, addedBy: 'user' }),
+    )
+  }
+
+  /**
+   * removeGroupMember drops one member.
+   *
+   * THE COORDINATOR CANNOT BE REMOVED — the server refuses, because a group with no coordinator routes its
+   * messages to nobody. Moving the role first (`setGroupCoordinator`) is the way to hand a group over.
+   */
+  async removeGroupMember(
+    group: string,
+    member: string,
+  ): Promise<GroupMember[]> {
+    const r = await this._guard(() =>
+      this._c.removeGroupMember({ group, member }),
+    )
+    return r.members.map(m => ({
+      session: m.session,
+      role: m.role as GroupMember['role'],
+      joinedAt: m.joinedAt,
+      joinedBy: m.joinedBy,
+    }))
+  }
+
+  /**
+   * coordinatorOf returns a group's coordinator session id.
+   *
+   * THE GROUP ROW DOES NOT CARRY IT. Membership is a separate table with roles, so this is a `GetGroup` per group —
+   * which is why the caller must want it for a reason. The one caller does: the create-group form has to exclude
+   * sessions that already coordinate somewhere, and one-coordinator-per-session is a server rule the form should
+   * not offer a way to break.
+   */
+  async coordinatorOf(group: string): Promise<string> {
+    const r = await this._guard(() =>
+      this._c.getGroup({ name: group, session: '' }),
+    )
+    return r.members.find(m => m.role === 'coordinator')?.session ?? ''
+  }
+
   async group(
     name: string,
     session?: string,

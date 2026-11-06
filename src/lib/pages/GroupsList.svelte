@@ -39,8 +39,32 @@
    * another group is shown as unavailable rather than hidden: hiding it would make the user wonder where
    * their session went.
    */
+  /**
+   * SESSIONS THAT COULD COORDINATE A NEW GROUP: every session, MINUS the ones already coordinating another.
+   *
+   * ONE COORDINATORSHIP PER SESSION, and the server enforces it. The form excludes them rather than letting the
+   * choice fail, because a picker that offers a guaranteed rejection is a picker that teaches the user nothing
+   * except to distrust it.
+   *
+   * THE EXCLUSION IS LOADED, NOT GUESSED: `Group` carries no coordinator, so this reads each group's members. It
+   * runs when the FORM OPENS (not on every render), and a failure leaves the list unfiltered — the server still
+   * refuses, and an empty picker would look like "there are no sessions".
+   */
+  let takenCoordinators = $state<Set<string>>(new Set())
+
+  async function loadTakenCoordinators() {
+    try {
+      const names = await store.api.groups()
+      const ids = await Promise.all(names.map(g => store.api.coordinatorOf(g.name)))
+      takenCoordinators = new Set(ids.filter(Boolean))
+    } catch {
+      /* unfiltered: the server refuses anyway, and hiding every candidate would be a worse lie */
+    }
+  }
+
   const candidates = $derived(
     store.sessions
+      .filter(s => !takenCoordinators.has(s.id))
       .map(s => ({ value: s.id, label: sessionName(s) }))
       .sort((a, b) => a.label.localeCompare(b.label)),
   )
@@ -97,7 +121,10 @@
       class="ml-auto rounded p-1.5 text-primary hover:bg-muted"
       title={t('groupNew')}
       aria-label={t('groupNew')}
-      onclick={() => (creating = true)}
+      onclick={() => {
+        void loadTakenCoordinators()
+        creating = true
+      }}
     >
       <AppIcons.add class="size-[18px]" />
     </button>
@@ -113,7 +140,10 @@
         <button
           type="button"
           class="rounded-md bg-primary px-4 py-1.5 text-sm text-primary-foreground hover:bg-primary/80"
-          onclick={() => (creating = true)}>{t('groupNew')}</button
+          onclick={() => {
+            void loadTakenCoordinators()
+            creating = true
+          }}>{t('groupNew')}</button
         >
       </div>
     {:else}

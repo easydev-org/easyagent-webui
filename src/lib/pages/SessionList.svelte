@@ -19,6 +19,8 @@
   import EmptyState from '$lib/components/layout/EmptyState.svelte'
   import ReconnectBanner from '$lib/components/ReconnectBanner.svelte'
   import { AppIcons } from '$lib/icons'
+  import { rowLongPress } from '$lib/row-menu'
+  import { cn } from '$lib/utils'
   import { now } from '$lib/clock.svelte'
   import ChatAvatar from '$lib/components/ChatAvatar.svelte'
 
@@ -158,6 +160,15 @@
   let rowMenu = $state<{ sid: string; anchor: MenuAnchor } | null>(null)
 
   /**
+   * A GROUP ROW'S OWN MENU, kept separate from a session's.
+   *
+   * THE TWO ROWS ACT ON DIFFERENT THINGS: a session row forks and deletes a session; a group row opens its
+   * transcript, its card, and deletes the group. Sharing one menu state would have forced every item to check
+   * which kind of row it came from, and the first item added in the wrong branch would act on the wrong object.
+   */
+  let groupMenu = $state<{ name: string; anchor: MenuAnchor } | null>(null)
+
+  /**
    * Open a session's PROFILE from its picture in the list.
    *
    * THE SESSION BECOMES ACTIVE FIRST. The profile page reads the active session, so opening a profile
@@ -182,6 +193,54 @@
     items.push({ value: 'delete', label: t('deleteSession'), destructive: true })
     return items
   })
+
+  const groupMenuItems = $derived.by(() => {
+    if (!groupMenu) return []
+    const items: ContextMenuItem[] = [
+      { value: 'open', label: t('openChat') },
+      { value: 'info', label: t('groupInfo') },
+    ]
+    // THE LIST'S MENU OFFERS DELETION because that is where a reader tidies up; the group's own card does not,
+    // since a destructive action does not belong next to "Save".
+    items.push({ value: 'delete', label: t('groupDelete'), destructive: true })
+    return items
+  })
+
+  async function onGroupMenuPick(value: string) {
+    const name = groupMenu?.name
+    groupMenu = null
+    if (!name) return
+    if (value === 'open') {
+      store.pushPage({ kind: 'group_chat', key: 'group_chat', id: name })
+    } else if (value === 'info') {
+      store.pushPage({ kind: 'group_info', key: 'group_info', id: name })
+    } else if (value === 'delete') {
+      await deleteGroupFlow(name)
+    }
+  }
+
+  /**
+   * deleteGroupFlow confirms, then deletes.
+   *
+   * THE BODY SAYS WHAT GOES WITH IT — the transcript — because a deletion a reader did not expect to lose the
+   * conversation is the kind of surprise that makes them distrust the next one.
+   */
+  async function deleteGroupFlow(name: string) {
+    const ok = await confirmDialog({
+      title: t('groupDelete'),
+      body: t('groupDeleteBody', { arg1: name }),
+      confirmLabel: t('delete'),
+      destructive: true,
+    })
+    if (!ok) return
+    try {
+      await store.api.deleteGroup(name)
+      await store.refreshGroups()
+      showToast(t('groupDeleted'))
+    } catch (e) {
+      showErrorToast(String(e))
+    }
+  }
 
   async function onRowMenuPick(value: string) {
     const sid = rowMenu?.sid
@@ -307,10 +366,22 @@
 
                THE MEMBER COUNT IS STILL HERE, moved beside the name where a chat puts nothing: it is a fact
                about the group rather than the thing a reader is looking for. -->
+          {@const groupHandlers = rowLongPress(
+            anchor => (groupMenu = { name: g.name, anchor }),
+            !selectMode,
+          )}
           <button
             type="button"
-            class="flex w-full items-center gap-3 rounded-md px-2 py-2 text-left hover:bg-muted/50"
+            class={cn(
+              'flex w-full items-center gap-3 rounded-md px-2 py-2 text-left select-none [-webkit-touch-callout:none]',
+              groupMenu?.name === g.name ? 'bg-muted' : 'hover:bg-muted/50',
+            )}
             onclick={() => store.pushPage({ kind: 'group_chat', key: 'group_chat', id: g.name })}
+            oncontextmenu={groupHandlers.oncontextmenu}
+            ontouchstart={groupHandlers.ontouchstart}
+            ontouchmove={groupHandlers.ontouchmove}
+            ontouchend={groupHandlers.ontouchend}
+            ontouchcancel={groupHandlers.ontouchcancel}
           >
             <ChatAvatar
               seed={g.name}
@@ -377,6 +448,17 @@
       items={rowMenuItems}
       onPick={v => void onRowMenuPick(v)}
       onClose={() => (rowMenu = null)}
+    />
+  {/if}
+
+  <!-- ONE MENU AT A TIME: opening a group's menu closes a session's, because two floating menus over the same list
+       is a state the reader never asked for. -->
+  {#if groupMenu}
+    <ContextMenu
+      anchor={groupMenu.anchor}
+      items={groupMenuItems}
+      onPick={v => void onGroupMenuPick(v)}
+      onClose={() => (groupMenu = null)}
     />
   {/if}
 

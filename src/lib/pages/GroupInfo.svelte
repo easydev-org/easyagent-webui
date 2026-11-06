@@ -17,6 +17,7 @@
   import PageHeader from '$lib/components/layout/PageHeader.svelte'
   import ChatAvatar from '$lib/components/ChatAvatar.svelte'
   import { Input } from '$lib/components/ui/input'
+  import { Dialog } from '$lib/components/ui/dialog'
   import { Textarea } from '$lib/components/ui/textarea'
   import { AppIcons } from '$lib/icons'
 
@@ -34,6 +35,12 @@
   // The editable fields, seeded once from the loaded group.
   let avatarFile = $state('')
   let intro = $state('')
+  /** Whether the "add member" picker is open. */
+  let adding = $state(false)
+  /** Session ids picked in that dialog, before the round trip. */
+  let picked = $state<string[]>([])
+  /** A member removal in flight, so its row can show it and not be clicked twice. */
+  let removing = $state('')
   let seededFor = $state('')
 
   const coordinator = $derived(members.find(m => m.role === 'coordinator')?.session ?? '')
@@ -134,6 +141,58 @@
     }
   }
 
+  /**
+   * THE SESSIONS THAT COULD JOIN: everything this tenant has, minus the members already here.
+   *
+   * NOT FILTERED BY ROLE. A session coordinating another group is still a legitimate plain member of this one —
+   * the constraint is one COORDINATORSHIP per session, not one membership, and hiding such a session would make
+   * the picker lie about who can be added.
+   */
+  const candidates = $derived(
+    store.sessions
+      .filter(s => !members.some(m => m.session === s.id))
+      .map(s => ({ id: s.id, label: s.name || s.id }))
+      .sort((a, b) => a.label.localeCompare(b.label)),
+  )
+
+  function togglePick(id: string) {
+    picked = picked.includes(id) ? picked.filter(x => x !== id) : [...picked, id]
+  }
+
+  async function addMembers() {
+    if (!group || picked.length === 0) return
+    try {
+      await store.api.addGroupMembers(group.name, picked)
+      const meta = await store.api.group(group.name)
+      members = meta.members
+      const n = picked.length
+      adding = false
+      picked = []
+      showToast(t('groupMembersAdded', { arg1: n }))
+    } catch (e) {
+      showErrorToast(String(e))
+    }
+  }
+
+  /**
+   * removeMember drops one session from the group.
+   *
+   * THE COORDINATOR IS NOT OFFERED: the server refuses to remove it, because a group with no coordinator routes
+   * its messages to nobody. Moving the role first is the way to hand a group over, and hiding the button here
+   * says that without making the user discover it through an error.
+   */
+  async function removeMember(id: string) {
+    if (!group || removing) return
+    removing = id
+    try {
+      members = await store.api.removeGroupMember(group.name, id)
+    } catch (e) {
+      showErrorToast(String(e))
+    } finally {
+      removing = ''
+    }
+  }
+
   function reset() {
     if (!group) return
     avatarFile = group.avatarFile ?? ''
@@ -230,8 +289,25 @@
       <!-- THE MEMBERS. Coordinator first — that is the session a user's message reaches, so it is the one a
            reader most needs to recognise. -->
       <div class="border-t border-border">
-        <div class="px-4 pt-4 pb-1 text-meta font-medium text-muted-foreground">
-          {t('groupMembersTitle', { arg1: members.length })}
+        <div class="flex items-center gap-2 px-4 pt-4 pb-1">
+          <span class="text-meta font-medium text-muted-foreground">
+            {t('groupMembersTitle', { arg1: members.length })}
+          </span>
+          <!-- ADDING A MEMBER IS A GROUP ACTION, so it sits with the list rather than behind an edit mode: the list
+               is what a reader is looking at when they notice someone is missing. -->
+          <button
+            type="button"
+            class="ml-auto flex items-center gap-1 rounded px-1.5 py-0.5 text-micro text-primary hover:bg-muted"
+            title={t('groupAddMember')}
+            aria-label={t('groupAddMember')}
+            onclick={() => {
+              picked = []
+              adding = true
+            }}
+          >
+            <AppIcons.add class="size-3.5" />
+            {t('groupAddMember')}
+          </button>
         </div>
         <div class="pb-3">
           {#each members as m (m.session)}
@@ -277,6 +353,27 @@
                   </div>
                 {/if}
               </div>
+              <!-- THE COORDINATOR HAS NO REMOVE BUTTON. The server refuses it — a group whose coordinator was
+                   removed routes its messages to nobody — and offering a button that always fails is worse than
+                   not offering it. -->
+              {#if m.session !== coordinator}
+                <button
+                  type="button"
+                  class="shrink-0 self-center rounded p-1 text-muted-foreground hover:bg-muted hover:text-destructive disabled:opacity-40"
+                  title={t('groupRemoveMember')}
+                  aria-label={t('groupRemoveMember')}
+                  disabled={removing === m.session}
+                  onclick={() => void removeMember(m.session)}
+                >
+                  {#if removing === m.session}
+                    <span
+                      class="block size-3.5 animate-spin rounded-full border-2 border-muted-foreground/30 border-t-muted-foreground"
+                    ></span>
+                  {:else}
+                    <AppIcons.close class="size-3.5" />
+                  {/if}
+                </button>
+              {/if}
             </div>
           {/each}
         </div>
@@ -302,3 +399,49 @@
     </div>
   {/if}
 </div>
+
+{#if adding}
+  <Dialog bind:open={adding} title={t('groupAddMember')}>
+    {#snippet children()}
+      {#if candidates.length === 0}
+        <!-- EVERY SESSION IS ALREADY A MEMBER, which is a real state and not a failure: saying so is better than
+             an empty picker the reader would try to interact with. -->
+        <p class="py-4 text-center text-meta text-muted-foreground">{t('groupNoCandidates')}</p>
+      {:else}
+        <div class="max-h-72 overflow-y-auto">
+          {#each candidates as c (c.id)}
+            <label
+              class="flex cursor-pointer items-center gap-2 rounded px-1 py-1.5 hover:bg-muted"
+            >
+              <input
+                type="checkbox"
+                checked={picked.includes(c.id)}
+                onchange={() => togglePick(c.id)}
+                class="size-4"
+              />
+              <span class="min-w-0 flex-1 truncate text-body">{c.label}</span>
+            </label>
+          {/each}
+        </div>
+      {/if}
+    {/snippet}
+    {#snippet footer()}
+      <button
+        type="button"
+        class="rounded-md px-3 py-1.5 text-sm hover:bg-muted"
+        onclick={() => {
+          adding = false
+          picked = []
+        }}>{t('cancel')}</button
+      >
+      <button
+        type="button"
+        class="rounded-md bg-primary px-3 py-1.5 text-sm text-primary-foreground hover:bg-primary/80 disabled:opacity-40"
+        disabled={picked.length === 0}
+        onclick={() => void addMembers()}
+      >
+        {t('groupAddMember')}
+      </button>
+    {/snippet}
+  </Dialog>
+{/if}
