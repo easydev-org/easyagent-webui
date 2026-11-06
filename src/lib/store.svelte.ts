@@ -216,6 +216,24 @@ export class AppStore {
     return this.sessions.find(s => s.id === id) ?? null
   }
 
+  /**
+   * sessionAvatar answers "which picture does this session render" from its id.
+   *
+   * THE ID IS THE ONLY INPUT, and that is the point: a message from another session carries a sender id and nothing
+   * else, so the picture has to be resolved from the row at RENDER time — anything else would be copying an avatar
+   * into a transcript, where it would go stale the moment the session changed it.
+   *
+   * ONE PLACE, NOT ONE PER CALL SITE. This lookup was written three times (a group bubble, a member list, a
+   * transcript row) and each copy was a place for the fallback to diverge — one returning '' and another returning
+   * the row's raw value for a session that no longer exists.
+   *
+   * EMPTY MEANS "RENDER THE IDENTICON": an unknown id, a session with no picture, and a session that was deleted all
+   * end up here, and ChatAvatar already draws the seeded honeycomb for an empty value.
+   */
+  sessionAvatar(id: string): string {
+    return this.sessionById(id)?.avatarFile ?? ''
+  }
+
   /** Manual refresh (pull-to-refresh / fallback reconciliation). Failures
    *  surface as a toast (the long-lived stream banner already covers a dropped
    *  connection; a manual refresh that fails is a one-shot action). */

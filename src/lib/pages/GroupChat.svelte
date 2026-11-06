@@ -192,7 +192,7 @@
    */
   function avatarOf(m: GroupMessage): string {
     if (!m.sender) return ''
-    return store.sessions.find(x => x.id === m.sender)?.avatarFile ?? ''
+    return store.sessionAvatar(m.sender)
   }
 
   /**

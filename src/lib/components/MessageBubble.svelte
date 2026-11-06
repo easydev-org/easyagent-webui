@@ -182,6 +182,26 @@
         ? groupSender
         : sessionId || 'assistant',
   )
+  /**
+   * THE PICTURE OF THE SESSION THAT SPOKE.
+   *
+   * `avatarSeed` already names WHICH session — for a group message, the sender — but seeding an identicon is not the
+   * same as showing the avatar that session uploaded. Without this the row drew a honeycomb for every peer, so a
+   * group looked like a wall of identical placeholder shapes and "who said that" was answered by colour alone.
+   *
+   * THE SOURCE IS THE STORE'S SESSION ROW, which the list stream keeps current: a session that changes its picture
+   * updates every place its messages appear, without the transcript re-fetching anything.
+   */
+  const avatarFile = $derived(store?.sessionAvatar(avatarSeed) ?? '')
+  const fetchBytes = $derived(store ? store.api.fetchFileBytes.bind(store.api) : undefined)
+  /** The accessible label for that avatar: the speaker's name, or the id when it cannot be resolved. */
+  const sendingSessionLabel = $derived(
+    sourceKind === 'group' && groupSender
+      ? senderLabel(groupSender)
+      : sourceKind === 'session'
+        ? senderLabel(sourceName)
+        : '',
+  )
   const showAvatar = $derived(incoming && !isError && !isSending)
 
   /**
@@ -380,7 +400,13 @@
             aria-label={t('mailboxFromSession')}
             onclick={() => onOpenSession?.(sourceName)}
           >
-            <ChatAvatar seed={avatarSeed} size={28} />
+            <ChatAvatar
+              seed={avatarSeed}
+              size={28}
+              avatar={avatarFile}
+              label={sendingSessionLabel}
+              {fetchBytes}
+            />
           </button>
         {:else}
           <span
@@ -388,7 +414,13 @@
             title={sourceKind === 'session' ? sourceName : ''}
             aria-hidden={sourceKind !== 'session'}
           >
-            <ChatAvatar seed={avatarSeed} size={28} />
+            <ChatAvatar
+              seed={avatarSeed}
+              size={28}
+              avatar={avatarFile}
+              label={sendingSessionLabel}
+              {fetchBytes}
+            />
           </span>
         {/if}
       </div>

@@ -350,7 +350,7 @@
                 <span class="relative block">
                   <ChatAvatar
                     seed={m.session}
-                    avatar={memberSession(m.session)?.avatarFile ?? ''}
+                    avatar={store.sessionAvatar(m.session)}
                     size={40}
                     label={memberLabel(m.session)}
                     fetchBytes={store.api.fetchFileBytes.bind(store.api)}
