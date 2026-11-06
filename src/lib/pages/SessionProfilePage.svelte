@@ -220,6 +220,26 @@
   function openChat() {
     if (sid) store.pickSession(sid)
   }
+
+  /**
+   * THE SESSION'S OWN ROOM, found by the membership the store already holds.
+   *
+   * A SESSION MAY BE IN MANY GROUPS, so "its group" is not well defined in general — but exactly one of them is the
+   * room it COORDINATES and was created with. That one is what this opens: it is the plain-conversation view of this
+   * session, which is the reason the page has the button at all.
+   *
+   * IT IS DERIVED, NOT REQUESTED. Every session row in the store already carries its groups, so asking the server
+   * for "the group this session owns" would be a second RPC for a value already in hand.
+   */
+  const ownGroup = $derived(
+    sid ? (store.groups.find(g => g.createdBy === `session:${sid}`) ?? null) : null,
+  )
+
+  function openOwnGroup() {
+    if (ownGroup) {
+      store.pushPage({ kind: 'group_chat', key: 'group_chat', id: ownGroup.id })
+    }
+  }
 </script>
 
 <!-- ONE COLUMN, TOP TO BOTTOM. The Shell wraps every page in a `flex` ROW, so a page with several
@@ -240,6 +260,19 @@
       >
         <AppIcons.chat class="size-[18px]" />
       </button>
+      <!-- THE ROOM, next to the transcript: two ways to watch the same session, and the reader picks which. The
+           room is what they supervise from; the chat is what they inspect. -->
+      {#if ownGroup}
+        <button
+          type="button"
+          class="rounded p-1.5 text-primary hover:bg-muted"
+          title={t('openGroup')}
+          aria-label={t('openGroup')}
+          onclick={openOwnGroup}
+        >
+          <AppIcons.users class="size-[18px]" />
+        </button>
+      {/if}
     {/snippet}
   </PageHeader>
 

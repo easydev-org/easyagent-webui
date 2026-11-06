@@ -164,6 +164,12 @@
                   class="flex items-center justify-between gap-2 border-t border-border/50 px-2 py-1 first:border-t-0"
                 >
                   <span class="min-w-0 flex-1 truncate font-mono text-[10px] text-muted-foreground">
+                    <!-- THE SCOPE COMES FIRST when there is one: it is what distinguishes three rows of the same
+                         capability, and a reader who cannot see it thinks the grant did not take. -->
+                    {#if g.scope}
+                      <span class="text-foreground">{g.scope}</span>
+                      <span class="mx-1">·</span>
+                    {/if}
                     {paramsText(g.params) || t('permissionsNoParams')}
                   </span>
                   <button

@@ -31,6 +31,7 @@ export function grantFromPb(g: {
   risk: string
   grantedAt: string
   grantedBy: string
+  scope: string
 }): SessionGrant {
   return {
     id: g.id,
@@ -38,6 +39,7 @@ export function grantFromPb(g: {
     capability: g.capability,
     params: g.params,
     risk: g.risk,
+    scope: g.scope,
     grantedAt: g.grantedAt,
     grantedBy: g.grantedBy,
   }
@@ -51,6 +53,7 @@ export function emptyGrant(): SessionGrant {
     capability: '',
     params: '',
     risk: '',
+    scope: '',
     grantedAt: '',
     grantedBy: '',
   }

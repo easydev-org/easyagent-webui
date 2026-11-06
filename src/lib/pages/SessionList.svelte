@@ -7,7 +7,7 @@
   import { showErrorToast, showToast } from '$lib/toast.svelte'
   import { promptDialog, confirmDialog } from '$lib/dialogs'
   import { Prefs } from '$lib/prefs'
-  import { sessionName } from '$lib/models'
+  import { sessionName, type Group } from '$lib/models'
   import { previewLabel } from '$lib/api-mappers'
   import NewSessionDialog from './NewSessionDialog.svelte'
   import SessionRow from '$lib/components/SessionRow.svelte'
@@ -136,6 +136,18 @@
 
   let newSessionOpen = $state(false)
 
+  /**
+   * isSessionRoom reports whether a group is a SESSION'S OWN ROOM rather than a group a person made.
+   *
+   * THE PROVENANCE IS IN `created_by`, which is `session:<id>` for the automatic room and `user…` for anything a
+   * person created. It is a label on the row rather than a separate kind, because the two are the same thing to
+   * every other part of the system — a group with members and a transcript — and a second kind would mean every
+   * reader branching on it.
+   */
+  function isSessionRoom(g: Group): boolean {
+    return g.createdBy.startsWith('session:')
+  }
+
   function create() {
     newSessionOpen = true
   }
@@ -144,9 +156,19 @@
     try {
       // Pin the language at creation so the session never drifts with the
       // mutable tenant default.
-      await store.api.createSession({ name, locale })
+      const created = await store.api.createSession({ name, locale })
       newSessionOpen = false
-      await store.refreshSessions()
+      /**
+       * THE NEW ROOM IS REFRESHED TOO, and the reader is taken straight into it.
+       *
+       * THE ROOM IS THE POINT of creating a session now: it is the plain-conversation page where you give orders
+       * and watch what happens. Landing in the transcript instead would show the tool cards first, which is the
+       * view you open when something looks wrong — not the one you start from.
+       */
+      await Promise.all([store.refreshSessions(), store.refreshGroups()])
+      if (created.groupId) {
+        store.pushPage({ kind: 'group_chat', key: 'group_chat', id: created.groupId })
+      }
     } catch (e) {
       showErrorToast(String(e))
     }
@@ -265,7 +287,8 @@
     if (!branch) return
     try {
       await store.api.fork(sid, branch)
-      await store.refreshSessions()
+      // THE FORK HAS ITS OWN ROOM, and the list has to show it without a reload.
+      await Promise.all([store.refreshSessions(), store.refreshGroups()])
       showToast(t('forked'))
     } catch {
       showErrorToast(t('forkFailed'))
@@ -396,6 +419,15 @@
             <span class="min-w-0 flex-1">
               <span class="flex items-baseline gap-2">
                 <span class="min-w-0 flex-1 truncate text-body font-medium">{g.name}</span>
+                <!-- A SESSION'S OWN ROOM IS MARKED, because it is a different kind of place: it exists so one
+                     session can be directed, and it disappears with that session. A list where the two looked
+                     identical would make "why is this group empty" a recurring question. -->
+                {#if isSessionRoom(g)}
+                  <span
+                    class="shrink-0 rounded border border-border px-1 text-[9px] text-muted-foreground"
+                    >{t('groupSessionRoom')}</span
+                  >
+                {/if}
                 {#if g.lastMessageAt}
                   <span class="shrink-0 text-micro text-muted-foreground tabular-nums"
                     >{fmtTime(g.lastMessageAt, now())}</span

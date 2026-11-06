@@ -289,6 +289,20 @@
       <!-- THE HEADER OPENS THE GROUP'S CARD, the same gesture a chat header already has: clicking the name
            there opens the session's profile. A group's picture, purpose and member list live one page in, and
            this is where a reader looks for them. -->
+      <!-- THE COORDINATOR'S TRANSCRIPT IS ONE CLICK AWAY, and this is the pair that makes the two screens useful:
+           the room is what you WATCH, the transcript is what you INSPECT when the summary looks wrong. Without
+           this the reader had to go back to the list and find the session by name. -->
+      {#if coordinator}
+        <button
+          type="button"
+          class="rounded p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground"
+          title={t('openSessionDetail')}
+          aria-label={t('openSessionDetail')}
+          onclick={() => store.pickSession(coordinator)}
+        >
+          <AppIcons.chat class="size-[18px]" />
+        </button>
+      {/if}
       <button
         type="button"
         class="rounded p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground"

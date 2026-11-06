@@ -46,8 +46,8 @@
     onRegenerate?: (() => void) | null
     /** Open the session named by a `session:{name}` source (jump to it). */
     onOpenSession?: ((sessionId: string) => void) | null
-    /** Opens a GROUP by name, for a `group:` source. */
-    onOpenGroup?: ((group: string) => void) | null
+    /** Opens a GROUP by ID, for a `group:` source. The id is the identity; the name is only what the chip displays. */
+    onOpenGroup?: ((groupId: string) => void) | null
     /** Whether a `session:{name}` source still resolves to a live session. */
     sessionExists?: ((sessionId: string) => boolean) | null
     /** Resolves a session id to its display name, for a chip or an avatar caption. */
@@ -95,7 +95,13 @@
             ? 'user'
             : 'other',
   )
-  /** The bare name after `session:` / `system:`; the GROUP name for `group:`. */
+  /**
+   * What follows `session:` / `system:` / `group:`, up to the sender.
+   *
+   * FOR A GROUP THIS IS AN ID, not a name: `group:<id>/<sender>` is what the agent writes now that the id is the
+   * identity. The chip labels itself with the group's name, but it NAVIGATES by this value — so treating it as a
+   * name would open nothing the moment a group was renamed.
+   */
   const sourceName = $derived(
     sourceKind === 'session'
       ? msg.source.slice('session:'.length)

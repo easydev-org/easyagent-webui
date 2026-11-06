@@ -282,7 +282,9 @@ export class AppStore {
     try {
       const s = await this.api.fork(id, branch)
       this.activeSessionId = s.id
-      await this.refreshSessions()
+      // THE FORK'S OWN ROOM exists now, so the list needs it too — a session row whose room is missing looks like a
+      // session that cannot be supervised.
+      await Promise.all([this.refreshSessions(), this.refreshGroups()])
       return true
     } catch {
       return false

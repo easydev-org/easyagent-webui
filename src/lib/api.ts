@@ -132,7 +132,9 @@ export class AgentApi {
     })
   }
 
-  async createSession(params: Record<string, unknown>): Promise<Session> {
+  async createSession(
+    params: Record<string, unknown>,
+  ): Promise<Session & { groupId: string }> {
     // Only forward fields actually set: an empty string would be written
     // verbatim (the agent treats empty preset/model as "tenant default").
     const model = (params['model'] as string) || ''
@@ -157,6 +159,13 @@ export class AgentApi {
       // name the caller typed. The name is kept as a label only.
       id: r.sessionId,
       name: r.name,
+      /**
+       * THE ROOM THE SERVER CREATED, so the caller can open it instead of the transcript.
+       *
+       * IT IS PART OF THE RESULT because finding it afterwards means listing every group and matching on a label —
+       * which is not unique, and is the lookup the id exists to remove.
+       */
+      groupId: r.groupId,
       model,
       variant,
       preset,
@@ -383,9 +392,14 @@ export class AgentApi {
     return r.session ? sessionFromPb(r.session) : emptySession('')
   }
 
-  async fork(id: string, branch: string): Promise<Session> {
+  async fork(
+    id: string,
+    branch: string,
+  ): Promise<Session & { groupId: string }> {
     const r = await this._guard(() => this._c.fork({ id, name: branch }))
-    return r.session ? sessionFromPb(r.session) : emptySession('')
+    const session = r.session ? sessionFromPb(r.session) : emptySession('')
+    // THE FORK'S OWN ROOM, created server-side for the same reason a new session's is.
+    return { ...session, groupId: r.groupId }
   }
 
   async revert(id: string, messageId?: string | null): Promise<void> {
@@ -439,9 +453,16 @@ export class AgentApi {
     capability: string,
     params: string,
     risk: string,
+    /**
+     * `scope` narrows the grant to one object (`group:<id>`); empty means everywhere.
+     *
+     * IT IS LAST AND OPTIONAL so the existing callers — which grant a capability globally — keep reading as before.
+     * A caller that needs a group-scoped grant is the one that has a group id to pass.
+     */
+    scope = '',
   ): Promise<SessionGrant> {
     const r = await this._guard(() =>
-      this._c.createGrant({ id, extId, capability, params, risk }),
+      this._c.createGrant({ id, extId, capability, params, risk, scope }),
     )
     return grantFromPb(r.grant ?? emptyGrant())
   }

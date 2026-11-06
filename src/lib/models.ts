@@ -571,8 +571,15 @@ export interface SessionGrant {
   params: string
   /** read | write | destructive — presentation only; drives the warning in the UI. */
   risk: string
+  /**
+   * The object this grant is narrowed to, or empty for everywhere.
+   *
+   * `group:<id>` FOR THE GROUP CAPABILITIES. Without showing it, three rows saying `group.spawn` look like three
+   * copies of one permission, and a reader cannot tell that granting one group does not grant another.
+   */
+  scope: string
   grantedAt: string
-  /** "user" | "auto:fork:<parent>" | "auto:preset:<name>". */
+  /** "user" | "auto:fork:<parent>" | "auto:preset:<name>" | "auto:create:<session>". */
   grantedBy: string
 }
 
