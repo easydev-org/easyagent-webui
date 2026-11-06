@@ -345,8 +345,24 @@
         <p class="py-10 text-center text-meta text-muted-foreground">{t('groupNoMessages')}</p>
       {/if}
       {#each messages as m (m.seq)}
-        {@const mine = !m.sender}
-        <!-- THE SAME SHAPE AS A ONE-TO-ONE CHAT, with the two things a group needs on top.
+        {@const mine = m.kind !== 'system' && !m.sender}
+        <!-- A SYSTEM MESSAGE IS A NOTICE, NOT A BUBBLE. It is the platform telling a session it still owes a reply:
+             nobody said it, so drawing it as somebody's words would attribute the machinery to a person. Centred and
+             unlabelled is also what makes it scannable — a reader looking for "who is behind" can skip it. -->
+        {#if m.kind === 'system'}
+          <div class="flex justify-center px-2 py-1">
+            <div
+              class="max-w-[85%] rounded-md border border-dashed border-border/70 bg-muted/30 px-3 py-2 text-micro text-muted-foreground"
+            >
+              <div class="mb-0.5 flex items-center justify-center gap-1 font-medium">
+                <AppIcons.bolt class="size-3" />
+                {t('groupSystemNotice')}
+              </div>
+              <div class="whitespace-pre-wrap break-words">{m.body}</div>
+            </div>
+          </div>
+        {:else}
+          <!-- THE SAME SHAPE AS A ONE-TO-ONE CHAT, with the two things a group needs on top.
              A bubble is a block you read down: the picture and the speaker's name share one row ABOVE the
              bubble, flush left, and the bubble sits under them.
 
@@ -356,100 +372,101 @@
              THE TIME MOVES TO THE ACTION ROW, under the bubble, next to copy — the same place and the same
              wording as a chat ("just now", "3 minutes ago"). A group has no undo (there is nothing to withdraw
              from a transcript several people have read), so copy is the only action there. -->
-        <div class={cn('mb-3 flex flex-col', mine ? 'items-end' : 'items-start')}>
-          {#if !mine}
-            <div class="mb-1 flex w-full items-center gap-2">
-              <!-- A MEMBER'S PICTURE OPENS THEIR CARD, the same gesture as every other avatar in this app. -->
-              <button
-                type="button"
-                class="shrink-0 rounded-full outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                title={labelOf(m)}
-                aria-label={labelOf(m)}
-                onclick={() => openMemberProfile(m)}
-              >
-                <span class="relative block">
-                  <ChatAvatar
-                    seed={m.sender}
-                    size={28}
-                    label={labelOf(m)}
-                    avatar={avatarOf(m)}
-                    fetchBytes={store.api.fetchFileBytes.bind(store.api)}
-                  />
-                  <!-- WHETHER THAT SESSION IS STILL WORKING, right on the message it sent. Reading "I'm on it"
+          <div class={cn('mb-3 flex flex-col', mine ? 'items-end' : 'items-start')}>
+            {#if !mine}
+              <div class="mb-1 flex w-full items-center gap-2">
+                <!-- A MEMBER'S PICTURE OPENS THEIR CARD, the same gesture as every other avatar in this app. -->
+                <button
+                  type="button"
+                  class="shrink-0 rounded-full outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  title={labelOf(m)}
+                  aria-label={labelOf(m)}
+                  onclick={() => openMemberProfile(m)}
+                >
+                  <span class="relative block">
+                    <ChatAvatar
+                      seed={m.sender}
+                      size={28}
+                      label={labelOf(m)}
+                      avatar={avatarOf(m)}
+                      fetchBytes={store.api.fetchFileBytes.bind(store.api)}
+                    />
+                    <!-- WHETHER THAT SESSION IS STILL WORKING, right on the message it sent. Reading "I'm on it"
                        and being unable to tell whether anything is happening is the gap this closes — and it is
                        the fact the room exists to show. -->
-                  <span class="absolute -top-0.5 -right-0.5">
-                    <StatusDot status={statusOf(m.sender)} size="sm" />
+                    <span class="absolute -top-0.5 -right-0.5">
+                      <StatusDot status={statusOf(m.sender)} size="sm" />
+                    </span>
                   </span>
-                </span>
-              </button>
-              <span class="truncate text-micro font-semibold">{labelOf(m)}</span>
-            </div>
-          {/if}
+                </button>
+                <span class="truncate text-micro font-semibold">{labelOf(m)}</span>
+              </div>
+            {/if}
 
-          <div class="flex max-w-[85%] flex-col {mine ? 'items-end' : 'items-start'}">
-            <div
-              class={cn(
-                'min-w-0 max-w-full space-y-1.5 rounded-md border px-3 py-2.5 break-words',
-                mine ? 'border-primary/40 bg-primary/12' : 'border-border/50 bg-card',
-              )}
-            >
-              <!-- MARKDOWN, EXACTLY AS A CHAT RENDERS IT: a session's reply is prose that uses lists, emphasis
+            <div class="flex max-w-[85%] flex-col {mine ? 'items-end' : 'items-start'}">
+              <div
+                class={cn(
+                  'min-w-0 max-w-full space-y-1.5 rounded-md border px-3 py-2.5 break-words',
+                  mine ? 'border-primary/40 bg-primary/12' : 'border-border/50 bg-card',
+                )}
+              >
+                <!-- MARKDOWN, EXACTLY AS A CHAT RENDERS IT: a session's reply is prose that uses lists, emphasis
                    and code, and printing it as one pre-wrapped block lost all of it — a numbered plan arrived as
                    a wall of asterisks. The user's own words stay plain: they are what a person typed, not a
                    document, and running them through a renderer would make their asterisks mean something. -->
-              {#if m.body}
-                <FileRefText text={m.body} api={store.api} markdown={!mine} />
-              {/if}
-              <!-- AN ATTACHMENT IS A `file:<code>` REFERENCE, drawn by the same component a chat uses — so a
+                {#if m.body}
+                  <FileRefText text={m.body} api={store.api} markdown={!mine} />
+                {/if}
+                <!-- AN ATTACHMENT IS A `file:<code>` REFERENCE, drawn by the same component a chat uses — so a
                    picture in a group looks like a picture in a chat, and a voice note plays the same way.
 
                    ONE ATTACHMENT FILLS THE BUBBLE; SEVERAL ARE A GRID. Stacking them at full width pushed the
                    conversation off the screen — three photos became three screens of scrolling — while a single
                    one at tile size was too small to see. The grid is the shape an IM app uses for the same
                    reason: the bubble stays about the size of its contents. -->
-              {#if (m.attachments ?? []).length === 1}
-                <MediaAttachment
-                  api={store.api}
-                  file={m.attachments![0]}
-                  siblings={m.attachments ?? []}
-                />
-              {:else if (m.attachments ?? []).length > 1}
-                <div class="flex flex-wrap gap-1">
-                  {#each m.attachments! as f (f.code)}
-                    <MediaAttachment
-                      api={store.api}
-                      file={f}
-                      siblings={m.attachments ?? []}
-                      dimension={96}
-                    />
-                  {/each}
-                </div>
-              {/if}
-            </div>
-            <div
-              class={cn(
-                'mt-1 flex items-center gap-0.5 text-micro text-muted-foreground',
-                mine ? 'justify-end' : 'justify-start',
-              )}
-            >
-              <!-- COPY, because a group message can be quoted somewhere else. NO UNDO: a group has a
+                {#if (m.attachments ?? []).length === 1}
+                  <MediaAttachment
+                    api={store.api}
+                    file={m.attachments![0]}
+                    siblings={m.attachments ?? []}
+                  />
+                {:else if (m.attachments ?? []).length > 1}
+                  <div class="flex flex-wrap gap-1">
+                    {#each m.attachments! as f (f.code)}
+                      <MediaAttachment
+                        api={store.api}
+                        file={f}
+                        siblings={m.attachments ?? []}
+                        dimension={96}
+                      />
+                    {/each}
+                  </div>
+                {/if}
+              </div>
+              <div
+                class={cn(
+                  'mt-1 flex items-center gap-0.5 text-micro text-muted-foreground',
+                  mine ? 'justify-end' : 'justify-start',
+                )}
+              >
+                <!-- COPY, because a group message can be quoted somewhere else. NO UNDO: a group has a
                    transcript several sessions have already read, and withdrawing it would not unsend it. -->
-              {#if m.body}
-                <button
-                  type="button"
-                  class="rounded p-0.5 hover:bg-muted"
-                  title={t('copy')}
-                  aria-label={t('copy')}
-                  onclick={() => void copyBody(m.body)}
-                >
-                  <AppIcons.copy class="size-3.5" />
-                </button>
-              {/if}
-              <span class="ml-1 tabular-nums opacity-70">{fmtTime(m.createdAt, now())}</span>
+                {#if m.body}
+                  <button
+                    type="button"
+                    class="rounded p-0.5 hover:bg-muted"
+                    title={t('copy')}
+                    aria-label={t('copy')}
+                    onclick={() => void copyBody(m.body)}
+                  >
+                    <AppIcons.copy class="size-3.5" />
+                  </button>
+                {/if}
+                <span class="ml-1 tabular-nums opacity-70">{fmtTime(m.createdAt, now())}</span>
+              </div>
             </div>
           </div>
-        </div>
+        {/if}
       {/each}
     </div>
 

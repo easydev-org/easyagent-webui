@@ -711,6 +711,13 @@ export interface GroupMessage {
   id: string
   /** The group's id. The NAME is on `groupName` and is the one current when the page loaded. */
   groupId: string
+  /**
+   * WHO WROTE THIS: "user" | "session" | "system".
+   *
+   * A SYSTEM MESSAGE IS THE PLATFORM'S — today, "you were addressed and have not replied". It is neither the user's
+   * nor a session's, so it renders as a notice rather than in anybody's bubble.
+   */
+  kind?: string
   /** The group's display name, for a transcript header. */
   groupName?: string
   /** The sending session's id, or empty when a user posted it. */

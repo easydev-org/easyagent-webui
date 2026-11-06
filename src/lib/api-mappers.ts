@@ -421,6 +421,7 @@ export function groupMessageFromPb(
   return {
     id: m.id,
     groupId: m.groupId,
+    kind: m.kind || undefined,
     groupName: m.groupName || undefined,
     sender: m.sender,
     senderName: m.senderName || undefined,
