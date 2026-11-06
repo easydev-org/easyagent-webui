@@ -869,21 +869,6 @@ export class AgentApi {
     }))
   }
 
-  /**
-   * coordinatorOf returns a group's coordinator session id.
-   *
-   * THE GROUP ROW DOES NOT CARRY IT. Membership is a separate table with roles, so this is a `GetGroup` per group —
-   * which is why the caller must want it for a reason. The one caller does: the create-group form has to exclude
-   * sessions that already coordinate somewhere, and one-coordinator-per-session is a server rule the form should
-   * not offer a way to break.
-   */
-  async coordinatorOf(group: string): Promise<string> {
-    const r = await this._guard(() =>
-      this._c.getGroup({ name: group, session: '' }),
-    )
-    return r.members.find(m => m.role === 'coordinator')?.session ?? ''
-  }
-
   async group(
     name: string,
     session?: string,
