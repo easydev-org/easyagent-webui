@@ -23,6 +23,8 @@
   import { VoiceRecorder } from '$lib/voice'
   import { fmtElapsed } from '$lib/chat-helpers'
   import { AppIcons } from '$lib/icons'
+  import ContextMenu, { type ContextMenuItem } from '$lib/components/ContextMenu.svelte'
+  import type { MenuAnchor } from '$lib/context-menu-position'
   import { cn } from '$lib/utils'
 
   let { store, initialId }: PageProps = $props()
@@ -36,6 +38,20 @@
    * was pushed. It is loaded with the group and refreshed by the watch, like every other fact on this page.
    */
   let groupTitle = $state('')
+
+  /**
+   * THE SESSION BEING ASKED, when the reader has armed a question.
+   *
+   * A QUESTION IS NOT A MESSAGE. Posting one starts a turn, which stops the session and changes the work being asked
+   * about — so asking goes through a side channel that runs the model once with no tools and writes nothing to the
+   * session. The composer says which session will answer, because otherwise the reader cannot tell the mode apart
+   * from a normal post.
+   */
+  let askTarget = $state<{ id: string; name: string } | null>(null)
+  let asking = $state(false)
+
+  /** The session whose avatar's context menu is open, if any. */
+  let memberMenu = $state<{ session: string; name: string; anchor: MenuAnchor } | null>(null)
 
   let messages = $state<GroupMessage[]>([])
   let members = $state<GroupMember[]>([])
@@ -277,6 +293,25 @@
 
   async function send() {
     const body = text.trim()
+    /**
+     * A QUESTION GOES SIDEWAYS. In ask mode the text is a question for one session, answered off to the side and
+     * relayed into the group; it must not be posted as a message, which would wake everyone and start a turn.
+     */
+    if (askTarget) {
+      if (!body || asking) return
+      asking = true
+      try {
+        await store.api.askInGroup(groupId, askTarget.id, body)
+        text = ''
+        askTarget = null
+        followBottom = true
+      } catch (e) {
+        showErrorToast(String(e))
+      } finally {
+        asking = false
+      }
+      return
+    }
     // A MESSAGE NEEDS SOMETHING IN IT: words, a file, or both.
     if ((!body && attachments.length === 0) || sending || uploading) return
     sending = true
@@ -289,6 +324,34 @@
       showErrorToast(String(e))
     } finally {
       sending = false
+    }
+  }
+
+  /**
+   * The avatar menu's items.
+   *
+   * TWO ACTIONS, BOTH ABOUT THE SESSION rather than the message: open its card, or ask it something without
+   * disturbing it. Anything about the message (copy) already lives in the bubble's action row, and duplicating it
+   * here would make the same action reachable two ways with different rules.
+   */
+  const memberMenuItems = $derived.by<ContextMenuItem[]>(() => [
+    { value: 'ask', label: t('groupAsk') },
+    { value: 'profile', label: t('openSessionDetail') },
+  ])
+
+  function onMemberMenuPick(value: string) {
+    const menu = memberMenu
+    memberMenu = null
+    if (!menu) return
+    if (value === 'ask') {
+      // ARM THE QUESTION. Nothing is sent until the reader types; pressing Escape or picking another session
+      // replaces the target rather than queueing a second question.
+      askTarget = { id: menu.session, name: menu.name }
+      return
+    }
+    if (value === 'profile') {
+      store.activeSessionId = menu.session
+      store.pushPage({ kind: 'session_profile', key: 'session_profile' })
     }
   }
 
@@ -382,6 +445,19 @@
                   title={labelOf(m)}
                   aria-label={labelOf(m)}
                   onclick={() => openMemberProfile(m)}
+                  oncontextmenu={e => {
+                    // A QUESTION STARTS FROM THE AVATAR of the session that should answer it: the reader already
+                    // knows which one they mean, and a menu on the message body would be about the message.
+                    e.preventDefault()
+                    // ANCHORED TO THE AVATAR, NOT THE POINTER: the same rule the session list uses. In a transcript
+                    // with dozens of near-identical faces, a cursor-anchored menu gives no clue whose it is.
+                    const r = (e.currentTarget as HTMLElement).getBoundingClientRect()
+                    memberMenu = {
+                      session: m.sender,
+                      name: labelOf(m),
+                      anchor: { top: r.top, bottom: r.bottom, left: r.left, right: r.right },
+                    }
+                  }}
                 >
                   <span class="relative block">
                     <ChatAvatar
@@ -519,6 +595,27 @@
         </div>
       {/if}
 
+      <!-- THE QUESTION LABEL, ABOVE THE COMPOSER: which session will answer, and a way out. Without it the reader
+           cannot tell ask mode from a normal post, and the next Enter would do something they did not intend. -->
+      {#if askTarget}
+        <div class="mb-2 flex items-center gap-2">
+          <span
+            class="flex min-w-0 items-center gap-1 rounded-full bg-sky-500/15 px-2 py-0.5 text-micro text-sky-600 dark:text-sky-400"
+          >
+            <AppIcons.bot class="size-3 shrink-0" />
+            <span class="shrink-0">{t('groupAskTo')}</span>
+            <span class="min-w-0 truncate font-medium">{askTarget.name}</span>
+          </span>
+          <button
+            type="button"
+            class="text-micro text-muted-foreground hover:text-foreground"
+            onclick={() => (askTarget = null)}
+          >
+            {t('cancel')}
+          </button>
+        </div>
+      {/if}
+
       <div class="flex items-center gap-2">
         <!-- Left: mic/keyboard toggle, in the same 42px slot the chat uses. -->
         <button
@@ -545,7 +642,11 @@
             class="block w-full min-h-[42px] max-h-40 resize-none border-0 bg-transparent px-3 py-[10px] text-sm leading-[21px] outline-none placeholder:text-muted-foreground {voiceMode
               ? 'invisible'
               : ''}"
-            placeholder={attachments.length ? '' : t('groupMessagePlaceholder')}
+            placeholder={askTarget
+              ? t('groupAskPlaceholder', { arg1: askTarget.name })
+              : attachments.length
+                ? ''
+                : t('groupMessagePlaceholder')}
             onkeydown={e => {
               if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault()
@@ -602,10 +703,12 @@
           class="flex size-[42px] shrink-0 items-center justify-center rounded-full border border-primary bg-card text-primary disabled:border-border disabled:text-muted-foreground disabled:opacity-40"
           title={t('send')}
           aria-label={t('send')}
-          disabled={(!text.trim() && attachments.length === 0) || sending || uploading}
+          disabled={askTarget
+            ? !text.trim() || asking
+            : (!text.trim() && attachments.length === 0) || sending || uploading}
           onclick={() => void send()}
         >
-          {#if sending}
+          {#if sending || asking}
             <span
               class="block size-5 animate-spin rounded-full border-2 border-primary/30 border-t-primary"
             ></span>
@@ -615,5 +718,15 @@
         </button>
       </div>
     </div>
+  {/if}
+
+  <!-- THE AVATAR MENU: ask this session a question without disturbing it, or open its card. -->
+  {#if memberMenu}
+    <ContextMenu
+      anchor={memberMenu.anchor}
+      items={memberMenuItems}
+      onPick={v => onMemberMenuPick(v)}
+      onClose={() => (memberMenu = null)}
+    />
   {/if}
 </div>

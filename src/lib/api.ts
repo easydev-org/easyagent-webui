@@ -45,6 +45,7 @@ import {
   type Group,
   type GroupMember,
   type GroupMessage,
+  type ReplyObligation,
   modelRefOf,
   type ToolEffect,
 } from './models'
@@ -911,6 +912,49 @@ export class AgentApi {
       }),
     )
     return groupMessageFromPb(r.message!)
+  }
+
+  /**
+   * askInGroup asks ONE session a question and posts the answer into the group.
+   *
+   * A SIDE CHANNEL, NOT A TURN. The session is not woken, nothing is written to it, and a session mid-work is
+   * unaffected — the model runs once with no tools over what is already persisted.
+   *
+   * THE ANSWER IS RELAYED AS A SYSTEM MESSAGE: the words are the model's, but the question was the reader's, so
+   * attributing it to the session would put a claim in the transcript it never made.
+   */
+  async askInGroup(
+    groupId: string,
+    sessionId: string,
+    question: string,
+  ): Promise<{ answer: string; message: GroupMessage | null }> {
+    const r = await this._guard(() =>
+      this._c.askInGroup({ groupId, sessionId, question }),
+    )
+    return {
+      answer: r.answer,
+      message: r.message ? groupMessageFromPb(r.message) : null,
+    }
+  }
+
+  /**
+   * replyObligations lists who still owes whom an answer in a group.
+   *
+   * THE PANEL BEHIND "WAITING FOR A REPLY". The data existed since requests started opening debts; without this the
+   * only way to learn it was to read the transcript and remember which asks had no answer.
+   */
+  async replyObligations(groupId: string): Promise<ReplyObligation[]> {
+    const r = await this._guard(() => this._c.listReplyObligations({ groupId }))
+    return r.obligations.map(o => ({
+      id: o.id,
+      session: o.session,
+      from: o.from,
+      seq: Number(o.seq),
+      messageId: o.messageId,
+      createdAt: o.createdAt,
+      remindCount: Number(o.remindCount),
+      remindedAt: o.remindedAt || undefined,
+    }))
   }
 
   /** Stream a group's transcript: retained messages after `sinceSeq`, then live. */

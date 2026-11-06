@@ -13,7 +13,7 @@
   import { showErrorToast, showToast } from '$lib/toast.svelte'
   import { guessMime } from '$lib/media'
   import { sessionName } from '$lib/models'
-  import type { Group, GroupMember } from '$lib/models'
+  import type { Group, GroupMember, ReplyObligation } from '$lib/models'
   import PageHeader from '$lib/components/layout/PageHeader.svelte'
   import ChatAvatar from '$lib/components/ChatAvatar.svelte'
   import StatusDot from '$lib/components/StatusDot.svelte'
@@ -28,6 +28,14 @@
 
   let group = $state<Group | null>(null)
   let members = $state<GroupMember[]>([])
+  /**
+   * WHO STILL OWES AN ANSWER.
+   *
+   * A request opens a debt and a reply closes it; this is the only place a reader can see the debts that are still
+   * open without reading the transcript and remembering which asks went unanswered. Refreshed with the member list,
+   * because both answer questions about the same group at the same time.
+   */
+  let obligations = $state<ReplyObligation[]>([])
   let loading = $state(true)
   let failed = $state('')
   let saving = $state(false)
@@ -90,6 +98,7 @@
         const meta = await store.api.group(g)
         group = meta.group
         members = meta.members
+        obligations = await store.api.replyObligations(groupId).catch(() => [])
         if (seededFor !== g) {
           seededFor = g
           avatarFile = meta.group.avatarFile ?? ''
@@ -312,6 +321,32 @@
 
       <!-- THE MEMBERS. Coordinator first — that is the session a user's message reaches, so it is the one a
            reader most needs to recognise. -->
+      <!-- WAITING FOR A REPLY, above the member list: a reader who sees a name here is looking for who to chase, and
+           the members below are who is on the work. -->
+      {#if obligations.length > 0}
+        <div class="border-t border-border">
+          <div class="px-4 pt-4 pb-1 text-meta font-medium text-muted-foreground">
+            {t('groupObligationsTitle')} · {obligations.length}
+          </div>
+          <ul class="pb-2">
+            {#each obligations as ob (ob.id)}
+              <li class="flex items-center gap-2 px-4 py-1.5 text-micro">
+                <AppIcons.clock class="size-3.5 shrink-0 text-warning" />
+                <span class="min-w-0 flex-1 truncate">
+                  <span class="font-medium">{memberLabel(ob.session)}</span>
+                  <span class="text-muted-foreground"> → {memberLabel(ob.from)}</span>
+                </span>
+                <!-- THE COUNT SAYS HOW LONG THIS HAS GONE ON. Three means the system has stopped chasing and the
+                     decision is now the reader's. -->
+                <span class="shrink-0 text-muted-foreground"
+                  >{t('groupObligationReminded', { arg1: String(ob.remindCount) })}</span
+                >
+              </li>
+            {/each}
+          </ul>
+        </div>
+      {/if}
+
       <div class="border-t border-border">
         <div class="flex items-center gap-2 px-4 pt-4 pb-1">
           <span class="text-meta font-medium text-muted-foreground">

@@ -686,6 +686,25 @@ export interface Group {
   lastMessageAt?: string
 }
 
+/**
+ * ReplyObligation is one outstanding debt: a session was asked something in a group and has not answered.
+ *
+ * OUTSTANDING ONLY on the wire. A reader asking "who has not answered" is not asking for the history of settled ones.
+ */
+export interface ReplyObligation {
+  id: string
+  /** The session that owes the answer. */
+  session: string
+  /** The session it owes, and that a reply must be addressed to. */
+  from: string
+  seq: number
+  messageId: string
+  createdAt: string
+  /** How many times it has been chased, and when it last was. */
+  remindCount: number
+  remindedAt?: string
+}
+
 export interface GroupMember {
   session: string
   /** 'coordinator' | 'member' */
