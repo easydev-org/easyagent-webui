@@ -939,18 +939,13 @@ export function getLocale(): Locale {
  *  otherwise. Resolves the "follow system" language preference. */
 export function systemLocale(): Locale {
   const langs =
-    typeof navigator !== 'undefined'
-      ? (navigator.languages?.[0] ?? navigator.language ?? '')
-      : ''
+    typeof navigator !== 'undefined' ? (navigator.languages?.[0] ?? navigator.language ?? '') : ''
   return langs.toLowerCase().startsWith('zh') ? 'zh' : 'en'
 }
 
 /** Translate a key with optional params. Supports named placeholders ({name})
  * and the arb positional style ({arg1}, {arg2}, … in declared order). */
-export function t(
-  key: Key | string,
-  params?: Record<string, string | number>,
-): string {
+export function t(key: Key | string, params?: Record<string, string | number>): string {
   let s = dicts[current][key] ?? dicts.en[key] ?? key
   if (params) {
     const vals = Object.values(params)

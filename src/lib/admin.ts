@@ -147,10 +147,7 @@ export class AdminApi {
     return { id: r.tenant?.id ?? '', token: r.token }
   }
 
-  async updateTenant(
-    id: string,
-    patch: { name?: string; disabled?: boolean },
-  ): Promise<void> {
+  async updateTenant(id: string, patch: { name?: string; disabled?: boolean }): Promise<void> {
     await this._c.updateTenant({
       id,
       ...(patch.name !== undefined ? { name: patch.name } : {}),
@@ -212,10 +209,7 @@ export class AdminApi {
   }
 
   /** Mint a delegated admin token for a subtree. Returns the one-time plaintext. */
-  async createAdminToken(
-    scopeTenantId: string,
-    label: string,
-  ): Promise<string> {
+  async createAdminToken(scopeTenantId: string, label: string): Promise<string> {
     const r = await this._c.createAdminToken({ scopeTenantId, label })
     return r.plaintext
   }

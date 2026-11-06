@@ -14,8 +14,7 @@ export default defineConfig({
       manifest: {
         name: 'EasyAgent',
         short_name: 'Agent',
-        description:
-          'Agent chat over the abc agent backend (agent.v1 via Connect)',
+        description: 'Agent chat over the abc agent backend (agent.v1 via Connect)',
         // Launch chrome follows the app's own (dark) palette; the icon hue
         // (AW violet) is used where the OS wants a brand colour.
         theme_color: '#0a0a0a',

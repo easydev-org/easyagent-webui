@@ -1,19 +1,10 @@
 // Pure chat-helper unit tests — model option/variant resolution and the
 // compact token/elapsed formatters.
 import { describe, expect, it } from 'vitest'
-import {
-  buildModelOptions,
-  fmtContext,
-  fmtElapsed,
-  variantsFor,
-} from './chat-helpers'
+import { buildModelOptions, fmtContext, fmtElapsed, variantsFor } from './chat-helpers'
 import type { ModelInfo } from './models'
 
-function model(
-  id: string,
-  providerId: string,
-  variants: ModelInfo['variants'] = [],
-): ModelInfo {
+function model(id: string, providerId: string, variants: ModelInfo['variants'] = []): ModelInfo {
   return { id, name: id, providerId, variants }
 }
 

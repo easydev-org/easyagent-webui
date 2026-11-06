@@ -49,12 +49,7 @@ describe('resolveAvatar', () => {
    * an empty circle with no explanation.
    */
   it('refuses anything that is not file:<code>', () => {
-    for (const v of [
-      'https://example.com/a.png',
-      'abc123',
-      'javascript:alert(1)',
-      'FILE:abc',
-    ]) {
+    for (const v of ['https://example.com/a.png', 'abc123', 'javascript:alert(1)', 'FILE:abc']) {
       expect(resolveAvatar(v)).toEqual({ source: 'identicon', code: '' })
     }
   })

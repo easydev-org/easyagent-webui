@@ -42,9 +42,7 @@ const jobStart: CardHandler = ({ tool, data, input, output, error }) => {
       ),
       // THE PROGRAM, NUMBERED. A window's start line is 1 here because this is the whole program the
       // caller sent — there is no larger file it came from.
-      body: program
-        ? { kind: 'code', name: '', text: program, startLine: 1 }
-        : undefined,
+      body: program ? { kind: 'code', name: '', text: program, startLine: 1 } : undefined,
     },
     result: {
       fields: fields(
@@ -140,9 +138,7 @@ const filePatch: CardHandler = ({ tool, input, output, error }) => {
       fields: [],
       // A PATCH IS CODE, and its shape IS its meaning: the `+`/`-` prefixes and the `***` markers are
       // what a reader checks. Numbers let a "hunk 2 failed" message be found.
-      body: patch
-        ? { kind: 'code', name: '', text: patch, startLine: 1 }
-        : undefined,
+      body: patch ? { kind: 'code', name: '', text: patch, startLine: 1 } : undefined,
     },
     result: {
       fields: [],
@@ -155,11 +151,4 @@ const filePatch: CardHandler = ({ tool, input, output, error }) => {
   }
 }
 
-export const sandboxHandlers = [
-  info,
-  jobStart,
-  jobOutput,
-  jobWait,
-  jobKill,
-  filePatch,
-]
+export const sandboxHandlers = [info, jobStart, jobOutput, jobWait, jobKill, filePatch]

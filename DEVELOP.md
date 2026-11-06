@@ -38,17 +38,17 @@ here and update the hand-written code:
 - **Token fields (proto #4).** `Session.input_tokens/output_tokens/total_tokens`
   (7/8/9) were **removed**; only the single-step `last_input_tokens` /
   `last_output_tokens` (10/11) remain. A "total" is `lastInputTokens +
-  lastOutputTokens` (see `Chat.svelte`'s context label). Nothing reads the
+lastOutputTokens` (see `Chat.svelte`'s context label). Nothing reads the
   cumulative counters any more.
 - **`WatchSession` resume anchors (proto #2/#3).** `WatchSessionRequest` carries
   `since_seq` (int64, the newest `WatchSessionResponse.seq` the client saw) and
   `since_msg` (message-id fallback). Resume rules — see `session-stream.ts`:
 
-  | case | `sinceSeq` | `sinceMsg` |
-  | --- | --- | --- |
-  | page refresh / new instance (`lastSeq === 0`) | `0` | `MessageSync.syncedTipId` |
-  | same-page reconnect (seq in memory) | `lastSeq` (resume **after** it) | `''` |
-  | switch to a different session | `0` | tip of the new session |
+  | case                                          | `sinceSeq`                      | `sinceMsg`                |
+  | --------------------------------------------- | ------------------------------- | ------------------------- |
+  | page refresh / new instance (`lastSeq === 0`) | `0`                             | `MessageSync.syncedTipId` |
+  | same-page reconnect (seq in memory)           | `lastSeq` (resume **after** it) | `''`                      |
+  | switch to a different session                 | `0`                             | tip of the new session    |
 
   The sequence anchor is **in-memory only** (`SessionStream.lastSeq`,
   deliberately NOT persisted): a non-zero `since_seq` makes the server skip the
@@ -131,18 +131,18 @@ Guard against it:
   or split the change);
 - after submitting, compare the MR's file set against `base` and confirm nothing
   you did not touch is missing;
-- `git init` the workspace root and commit is a workaround for a *different*
+- `git init` the workspace root and commit is a workaround for a _different_
   issue (making the submit honor `.gitignore`/tracking); keep `.git` **outside**
   the repository directory or submit fails with `invalid path component: ".git"`.
 
 ## `package-lock.json` registry (artifact vs. npmjs)
 
 `.npmrc` is **scope-only** (`n/a so only
-`the SDK` resolves from the in-cluster **artifact** mirror; every OTHER
+`the SDK`resolves from the in-cluster **artifact** mirror; every OTHER
 dependency resolves from the default registry (npmjs). When (re)generating the
 lock, make sure a stray **global** npmrc does not redirect the default registry:
-the lock's `resolved` URLs should be `registry.npmjs.org` for non-scoped
-packages and `artifact.worker.svc.cluster.local` **only** for `the SDK`. A
+the lock's`resolved`URLs should be`registry.npmjs.org`for non-scoped
+packages and`artifact.worker.svc.cluster.local`**only** for`the SDK`. A
 quick check:
 
 ```sh

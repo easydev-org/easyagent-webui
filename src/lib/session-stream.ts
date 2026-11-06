@@ -138,12 +138,7 @@ export class SessionStream {
     const sinceMsg = this.lastSeq > 0 ? '' : this.h.getSinceMsg()
     void (async () => {
       try {
-        for await (const ev of this.api.streamEvents(
-          sid,
-          this.lastSeq,
-          ac.signal,
-          sinceMsg,
-        )) {
+        for await (const ev of this.api.streamEvents(sid, this.lastSeq, ac.signal, sinceMsg)) {
           if (ac.signal.aborted) return
           this.lastStreamEventAt = Date.now()
           this.handleEvent(ev)
@@ -236,8 +231,7 @@ export class SessionStream {
     this.watchdogTimer && clearInterval(this.watchdogTimer)
     this.watchdogTimer = setInterval(() => {
       if (!this.h.isSending()) return
-      if (Date.now() - this.lastStreamEventAt < SessionStream.STREAM_STALE_MS)
-        return
+      if (Date.now() - this.lastStreamEventAt < SessionStream.STREAM_STALE_MS) return
       const sid = this.subSid ?? this.h.getSessionId()
       if (!sid || sid !== this.h.getSessionId()) return
       void this.recoverStaleStream(sid)
@@ -266,18 +260,13 @@ export class SessionStream {
         this.api
           .state(sid)
           .then(([st]) =>
-            st === 'busy' || st === 'running'
-              ? ('busy' as const)
-              : ('idle' as const),
+            st === 'busy' || st === 'running' ? ('busy' as const) : ('idle' as const),
           )
           .catch(() => 'dead' as const),
-        new Promise<'timeout'>(r =>
-          setTimeout(() => r('timeout'), SessionStream.PROBE_TIMEOUT_MS),
-        ),
+        new Promise<'timeout'>(r => setTimeout(() => r('timeout'), SessionStream.PROBE_TIMEOUT_MS)),
       ])
       // A fresh event may have landed while probing: stand down.
-      if (Date.now() - this.lastStreamEventAt < SessionStream.STREAM_STALE_MS)
-        return
+      if (Date.now() - this.lastStreamEventAt < SessionStream.STREAM_STALE_MS) return
       if (sid !== this.h.getSessionId()) return
       if (probe === 'idle') {
         this.h.onIdle()
@@ -303,8 +292,7 @@ export class SessionStream {
   private startIdleProbe() {
     this.idleProbeTimer && clearInterval(this.idleProbeTimer)
     this.idleProbeTimer = setInterval(() => {
-      if (Date.now() - this.lastActivity < SessionStream.IDLE_PROBE_EVERY)
-        return
+      if (Date.now() - this.lastActivity < SessionStream.IDLE_PROBE_EVERY) return
       this.api
         .state(this.h.getSessionId())
         .then(([st]) => {

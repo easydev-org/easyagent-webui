@@ -25,10 +25,7 @@ export function concat(frames: Float32Array[]): Float32Array {
 }
 
 /** Float32 [-1,1] mono → 16-bit PCM WAV (44-byte canonical header). */
-export function encodeWav(
-  samples: Float32Array,
-  sampleRate: number,
-): Uint8Array {
+export function encodeWav(samples: Float32Array, sampleRate: number): Uint8Array {
   const dataBytes = samples.length * 2
   const buf = new ArrayBuffer(44 + dataBytes)
   const dv = new DataView(buf)

@@ -75,11 +75,7 @@ describe('startToolPartIn', () => {
 describe('appendToolInputTo', () => {
   it('accumulates streamed argument JSON', () => {
     const parts = startToolPartIn([], 'tc1', 'x')
-    const out = appendToolInputTo(
-      appendToolInputTo(parts, 'tc1', '{"q":'),
-      'tc1',
-      '"x"}',
-    )
+    const out = appendToolInputTo(appendToolInputTo(parts, 'tc1', '{"q":'), 'tc1', '"x"}')
     expect(out[0]!.state?.inputText).toBe('{"q":"x"}')
   })
 
@@ -130,14 +126,9 @@ describe('applyToolResultTo', () => {
   })
 
   it('marks error and keeps the message', () => {
-    const out = applyToolResultTo(
-      startToolPartIn([], 'tc1', 'x'),
-      'tc1',
-      null,
-      {
-        errorMsg: 'kaput',
-      },
-    )
+    const out = applyToolResultTo(startToolPartIn([], 'tc1', 'x'), 'tc1', null, {
+      errorMsg: 'kaput',
+    })
     expect(out[0]!.state).toMatchObject({ status: 'error', error: 'kaput' })
   })
 

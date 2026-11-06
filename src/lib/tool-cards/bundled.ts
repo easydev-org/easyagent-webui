@@ -118,11 +118,7 @@ interface HistoryEntry {
 const history: CardHandler = ({ tool, data, input }) => {
   // `history-range-read` replaced `history-range`, whose window was measured from the tip and moved
   // as messages arrived. Keep the old name so an older transcript still renders.
-  if (
-    tool !== 'history-search' &&
-    tool !== 'history-range-read' &&
-    tool !== 'history-range'
-  )
+  if (tool !== 'history-search' && tool !== 'history-range-read' && tool !== 'history-range')
     return null
   const entries = arr<HistoryEntry>(data, 'entries')
   return {
@@ -207,22 +203,13 @@ function mediaCard(
         fields: fields(
           field('asterisk', 'tcPrompt', firstLine(prompt, 60)),
           field('cpu', 'tcModel', model, { mono: true }),
-          field(
-            'code',
-            'tcReference',
-            s(data, 'source') || s(data, 'reference'),
-            { mono: true },
-          ),
+          field('code', 'tcReference', s(data, 'source') || s(data, 'reference'), { mono: true }),
         ),
       },
       result: {
         fields: fields(
           field('list', 'tcFiles', files.length),
-          field(
-            'database',
-            'tcSize',
-            humanBytes(files.reduce((a, f) => a + (f.bytes ?? 0), 0)),
-          ),
+          field('database', 'tcSize', humanBytes(files.reduce((a, f) => a + (f.bytes ?? 0), 0))),
         ),
         body: first
           ? opts.audio
@@ -261,14 +248,10 @@ const groupCreate: CardHandler = ({ tool, data, input, output }) => {
   return {
     subtitle: 'group',
     input: {
-      fields: fields(
-        field('group', 'tcGroup', s(input, 'name'), { mono: true }),
-      ),
+      fields: fields(field('group', 'tcGroup', s(input, 'name'), { mono: true })),
     },
     result: {
-      fields: fields(
-        field('group', 'tcGroup', s(data, 'group'), { mono: true }),
-      ),
+      fields: fields(field('group', 'tcGroup', s(data, 'group'), { mono: true })),
       body: output ? { kind: 'text', text: output } : undefined,
     },
   }
@@ -280,11 +263,7 @@ const spawn: CardHandler = ({ tool, data, input, output }) => {
     subtitle: 'spawn',
     input: {
       fields: fields(
-        field(
-          'chat',
-          'tcDescription',
-          firstLine(s(input, 'task') || s(input, 'name'), 60),
-        ),
+        field('chat', 'tcDescription', firstLine(s(input, 'task') || s(input, 'name'), 60)),
       ),
     },
     result: {
@@ -307,9 +286,7 @@ const groupSend: CardHandler = ({ tool, data, input, output }) => {
   return {
     subtitle: 'group',
     input: {
-      fields: fields(
-        field('group', 'tcGroup', s(input, 'group'), { mono: true }),
-      ),
+      fields: fields(field('group', 'tcGroup', s(input, 'group'), { mono: true })),
     },
     result: {
       fields: fields(

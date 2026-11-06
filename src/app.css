@@ -36,7 +36,8 @@
   animation: select-pop 160ms ease-out;
 }
 
-/* Markdown body inside message bubbles (prose base + token colors). */.md-body {
+/* Markdown body inside message bubbles (prose base + token colors). */
+.md-body {
   font-size: var(--text-body);
   line-height: var(--line-body);
   word-break: break-word;

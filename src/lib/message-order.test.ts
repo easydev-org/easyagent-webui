@@ -58,12 +58,7 @@ describe('orderMessages (server-authored chain)', () => {
     const uB = msg({ id: 'uB', prevId: 'aA' })
     const aB = msg({ id: 'aB', role: 'assistant', prevId: 'uB' })
     // Deliberately scrambled array order.
-    expect(ids(orderMessages([uB, aB, uA, aA]))).toEqual([
-      'uA',
-      'aA',
-      'uB',
-      'aB',
-    ])
+    expect(ids(orderMessages([uB, aB, uA, aA]))).toEqual(['uA', 'aA', 'uB', 'aB'])
   })
 
   it('orders a clean server chain by prevId', () => {
@@ -120,10 +115,7 @@ describe('orderMessages (server-authored chain)', () => {
   })
 
   it('does not mutate the input array or its elements', () => {
-    const input = [
-      msg({ id: 'a', seq: 99 }),
-      msg({ id: 'l', isLocal: true, seq: 0 }),
-    ]
+    const input = [msg({ id: 'a', seq: 99 }), msg({ id: 'l', isLocal: true, seq: 0 })]
     const snapshot = input.map(m => ({ id: m.id, seq: m.seq }))
     orderMessages(input)
     expect(input.map(m => ({ id: m.id, seq: m.seq }))).toEqual(snapshot)

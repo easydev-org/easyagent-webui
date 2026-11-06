@@ -87,10 +87,7 @@ describe('SessionStream resume anchor', () => {
     // resume from 1234 — the server would then skip the running turn's earlier
     // structural events. It replays from the tip message instead.
     const b = stubApi()
-    const s2 = new SessionStream(
-      b.api,
-      handlers({ getSinceMsg: () => 'msg-42' }),
-    )
+    const s2 = new SessionStream(b.api, handlers({ getSinceMsg: () => 'msg-42' }))
     s2.connect('s1')
     await flush()
     expect(b.calls[0]).toEqual({ sinceSeq: 0, sinceMsg: 'msg-42' })

@@ -21,10 +21,8 @@ let app: Record<string, unknown> | null = null
 /** A minimal store: only what the bubble reads for an avatar. */
 function storeWith(session: { id: string; avatarFile?: string } | null) {
   return {
-    sessionById: (id: string) =>
-      session && session.id === id ? session : null,
-    sessionAvatar: (id: string) =>
-      session && session.id === id ? (session.avatarFile ?? '') : '',
+    sessionById: (id: string) => (session && session.id === id ? session : null),
+    sessionAvatar: (id: string) => (session && session.id === id ? (session.avatarFile ?? '') : ''),
     groups: [] as unknown[],
     api: { fetchFileBytes: vi.fn(async () => new Uint8Array()) },
   }
@@ -36,9 +34,7 @@ function groupMessage(from: string): ChatMessage {
     role: 'user',
     // The wire form: `group:<id>` for the user's own post, `group:<id>/<sender>` for a member's.
     source: `group:grp-1/${from}`,
-    parts: [
-      { id: 'p1', type: 'text', text: 'on it' } as ChatMessage['parts'][number],
-    ],
+    parts: [{ id: 'p1', type: 'text', text: 'on it' } as ChatMessage['parts'][number]],
   } as ChatMessage
 }
 

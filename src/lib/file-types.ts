@@ -5,12 +5,9 @@
 import { thumbHashToDataURL } from 'thumbhash'
 
 /** OOXML office types the viewer can render (docx/xlsx/pptx). */
-export const MIME_DOCX =
-  'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
-export const MIME_XLSX =
-  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-export const MIME_PPTX =
-  'application/vnd.openxmlformats-officedocument.presentationml.presentation'
+export const MIME_DOCX = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+export const MIME_XLSX = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+export const MIME_PPTX = 'application/vnd.openxmlformats-officedocument.presentationml.presentation'
 export const OFFICE_MIMES = new Set([MIME_DOCX, MIME_XLSX, MIME_PPTX])
 
 export type PreviewKind =
@@ -165,15 +162,9 @@ export function previewKind(mime?: string | null, name?: string): PreviewKind {
   if (m === MIME_DOCX || ext === 'docx') return 'docx'
   if (m === MIME_XLSX || ext === 'xlsx') return 'xlsx'
   if (m === MIME_PPTX || ext === 'pptx') return 'pptx'
-  if (m === 'text/markdown' || ext === 'md' || ext === 'markdown')
-    return 'markdown'
+  if (m === 'text/markdown' || ext === 'md' || ext === 'markdown') return 'markdown'
   if (m === 'application/json' || ext === 'json') return 'json'
-  if (
-    m === 'text/csv' ||
-    m === 'text/tab-separated-values' ||
-    ext === 'csv' ||
-    ext === 'tsv'
-  )
+  if (m === 'text/csv' || m === 'text/tab-separated-values' || ext === 'csv' || ext === 'tsv')
     return 'csv'
   if (m === 'text/html' || ext === 'html' || ext === 'htm') return 'html'
   if (CODE_EXT.has(ext)) return 'code'
@@ -225,13 +216,7 @@ export function fileIconSlot(
       return 'file'
     default: {
       const ext = (name ?? '').split('.').pop()?.toLowerCase() ?? ''
-      if (
-        ext === 'zip' ||
-        ext === 'tar' ||
-        ext === 'gz' ||
-        ext === '7z' ||
-        ext === 'rar'
-      )
+      if (ext === 'zip' || ext === 'tar' || ext === 'gz' || ext === '7z' || ext === 'rar')
         return 'file_archive'
       return 'file'
     }
@@ -268,10 +253,7 @@ export function thumbhashPlaceholder(hash?: string | null): string {
 /** A stable CSS `aspect-ratio` value from server dimensions, or '' when
  *  unknown. Applied while loading to reserve the final box and prevent the
  *  layout from jumping once the image binds. */
-export function aspectRatio(
-  width?: number | null,
-  height?: number | null,
-): string {
+export function aspectRatio(width?: number | null, height?: number | null): string {
   if (!width || !height || width <= 0 || height <= 0) return ''
   return `${width} / ${height}`
 }

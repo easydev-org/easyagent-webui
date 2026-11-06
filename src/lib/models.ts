@@ -2,14 +2,7 @@
  * types only). Used until ListProvidersCatalog answers; the server response
  * overrides it. */
 export const FALLBACK_API_TYPE_CAPABILITIES: Record<string, string[]> = {
-  'openai-compatible': [
-    'text',
-    'embedding',
-    'image',
-    'speech',
-    'transcription',
-    'realtime',
-  ],
+  'openai-compatible': ['text', 'embedding', 'image', 'speech', 'transcription', 'realtime'],
   openai: ['text', 'embedding', 'image', 'speech', 'transcription', 'realtime'],
   anthropic: ['text'],
   deepseek: ['text'],

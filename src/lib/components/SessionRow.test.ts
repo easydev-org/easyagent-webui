@@ -41,8 +41,7 @@ describe('SessionRow relative-time stamp', () => {
       props: { session: session('2026-01-01T00:00:00Z') },
     })
     const stamp = () =>
-      document.querySelector('button span.w-\\[52px\\]')?.textContent?.trim() ??
-      ''
+      document.querySelector('button span.w-\\[52px\\]')?.textContent?.trim() ?? ''
     expect(stamp()).toBe('just now')
     // 30s later the shared clock ticks AND a minute boundary is crossed; the
     // label must re-render with no user interaction.

@@ -34,10 +34,7 @@ describe('ToolPicker mounts without crashing', () => {
   })
 
   it('a qualified selection (same bare name in two extensions)', () => {
-    const done = render(
-      [t('extA', 'search'), t('extB', 'search')],
-      new Set(['extA.search']),
-    )
+    const done = render([t('extA', 'search'), t('extB', 'search')], new Set(['extA.search']))
     expect(document.body.textContent).toContain('search')
     done()
   })
