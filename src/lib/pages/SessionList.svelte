@@ -405,7 +405,9 @@
         aria-expanded={groupsOpen}
         onclick={toggleGroups}
       >
-        <span class="flex-1 text-micro font-semibold tracking-wider text-muted-foreground uppercase">
+        <span
+          class="flex-1 text-micro font-semibold tracking-wider text-muted-foreground uppercase"
+        >
           {t('groupsTitle')} · {store.groups.length}
         </span>
         <AppIcons.chevron_down

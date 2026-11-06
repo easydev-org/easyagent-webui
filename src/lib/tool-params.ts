@@ -14,9 +14,7 @@ export interface ToolParam {
 
 /** Parse a JSON-Schema object into a flat list of leaf params (recursed for
  *  object properties and array item objects). */
-export function parseToolParams(
-  schema?: Record<string, unknown> | null,
-): ToolParam[] {
+export function parseToolParams(schema?: Record<string, unknown> | null): ToolParam[] {
   if (!schema) return []
   const properties = schema['properties']
   if (!properties || typeof properties !== 'object') return []
@@ -24,9 +22,7 @@ export function parseToolParams(
     Array.isArray(schema['required']) ? schema['required'].map(String) : [],
   )
   const out: ToolParam[] = []
-  for (const [key, value] of Object.entries(
-    properties as Record<string, unknown>,
-  )) {
+  for (const [key, value] of Object.entries(properties as Record<string, unknown>)) {
     if (!value || typeof value !== 'object') continue
     const v = value as Record<string, unknown>
     const type = (v['type'] as string) || 'object'

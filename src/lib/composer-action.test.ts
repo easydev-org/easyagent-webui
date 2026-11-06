@@ -25,16 +25,12 @@ describe('composerAction', () => {
   })
 
   it('while a turn runs: deliver when there is content, else stop', () => {
-    expect(composerAction({ ...base, sending: true, canDeliver: true })).toBe(
-      'deliver',
-    )
+    expect(composerAction({ ...base, sending: true, canDeliver: true })).toBe('deliver')
     expect(composerAction({ ...base, sending: true })).toBe('stop')
   })
 
   it('deliver outranks stop but stop outranks our own submitting', () => {
-    expect(composerAction({ ...base, sending: true, submitting: true })).toBe(
-      'stop',
-    )
+    expect(composerAction({ ...base, sending: true, submitting: true })).toBe('stop')
   })
 
   it('idle: submitting spinner, then send, then attach', () => {

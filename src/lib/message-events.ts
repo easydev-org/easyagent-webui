@@ -47,13 +47,7 @@ export function applyStreamEvent(
     case 'tool-input-start': {
       const sid = streamMsgId()
       if (sid == null) break
-      if (
-        store.ensureStreamingMsg(
-          sid,
-          params['prev_id'] as string | undefined,
-        ) == null
-      )
-        break
+      if (store.ensureStreamingMsg(sid, params['prev_id'] as string | undefined) == null) break
       if (event === 'text-start' && params['id'] != null) {
         store.ensurePart(sid, params['id'] as string, 'text')
       } else if (event === 'reasoning-start' && params['id'] != null) {
@@ -69,10 +63,7 @@ export function applyStreamEvent(
     }
     case 'tool-input-delta': {
       if (params['id'] != null && params['delta'] != null) {
-        store.appendToolInput(
-          params['id'] as string,
-          String(params['delta'] ?? ''),
-        )
+        store.appendToolInput(params['id'] as string, String(params['delta'] ?? ''))
       }
       break
     }
@@ -80,50 +71,22 @@ export function applyStreamEvent(
       if (params['id'] != null && params['text'] != null) {
         const sid = streamMsgId()
         if (sid == null) break
-        if (
-          store.ensureStreamingMsg(
-            sid,
-            params['prev_id'] as string | undefined,
-          ) == null
-        )
-          break
-        store.appendDelta(
-          sid,
-          params['id'] as string,
-          String(params['text'] ?? ''),
-          false,
-        )
+        if (store.ensureStreamingMsg(sid, params['prev_id'] as string | undefined) == null) break
+        store.appendDelta(sid, params['id'] as string, String(params['text'] ?? ''), false)
       }
       break
     case 'reasoning-delta':
       if (params['id'] != null && params['text'] != null) {
         const sid = streamMsgId()
         if (sid == null) break
-        if (
-          store.ensureStreamingMsg(
-            sid,
-            params['prev_id'] as string | undefined,
-          ) == null
-        )
-          break
-        store.appendDelta(
-          sid,
-          `r${params['id']}`,
-          String(params['text'] ?? ''),
-          true,
-        )
+        if (store.ensureStreamingMsg(sid, params['prev_id'] as string | undefined) == null) break
+        store.appendDelta(sid, `r${params['id']}`, String(params['text'] ?? ''), true)
       }
       break
     case 'tool-call': {
       const sid = streamMsgId()
       if (sid == null) break
-      if (
-        store.ensureStreamingMsg(
-          sid,
-          params['prev_id'] as string | undefined,
-        ) == null
-      )
-        break
+      if (store.ensureStreamingMsg(sid, params['prev_id'] as string | undefined) == null) break
       const tcId = (params['toolCallId'] ?? params['id']) as string | undefined
       if (tcId != null) {
         store.addToolPart(
@@ -146,15 +109,11 @@ export function applyStreamEvent(
       const tcId = (params['toolCallId'] ?? params['id']) as string | undefined
       if (tcId == null) break
       const mid =
-        typeof params['message_id'] === 'string'
-          ? (params['message_id'] as string)
-          : undefined
-      const out =
-        (params['output'] as Record<string, unknown> | undefined) ?? {}
+        typeof params['message_id'] === 'string' ? (params['message_id'] as string) : undefined
+      const out = (params['output'] as Record<string, unknown> | undefined) ?? {}
       // `content` (terminal, authoritative) or `delta` (live, appended). Exactly one is
       // present per frame; the store merges accordingly.
-      const content =
-        typeof out['content'] === 'string' ? out['content'] : undefined
+      const content = typeof out['content'] === 'string' ? out['content'] : undefined
       const delta = typeof out['delta'] === 'string' ? out['delta'] : undefined
       // `state` distinguishes a clean finish from a tool that stopped early with
       // real output in hand — the difference between "done" and "stopped after N
@@ -165,13 +124,10 @@ export function applyStreamEvent(
         content,
         delta,
         state,
-        changeId:
-          typeof out['change_id'] === 'string' ? out['change_id'] : undefined,
+        changeId: typeof out['change_id'] === 'string' ? out['change_id'] : undefined,
         diff: typeof out['diff'] === 'string' ? out['diff'] : undefined,
-        additions:
-          typeof out['additions'] === 'number' ? out['additions'] : undefined,
-        deletions:
-          typeof out['deletions'] === 'number' ? out['deletions'] : undefined,
+        additions: typeof out['additions'] === 'number' ? out['additions'] : undefined,
+        deletions: typeof out['deletions'] === 'number' ? out['deletions'] : undefined,
         data: out,
         preliminary,
       })
@@ -183,9 +139,7 @@ export function applyStreamEvent(
       const tcId = (params['toolCallId'] ?? params['id']) as string | undefined
       if (tcId == null) break
       const mid =
-        typeof params['message_id'] === 'string'
-          ? (params['message_id'] as string)
-          : undefined
+        typeof params['message_id'] === 'string' ? (params['message_id'] as string) : undefined
       const text = params['errorText'] ?? params['error'] ?? 'tool error'
       store.applyToolOutput(mid, tcId, {
         // No `content`/`delta`: an error frame carries no output of its own, and
@@ -198,8 +152,7 @@ export function applyStreamEvent(
     }
     case 'tool-output-denied': {
       const tcId = (params['toolCallId'] ?? params['id']) as string | undefined
-      if (tcId != null)
-        store.updateToolResult(tcId, null, { errorMsg: 'denied' })
+      if (tcId != null) store.updateToolResult(tcId, null, { errorMsg: 'denied' })
       break
     }
     case 'file':
@@ -212,16 +165,8 @@ export function applyStreamEvent(
       if (part == null) break
       const sid = streamMsgId()
       if (sid == null) break
-      if (
-        store.ensureStreamingMsg(
-          sid,
-          params['prev_id'] as string | undefined,
-        ) == null
-      )
-        break
-      const existing = store.messages
-        .find(m => m.id === sid)
-        ?.parts.some(p => p.id === part.id)
+      if (store.ensureStreamingMsg(sid, params['prev_id'] as string | undefined) == null) break
+      const existing = store.messages.find(m => m.id === sid)?.parts.some(p => p.id === part.id)
       if (!existing) {
         store.setMsg(sid, m => ({ ...m, parts: [...m.parts, part] }))
       }
@@ -260,12 +205,9 @@ export function applyStreamEvent(
       // a trigger shows up here once the agent has drained the mailbox and
       // written the chain row. `streaming:true` opens the assistant step's
       // bubble; its deltas then arrive under the same id.
-      const addedId =
-        typeof params['message_id'] === 'string' ? params['message_id'] : ''
-      const prevId =
-        typeof params['prev_id'] === 'string' ? params['prev_id'] : ''
-      const role =
-        typeof params['role'] === 'string' ? params['role'] : 'assistant'
+      const addedId = typeof params['message_id'] === 'string' ? params['message_id'] : ''
+      const prevId = typeof params['prev_id'] === 'string' ? params['prev_id'] : ''
+      const role = typeof params['role'] === 'string' ? params['role'] : 'assistant'
       const streaming = params['streaming'] === true
       const src = typeof params['source'] === 'string' ? params['source'] : ''
       if (addedId !== '') {

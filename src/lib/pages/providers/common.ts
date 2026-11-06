@@ -7,13 +7,7 @@
  * pane plays speech — so a section for them would be a picker whose models are never selectable. The
  * PROTOCOL still accepts them (the gateway serves them); this is a decision about what to show.
  */
-export const MODEL_CAPABILITIES = [
-  'text',
-  'image',
-  'video',
-  'speech',
-  'transcription',
-] as const
+export const MODEL_CAPABILITIES = ['text', 'image', 'video', 'speech', 'transcription'] as const
 
 /** The api types that can serve a modality (from the server catalog). */
 export function apiTypesForCapability(

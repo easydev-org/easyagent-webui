@@ -75,8 +75,7 @@ export class VoiceRecorder {
       // Ask the context for 16 kHz directly; the browser resamples the mic.
       const Ctor =
         window.AudioContext ??
-        (window as unknown as { webkitAudioContext: typeof AudioContext })
-          .webkitAudioContext
+        (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext
       const ctx = new Ctor({ sampleRate: SAMPLE_RATE })
       this.ctx = ctx
       if (ctx.state === 'suspended') await ctx.resume()
@@ -105,9 +104,7 @@ export class VoiceRecorder {
     source: MediaStreamAudioSourceNode,
   ): Promise<void> {
     if (ctx.audioWorklet === undefined) throw new Error('no AudioWorklet')
-    const url = URL.createObjectURL(
-      new Blob([WORKLET_SRC], { type: 'application/javascript' }),
-    )
+    const url = URL.createObjectURL(new Blob([WORKLET_SRC], { type: 'application/javascript' }))
     this.workletUrl = url
     await ctx.audioWorklet.addModule(url)
     // Keep ONE output: a 0-output node cannot be connected, and the failed
@@ -125,10 +122,7 @@ export class VoiceRecorder {
     this.worklet = node
   }
 
-  private attachScriptProcessor(
-    ctx: AudioContext,
-    source: MediaStreamAudioSourceNode,
-  ): void {
+  private attachScriptProcessor(ctx: AudioContext, source: MediaStreamAudioSourceNode): void {
     const node = ctx.createScriptProcessor(4096, 1, 1)
     node.onaudioprocess = e => {
       if (this.cancelled) return

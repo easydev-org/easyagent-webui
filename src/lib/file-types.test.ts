@@ -25,9 +25,7 @@ describe('mimeToKind', () => {
 
   it('classifies OOXML office types', () => {
     expect(
-      mimeToKind(
-        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-      ),
+      mimeToKind('application/vnd.openxmlformats-officedocument.wordprocessingml.document'),
     ).toBe('office')
   })
 

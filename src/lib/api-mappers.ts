@@ -3,18 +3,9 @@
 // these, and they are independently unit-testable.
 
 import { create, fromBinary, toBinary } from '@bufbuild/protobuf'
-import {
-  IngestFileRequestSchema,
-  IngestFileResponseSchema,
-} from '../gen/agent/v1/agent_pb.js'
+import { IngestFileRequestSchema, IngestFileResponseSchema } from '../gen/agent/v1/agent_pb.js'
 import { t } from './i18n.svelte'
-import type {
-  GroupMessage,
-  Message,
-  MessagePart,
-  Session,
-  SessionGrant,
-} from './models'
+import type { GroupMessage, Message, MessagePart, Session, SessionGrant } from './models'
 
 /**
  * Map a grant from the wire.
@@ -67,9 +58,7 @@ export function decodeJson(data: string): Record<string, unknown> {
   if (!data) return {}
   try {
     const v = JSON.parse(data)
-    return v && typeof v === 'object' && !Array.isArray(v)
-      ? (v as Record<string, unknown>)
-      : {}
+    return v && typeof v === 'object' && !Array.isArray(v) ? (v as Record<string, unknown>) : {}
   } catch {
     return {}
   }
@@ -88,9 +77,7 @@ export function valueToJson(v: unknown): unknown {
     case 'boolValue':
       return k.value
     case 'listValue':
-      return ((k.value as { values?: unknown[] })?.values ?? []).map(
-        valueToJson,
-      )
+      return ((k.value as { values?: unknown[] })?.values ?? []).map(valueToJson)
     case 'structValue':
       return structToJson(k.value)
     default:
@@ -106,9 +93,7 @@ function structToJson(v: unknown): Record<string, unknown> {
   return out
 }
 
-export function sessionFromPb(
-  s: import('../gen/agent/v1/agent_pb.js').Session,
-): Session {
+export function sessionFromPb(s: import('../gen/agent/v1/agent_pb.js').Session): Session {
   return {
     id: s.id,
     name: s.name,
@@ -137,9 +122,7 @@ export function sessionFromPb(
     // 'unknown' (a transient read error) is surfaced so the row shows a
     // distinct badge instead of a misleading idle or a bare gap.
     status:
-      s.status === 'busy' || s.status === 'idle' || s.status === 'unknown'
-        ? s.status
-        : undefined,
+      s.status === 'busy' || s.status === 'idle' || s.status === 'unknown' ? s.status : undefined,
   }
 }
 
@@ -205,13 +188,9 @@ export function messageFromPb(m: PbMessage): Message {
           type: 'compaction',
           text: (d['summary'] as string) || '',
           compactionReason:
-            d['reason'] === 'manual' || d['reason'] === 'overflow'
-              ? d['reason']
-              : null,
-          foldedCount:
-            typeof d['folded_count'] === 'number' ? d['folded_count'] : null,
-          foldedTokens:
-            typeof d['folded_tokens'] === 'number' ? d['folded_tokens'] : null,
+            d['reason'] === 'manual' || d['reason'] === 'overflow' ? d['reason'] : null,
+          foldedCount: typeof d['folded_count'] === 'number' ? d['folded_count'] : null,
+          foldedTokens: typeof d['folded_tokens'] === 'number' ? d['folded_tokens'] : null,
         })
         break
       case 'channel': {
@@ -254,8 +233,7 @@ export function messageFromPb(m: PbMessage): Message {
                 ? Number(d['durationMs'])
                 : undefined,
           thumbCode:
-            (d['thumb_code'] as string | undefined) ??
-            (d['thumbCode'] as string | undefined),
+            (d['thumb_code'] as string | undefined) ?? (d['thumbCode'] as string | undefined),
           thumbhash: (d['thumbhash'] as string | undefined) ?? undefined,
         })
         break
@@ -270,8 +248,7 @@ export function messageFromPb(m: PbMessage): Message {
         // the empty string because the tool printed nothing. This used to set status 'complete'
         // unconditionally and read only `content`, so a refused or crashing tool rendered as a green
         // card with no body: the user saw that a step failed and could not see why.
-        const failed =
-          res?.['state'] === 'error' || typeof meta?.['error'] === 'string'
+        const failed = res?.['state'] === 'error' || typeof meta?.['error'] === 'string'
         parts.push({
           id: p.id,
           type: 'tool',
@@ -282,10 +259,7 @@ export function messageFromPb(m: PbMessage): Message {
             title: (d['name'] as string) || '',
             input: (d['input'] as Record<string, unknown>) || null,
             output: typeof content === 'string' ? content : null,
-            error:
-              typeof meta?.['error'] === 'string'
-                ? (meta['error'] as string)
-                : null,
+            error: typeof meta?.['error'] === 'string' ? (meta['error'] as string) : null,
             data: meta ?? null,
             // How the call ended, so a rebuilt transcript says "timed out" the same
             // way the live one did.
@@ -303,8 +277,7 @@ export function messageFromPb(m: PbMessage): Message {
           (d['metadata'] as Record<string, unknown> | undefined)
         // THE ORPHAN CASE — a result with no tool part to pair with. It has the same shape, and the
         // same trap: the reason for a failure lives in meta.error while content is empty.
-        const failed =
-          d['state'] === 'error' || typeof meta?.['error'] === 'string'
+        const failed = d['state'] === 'error' || typeof meta?.['error'] === 'string'
         parts.push({
           id: p.id,
           type: 'tool',
@@ -314,10 +287,7 @@ export function messageFromPb(m: PbMessage): Message {
             status: failed ? 'error' : 'complete',
             title: '',
             output: typeof content === 'string' ? content : null,
-            error:
-              typeof meta?.['error'] === 'string'
-                ? (meta['error'] as string)
-                : null,
+            error: typeof meta?.['error'] === 'string' ? (meta['error'] as string) : null,
           },
         })
         break
@@ -412,14 +382,8 @@ export function uploadIngest(
 }
 
 /** Serialise an IngestFile request to its binary Connect body. */
-export function encodeIngestRequest(
-  bytes: Uint8Array,
-  name: string,
-): Uint8Array {
-  return toBinary(
-    IngestFileRequestSchema,
-    create(IngestFileRequestSchema, { data: bytes, name }),
-  )
+export function encodeIngestRequest(bytes: Uint8Array, name: string): Uint8Array {
+  return toBinary(IngestFileRequestSchema, create(IngestFileRequestSchema, { data: bytes, name }))
 }
 
 /**

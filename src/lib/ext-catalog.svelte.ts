@@ -107,15 +107,11 @@ async function probe(id: string, token: string): Promise<ExtUi | null> {
     })
     if (!r.ok) return null
     const info = (await r.json()) as UiInfo
-    const base =
-      typeof info.base === 'string' && info.base !== ''
-        ? info.base
-        : `/ext/${id}`
+    const base = typeof info.base === 'string' && info.base !== '' ? info.base : `/ext/${id}`
     return {
       id,
       // The extension's own name for itself; the id is the fallback, never a blank cell.
-      title:
-        typeof info.title === 'string' && info.title !== '' ? info.title : id,
+      title: typeof info.title === 'string' && info.title !== '' ? info.title : id,
       base,
       descriptions: readDescriptions(info.descriptions),
       // Resolved against the mount the extension reported, so an icon path is a path under it rather
@@ -146,7 +142,5 @@ export async function discoverExtUis(api: AgentApi): Promise<ExtUi[]> {
   }
   const token = storedToken()
   const found = await Promise.all(ids.map(id => probe(id, token)))
-  return found
-    .filter((e): e is ExtUi => e !== null)
-    .sort((a, b) => a.title.localeCompare(b.title))
+  return found.filter((e): e is ExtUi => e !== null).sort((a, b) => a.title.localeCompare(b.title))
 }

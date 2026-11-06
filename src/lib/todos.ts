@@ -16,22 +16,13 @@ export interface Todo {
   priority: TodoPriority
 }
 
-const STATUSES: readonly TodoStatus[] = [
-  'pending',
-  'in_progress',
-  'completed',
-  'cancelled',
-]
+const STATUSES: readonly TodoStatus[] = ['pending', 'in_progress', 'completed', 'cancelled']
 const PRIORITIES: readonly TodoPriority[] = ['high', 'medium', 'low']
 
 /** True for the bundled todo tool, bare or extension-qualified (`x.todo-write`). */
 export function isTodoWrite(name: string | null | undefined): boolean {
   if (!name) return false
-  return (
-    name === 'todo-write' ||
-    name === 'todowrite' ||
-    name.endsWith('.todo-write')
-  )
+  return name === 'todo-write' || name === 'todowrite' || name.endsWith('.todo-write')
 }
 
 function asStatus(v: unknown): TodoStatus {
@@ -49,14 +40,12 @@ function asPriority(v: unknown): TodoPriority {
  * still streaming (no `input` yet), and a genuinely empty list.
  */
 export function parseTodos(input: unknown): Todo[] | null {
-  if (input === null || typeof input !== 'object' || Array.isArray(input))
-    return null
+  if (input === null || typeof input !== 'object' || Array.isArray(input)) return null
   const raw = (input as Record<string, unknown>)['todos']
   if (!Array.isArray(raw)) return null
   const out: Todo[] = []
   for (const item of raw) {
-    if (item === null || typeof item !== 'object' || Array.isArray(item))
-      continue
+    if (item === null || typeof item !== 'object' || Array.isArray(item)) continue
     const o = item as Record<string, unknown>
     out.push({
       content: typeof o['content'] === 'string' ? o['content'] : '',

@@ -21,9 +21,7 @@ export function sanitizeToolName(name: string): string {
  *   (the agent's whitelist matching accepts both forms).
  */
 export function toolValue(all: readonly ToolInfo[], t: ToolInfo): string {
-  return isColliding(all, t.name)
-    ? `${t.category}.${t.name}`
-    : sanitizeToolName(t.name)
+  return isColliding(all, t.name) ? `${t.category}.${t.name}` : sanitizeToolName(t.name)
 }
 
 /** Whether a bare tool name is provided by more than one extension. */
