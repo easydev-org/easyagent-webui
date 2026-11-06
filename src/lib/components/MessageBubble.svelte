@@ -111,15 +111,41 @@
           ? msg.source.slice('group:'.length).split('/')[0] || ''
           : '',
   )
+  /**
+   * The group's DISPLAY NAME for a `group:` source.
+   *
+   * `sourceName` is the id — the address the chip navigates by — so showing it put a 32-character string in a chip
+   * a person reads. The name comes from the store when the list has the group, falling back to the id so an unknown
+   * group is still attributable rather than blank.
+   */
+  const groupLabel = $derived(
+    sourceKind === 'group'
+      ? (store?.groups.find(g => g.id === sourceName)?.name ?? sourceName)
+      : '',
+  )
+
   /** The sending session for a `group:` source ('' when the user posted it). */
   const groupSender = $derived(
     sourceKind === 'group' ? msg.source.slice('group:'.length).split('/')[1] || '' : '',
   )
   // A system-sourced message renders like a system notice (centred).
   const isSystem = $derived(isRoleSystem || sourceKind === 'system')
-  // The reader's OWN prompt: right-aligned, no avatar, retry/edit allowed.
-  // A session hand-off has role `user` but is NOT ours.
-  const isOwn = $derived(isUser && sourceKind !== 'session' && sourceKind !== 'group')
+  /**
+   * WHETHER THE READER WROTE THIS — and a GROUP message they posted counts.
+   *
+   * A message the USER sent to a group arrives in the coordinator's transcript as `group:<id>` with NO sender
+   * segment; a member's post carries `group:<id>/<session>`. That empty tail is the discriminator, and it is the
+   * only one available: both are role `user`, because both ARE user-shaped input to the model.
+   *
+   * TREATING THEM AS INCOMING WAS WRONG IN A WAY THAT READS AS A BUG: the person's own words appeared on the left
+   * with an avatar, indistinguishable from a worker's report, so "did I say that or did something else" had no
+   * answer on the page where they supervise.
+   *
+   * A SESSION HAND-OFF STAYS INCOMING: role `user`, but written by another session, not by this reader.
+   */
+  const isOwn = $derived(
+    isUser && sourceKind !== 'session' && (sourceKind !== 'group' || groupSender === ''),
+  )
 
   /**
    * senderLabel renders a session id as the name a reader knows it by.
@@ -286,12 +312,25 @@
 
 {#snippet chipBody()}
   {#if sourceKind === 'group'}
-    <!-- A GROUP MESSAGE NAMES THE GROUP AND THE SPEAKER: "which conversation" and "who said it" are two
-         different questions, and a chip that answered only one of them left the reader guessing. -->
+    <!-- A GROUP MESSAGE SAYS WHICH CONVERSATION IT CAME FROM AND WHO SPOKE, because those are two different
+         questions and a chip that answered only one left the reader guessing.
+
+         "YOU" IS SAID EXPLICITLY when the reader wrote it. A group message they posted carries no sender, and
+         leaving the chip to imply authorship by alignment alone made the reader compare bubbles instead of reading
+         a label — on the page where they supervise, "did I say that or did something else" has to be answerable at
+         a glance.
+
+         THE NAME, NOT THE ID. `sourceName` holds the id — that is the address — so printing it raw put a
+         32-character string where a label belongs. -->
     <AppIcons.users class="size-3" />
-    {t('mailboxFromGroup')}
-    {#if sourceName}<span class="opacity-80">· {sourceName}</span>{/if}
-    {#if groupSender}<span class="opacity-80">· {senderLabel(groupSender)}</span>{/if}
+    {#if groupSender}
+      {t('mailboxFromGroup')}
+      {#if groupLabel}<span class="opacity-80">· {groupLabel}</span>{/if}
+      <span class="opacity-80">· {senderLabel(groupSender)}</span>
+    {:else}
+      {t('mailboxFromYouInGroup')}
+      {#if groupLabel}<span class="opacity-80">· {groupLabel}</span>{/if}
+    {/if}
   {:else if sourceKind === 'session'}
     <AppIcons.chat class="size-3" />
     {t('mailboxFromSession')}
@@ -381,7 +420,10 @@
               {msg.errorKind === 'send' ? t('sendFailedTitle') : t('modelError')}
             </span>
           {/if}
-          {#if sourceKind === 'session' || sourceKind === 'system' || sourceKind === 'group'}
+          <!-- A MESSAGE THE READER WROTE NEEDS NO SOURCE CHIP: alignment and the bubble already say it is theirs,
+               and a chip reading "you, in group X" is a label on something self-evident. It is kept for everyone
+               ELSE's messages, where the chip is the only thing that says which conversation it came from. -->
+          {#if (sourceKind === 'session' || sourceKind === 'system' || sourceKind === 'group') && !isOwn}
             <!-- Source chip: "来自会话 · {name}" / "来自系统 · {name}". The
                session chip opens that session when it still exists. -->
             <!-- A GROUP CHIP OPENS THE GROUP, NOT THE SENDER: the chip names which conversation this came

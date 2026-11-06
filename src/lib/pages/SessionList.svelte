@@ -148,18 +148,6 @@
     Prefs.saveGroupsOpen(groupsOpen)
   }
 
-  /**
-   * isSessionRoom reports whether a group is a SESSION'S OWN ROOM rather than a group a person made.
-   *
-   * THE PROVENANCE IS IN `created_by`, which is `session:<id>` for the automatic room and `user…` for anything a
-   * person created. It is a label on the row rather than a separate kind, because the two are the same thing to
-   * every other part of the system — a group with members and a transcript — and a second kind would mean every
-   * reader branching on it.
-   */
-  function isSessionRoom(g: Group): boolean {
-    return g.createdBy.startsWith('session:')
-  }
-
   function create() {
     newSessionOpen = true
   }
@@ -452,15 +440,6 @@
             <span class="min-w-0 flex-1">
               <span class="flex items-baseline gap-2">
                 <span class="min-w-0 flex-1 truncate text-body font-medium">{g.name}</span>
-                <!-- A SESSION'S OWN ROOM IS MARKED, because it is a different kind of place: it exists so one
-                     session can be directed, and it disappears with that session. A list where the two looked
-                     identical would make "why is this group empty" a recurring question. -->
-                {#if isSessionRoom(g)}
-                  <span
-                    class="shrink-0 rounded border border-border px-1 text-[9px] text-muted-foreground"
-                    >{t('groupSessionRoom')}</span
-                  >
-                {/if}
                 {#if g.lastMessageAt}
                   <span class="shrink-0 text-micro text-muted-foreground tabular-nums"
                     >{fmtTime(g.lastMessageAt, now())}</span

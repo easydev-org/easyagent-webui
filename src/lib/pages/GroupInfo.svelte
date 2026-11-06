@@ -182,8 +182,10 @@
   async function addMembers() {
     if (!group || picked.length === 0) return
     try {
-      await store.api.addGroupMembers(group.name, picked)
-      const meta = await store.api.group(group.name)
+      // BY ID. The name is a label two groups may share, and every group RPC takes the id since the identity split —
+      // a call keyed by the label asked for a group that may not exist, or the wrong one.
+      await store.api.addGroupMembers(group.id, picked)
+      const meta = await store.api.group(group.id)
       members = meta.members
       const n = picked.length
       adding = false
@@ -205,7 +207,7 @@
     if (!group || removing) return
     removing = id
     try {
-      members = await store.api.removeGroupMember(group.name, id)
+      members = await store.api.removeGroupMember(group.id, id)
     } catch (e) {
       showErrorToast(String(e))
     } finally {
