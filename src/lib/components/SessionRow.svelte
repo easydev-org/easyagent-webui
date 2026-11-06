@@ -14,6 +14,7 @@
   import { cn } from '$lib/utils'
   import { AppIcons } from '$lib/icons'
   import ChatAvatar from '$lib/components/ChatAvatar.svelte'
+  import StatusDot from '$lib/components/StatusDot.svelte'
   import { now } from '$lib/clock.svelte'
 
   let {
@@ -128,29 +129,11 @@
     {fetchBytes}
     label={sessionName(session)}
   />
-  <!-- Runtime status from the server's run lease: a top-right badge on the
-       avatar. Running (incl. mid-retry) = pulsing green; idle = gray;
-       unknown (lease read error) = amber; a reply that did not read the
-       lease (undefined) = no badge. -->
-  {#if session.status === 'busy'}
-    <span
-      class="absolute -top-0.5 -right-0.5 size-2.5 animate-pulse rounded-full bg-success ring-2 ring-background"
-      title={t('running')}
-      aria-label={t('running')}
-    ></span>
-  {:else if session.status === 'idle'}
-    <span
-      class="absolute -top-0.5 -right-0.5 size-2.5 rounded-full bg-muted-foreground ring-2 ring-background"
-      title={t('idle')}
-      aria-label={t('idle')}
-    ></span>
-  {:else if session.status === 'unknown'}
-    <span
-      class="absolute -top-0.5 -right-0.5 size-2.5 rounded-full bg-warning ring-2 ring-background"
-      title={t('statusUnknown')}
-      aria-label={t('statusUnknown')}
-    ></span>
-  {/if}
+  <!-- Runtime status from the server's run lease, as a top-right badge on the avatar. The mapping lives in
+       StatusDot so a group's member list draws the same fact the same way. -->
+  <span class="absolute -top-0.5 -right-0.5">
+    <StatusDot status={session.status} />
+  </span>
 {/snippet}
 
 <button

@@ -15,6 +15,8 @@ const K_DARK_LEGACY = 'agent.darkMode'
 const K_AGENT_LOCALE = 'agent.agentLocale'
 const K_READ = 'agent.readSeqs'
 const K_BACKENDS = 'agent.backends'
+/** Whether the group section of the conversation list is expanded. */
+const K_GROUPS_OPEN = 'agent.groupsOpen'
 
 export type ThemeMode = 'system' | 'light' | 'dark'
 
@@ -68,6 +70,21 @@ export const Prefs = {
 
   saveAgentLocale(v: 'zh' | 'en') {
     localStorage.setItem(K_AGENT_LOCALE, v)
+  },
+
+  /**
+   * Whether the list's group section is open.
+   *
+   * OPEN BY DEFAULT, because a tenant with one or two groups should not have to discover a control before seeing
+   * them. It is remembered because the reason to close it is a PERSISTENT one — a tenant with thirty groups, where
+   * the section crowds out the sessions — and re-closing it on every visit would make the memory pointless.
+   */
+  loadGroupsOpen(): boolean {
+    return localStorage.getItem(K_GROUPS_OPEN) !== '0'
+  },
+
+  saveGroupsOpen(v: boolean) {
+    localStorage.setItem(K_GROUPS_OPEN, v ? '1' : '0')
   },
 
   /** The effective agent locale pushed to the backend config KV. */

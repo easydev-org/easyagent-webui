@@ -697,6 +697,13 @@ export interface GroupMember {
   session: string
   /** 'coordinator' | 'member' */
   role: 'coordinator' | 'member' | string
+  /**
+   * `busy` while a turn holds this session's run lease ANYWHERE, `idle` otherwise.
+   *
+   * Read from the shared lease rather than from one replica's active set: a turn runs on one process, and a
+   * process-local answer showed "idle" for working sessions on every other one.
+   */
+  status?: 'busy' | 'idle' | 'unknown' | string
   joinedAt: string
   joinedBy: string
 }

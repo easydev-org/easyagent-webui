@@ -16,6 +16,7 @@
   import type { Group, GroupMember } from '$lib/models'
   import PageHeader from '$lib/components/layout/PageHeader.svelte'
   import ChatAvatar from '$lib/components/ChatAvatar.svelte'
+  import StatusDot from '$lib/components/StatusDot.svelte'
   import { Input } from '$lib/components/ui/input'
   import { Dialog } from '$lib/components/ui/dialog'
   import { Textarea } from '$lib/components/ui/textarea'
@@ -331,13 +332,21 @@
                   store.pushPage({ kind: 'session_profile', key: 'session_profile' })
                 }}
               >
-                <ChatAvatar
-                  seed={m.session}
-                  avatar={memberSession(m.session)?.avatarFile ?? ''}
-                  size={40}
-                  label={memberLabel(m.session)}
-                  fetchBytes={store.api.fetchFileBytes.bind(store.api)}
-                />
+                <span class="relative block">
+                  <ChatAvatar
+                    seed={m.session}
+                    avatar={memberSession(m.session)?.avatarFile ?? ''}
+                    size={40}
+                    label={memberLabel(m.session)}
+                    fetchBytes={store.api.fetchFileBytes.bind(store.api)}
+                  />
+                  <!-- IS THIS ONE WORKING? It is the first question a member list has to answer, and the answer
+                       comes from the shared run lease — so it is right from any replica, not just the one that
+                       happens to be running the turn. -->
+                  <span class="absolute -top-0.5 -right-0.5">
+                    <StatusDot status={m.status} />
+                  </span>
+                </span>
               </button>
               <div class="min-w-0 flex-1">
                 <div class="flex items-baseline gap-2">

@@ -888,6 +888,7 @@ export class AgentApi {
     return r.members.map(m => ({
       session: m.session,
       role: m.role as GroupMember['role'],
+      status: (m.status || undefined) as GroupMember['status'],
       joinedAt: m.joinedAt,
       joinedBy: m.joinedBy,
     }))
@@ -906,6 +907,7 @@ export class AgentApi {
       members: r.members.map(m => ({
         session: m.session,
         role: m.role as GroupMember['role'],
+        status: (m.status || undefined) as GroupMember['status'],
         joinedAt: m.joinedAt,
         joinedBy: m.joinedBy,
       })),

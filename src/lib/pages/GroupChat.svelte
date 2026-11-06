@@ -17,6 +17,7 @@
   import type { FileRef, GroupMember, GroupMessage } from '$lib/models'
   import PageHeader from '$lib/components/layout/PageHeader.svelte'
   import ChatAvatar from '$lib/components/ChatAvatar.svelte'
+  import StatusDot from '$lib/components/StatusDot.svelte'
   import MediaAttachment from '$lib/components/MediaAttachment.svelte'
   import FileRefText from '$lib/components/FileRefText.svelte'
   import { VoiceRecorder } from '$lib/voice'
@@ -141,6 +142,17 @@
   let followBottom = $state(true)
 
   const coordinator = $derived(members.find(m => m.role === 'coordinator')?.session ?? '')
+
+  /**
+   * statusOf answers "is this member working" from the member list the page already holds.
+   *
+   * THE STATUS COMES WITH THE MEMBERS, not from a per-message call: a transcript of fifty messages from four
+   * sessions would otherwise be fifty status lookups for four answers. It is refreshed with the member list, which
+   * the page reloads — a live push would be a subscription per group for a decoration on an avatar.
+   */
+  function statusOf(session: string): string | undefined {
+    return members.find(x => x.session === session)?.status
+  }
 
   /** A member's display name, falling back to the id when the session cannot be resolved. */
   function labelOf(m: GroupMessage): string {
@@ -351,13 +363,21 @@
                 aria-label={labelOf(m)}
                 onclick={() => openMemberProfile(m)}
               >
-                <ChatAvatar
-                  seed={m.sender}
-                  size={28}
-                  label={labelOf(m)}
-                  avatar={avatarOf(m)}
-                  fetchBytes={store.api.fetchFileBytes.bind(store.api)}
-                />
+                <span class="relative block">
+                  <ChatAvatar
+                    seed={m.sender}
+                    size={28}
+                    label={labelOf(m)}
+                    avatar={avatarOf(m)}
+                    fetchBytes={store.api.fetchFileBytes.bind(store.api)}
+                  />
+                  <!-- WHETHER THAT SESSION IS STILL WORKING, right on the message it sent. Reading "I'm on it"
+                       and being unable to tell whether anything is happening is the gap this closes — and it is
+                       the fact the room exists to show. -->
+                  <span class="absolute -top-0.5 -right-0.5">
+                    <StatusDot status={statusOf(m.sender)} size="sm" />
+                  </span>
+                </span>
               </button>
               <span class="truncate text-micro font-semibold">{labelOf(m)}</span>
             </div>

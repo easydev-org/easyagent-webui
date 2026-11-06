@@ -137,6 +137,18 @@
   let newSessionOpen = $state(false)
 
   /**
+   * Whether the group section is expanded, and the choice is REMEMBERED.
+   *
+   * See the note at the section itself: every session now owns a room, so the group list grows with the session
+   * count and would otherwise sit on top of the sessions the reader came for.
+   */
+  let groupsOpen = $state(Prefs.loadGroupsOpen())
+  function toggleGroups() {
+    groupsOpen = !groupsOpen
+    Prefs.saveGroupsOpen(groupsOpen)
+  }
+
+  /**
    * isSessionRoom reports whether a group is a SESSION'S OWN ROOM rather than a group a person made.
    *
    * THE PROVENANCE IS IN `created_by`, which is `session:<id>` for the automatic room and `user…` for anything a
@@ -379,12 +391,31 @@
     ontouchstart={onTouchStart}
     ontouchmove={onTouchMove}
   >
-    <!-- GROUPS SCROLL WITH THE SESSIONS, because they are the same list in two parts. A fixed section above a
-         scrolling one would push the sessions off the screen once a tenant had a few groups, and the sessions
-         are the longer list. -->
+    <!-- GROUPS AND SESSIONS SHARE ONE SCROLL AREA, so neither can push the other out of reach by being long —
+         but they cannot both be visible at once either, and the groups are the part that grows without bound:
+         every session a person makes now owns a room, so a tenant with thirty sessions has thirty groups ABOVE
+         the sessions it actually came here to read.
+
+         SO THE GROUP SECTION COLLAPSES. It opens by default (one or two groups should not need discovering) and
+         the choice is remembered, because the reason to close it is persistent: this tenant has too many. -->
     {#if !selectMode && !searching && store.groups.length > 0}
-      <SectionLabel class="normal-case">{t('groupsTitle')}</SectionLabel>
-      <div class="space-y-1 px-2 pb-1" role="list">
+      <button
+        type="button"
+        class="flex w-full items-center gap-2 px-4 py-2 text-left"
+        aria-expanded={groupsOpen}
+        onclick={toggleGroups}
+      >
+        <span class="flex-1 text-micro font-semibold tracking-wider text-muted-foreground uppercase">
+          {t('groupsTitle')} · {store.groups.length}
+        </span>
+        <AppIcons.chevron_down
+          class={cn(
+            'size-4 shrink-0 text-muted-foreground transition-transform',
+            groupsOpen ? '' : '-rotate-90',
+          )}
+        />
+      </button>
+      <div class="space-y-1 px-2 pb-1" role="list" hidden={!groupsOpen}>
         {#each store.groups as g (g.id)}
           <!-- A GROUP ROW IS A CONVERSATION ROW, and it now reads like one: picture, name, WHAT WAS LAST SAID,
                and when. It used to show a member count instead of the preview, so a reader scanning the list
