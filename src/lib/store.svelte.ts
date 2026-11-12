@@ -16,6 +16,7 @@ import {
   rootPageFor,
   type SessionOverlay,
   type SiderTab,
+  updateTop,
 } from './nav'
 import { sortSessionsByRecency } from './session-order'
 import { showErrorToast } from './toast.svelte'
@@ -449,6 +450,19 @@ export class AppStore {
    * [root, current] so the tablet split never shows two parallels). */
   pushSibling(page: AppPage) {
     this.stacks[this.siderTab] = pushSibling(this.currentStack, page)
+  }
+
+  /**
+   * Retitle the extension view on top, if that is still what is on top.
+   *
+   * A PANEL THAT LEARNED ITS SUBJECT'S NAME SHOULD SAY SO — "Sandbox" becoming "sandbox dev-1" is the
+   * difference between a generic pane and one that tells the reader what they are looking at. The
+   * address check lives in updateTop, so a panel replaced mid-flight cannot rename its successor.
+   */
+  setExtViewTitle(ext: string, title: string) {
+    this.stacks[this.siderTab] = updateTop(this.currentStack, 'ext_view', p =>
+      p.ext === ext ? { ...p, title } : p,
+    )
   }
 
   /** Pop the top page; never pops below the root. */

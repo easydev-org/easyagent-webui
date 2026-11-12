@@ -24,6 +24,61 @@ export interface ExtUi {
   descriptions: Record<string, string>
   /** Absolute URL of the shelf icon, or '' when the extension declared none. */
   icon: string
+  /** What this panel offers beyond its front page. Always present, possibly empty. */
+  contributes: ExtContributes
+}
+
+/**
+ * What a panel says it offers, read from its installed `ui.json` through `/api/v1/ui`.
+ *
+ * EVERYTHING HERE IS RENDERED IN AN IFRAME. There is no scripting hook and no renderer replacement:
+ * a panel is built separately from this console, so the console owns the slot and the panel owns the
+ * pixels inside it. That constraint is why this is a list of places and routes rather than a set of
+ * capabilities.
+ */
+export interface ExtContributes {
+  /** Extra shelf entries beyond the front page. The first is treated as home. */
+  pages: ExtPage[]
+  /**
+   * Views a conversation can open beside itself, from its ⋯ menu.
+   *
+   * This is what makes an extension reachable from a session rather than only from the global shelf.
+   */
+  sessionViews: ExtSessionView[]
+  /** Extra HTTP prefixes this extension's backend serves; consumed by ext-ui-host, not here. */
+  proxies: string[]
+}
+
+/** One navigable screen a panel serves. */
+export interface ExtPage {
+  /** A route WITHIN the panel, e.g. "/" or "/pulls". Opaque here. */
+  route: string
+  /** The shelf label. Falls back to the panel's title. */
+  title: string
+  /** Keyed by language tag, like the panel's own descriptions. */
+  descriptions: Record<string, string>
+  /** An icon path under the mount, or '' for the panel's own icon. */
+  icon: string
+}
+
+/** A view a conversation can open beside itself. */
+export interface ExtSessionView {
+  /** Stable identifier, used as the navigation key so reopening focuses rather than stacks. */
+  id: string
+  /** A route WITHIN the panel, e.g. "/side". Opaque here. */
+  route: string
+  /** The header title, before the panel reports its own. */
+  title: string
+  /** The conversation ⋯ menu entry. Empty means this view cannot be opened, so it is dropped. */
+  menuLabel: string
+  /**
+   * The namespace this view reads and writes its selection under, e.g. "sandbox".
+   *
+   * THE CONSOLE DOES NOT INTERPRET THE VALUE. It relays a namespace → id map between the views that
+   * declare the same namespace, which is how a panel learns "which machine" without this console ever
+   * learning what a machine is. Empty means this view shares no selection.
+   */
+  selectionNamespace: string
 }
 
 /** The shape an extension answers `/api/v1/ui` with. */
@@ -33,6 +88,7 @@ interface UiInfo {
   title?: unknown
   descriptions?: unknown
   icon?: unknown
+  contributes?: unknown
 }
 
 /**
@@ -100,6 +156,79 @@ function storedToken(): string {
 }
 
 /** Probe one extension, or null when it has no UI. */
+/**
+ * Read the contributions a panel declared, dropping anything malformed.
+ *
+ * DROPPED, NOT REJECTED WHOLESALE: one bad entry (a session view with no menu label) must not cost the
+ * panel its other entries. This is the same rule the rest of this file uses for descriptions — a
+ * broken field disappears rather than turning the whole panel invisible.
+ */
+function readContributes(v: unknown): ExtContributes {
+  const empty: ExtContributes = { pages: [], sessionViews: [], proxies: [] }
+  if (v === null || typeof v !== 'object') return empty
+  const c = v as {
+    pages?: unknown
+    session_views?: unknown
+    sessionViews?: unknown
+    proxies?: unknown
+  }
+
+  const pages: ExtPage[] = []
+  if (Array.isArray(c.pages)) {
+    for (const raw of c.pages) {
+      if (raw === null || typeof raw !== 'object') continue
+      const p = raw as { route?: unknown; title?: unknown; descriptions?: unknown; icon?: unknown }
+      if (typeof p.route !== 'string' || p.route === '') continue
+      pages.push({
+        route: p.route.startsWith('/') ? p.route : `/${p.route}`,
+        title: typeof p.title === 'string' ? p.title : '',
+        descriptions: readDescriptions(p.descriptions),
+        icon: typeof p.icon === 'string' ? p.icon : '',
+      })
+    }
+  }
+
+  // THE WIRE SPELLS IT `session_views`; the interface uses camelCase like the rest of this codebase.
+  // Both are accepted so a panel written against either name is not silently ignored.
+  const sessionViews: ExtSessionView[] = []
+  const rawViews = Array.isArray(c.session_views) ? c.session_views : c.sessionViews
+  if (Array.isArray(rawViews)) {
+    for (const raw of rawViews) {
+      if (raw === null || typeof raw !== 'object') continue
+      const s = raw as {
+        id?: unknown
+        route?: unknown
+        title?: unknown
+        menu_label?: unknown
+        menuLabel?: unknown
+        selection_namespace?: unknown
+        selectionNamespace?: unknown
+      }
+      const id = typeof s.id === 'string' ? s.id : ''
+      const route = typeof s.route === 'string' ? s.route : ''
+      const label = typeof s.menu_label === 'string' ? s.menu_label : s.menuLabel
+      // A VIEW WITH NO MENU LABEL CANNOT BE OPENED, so it is not offered: a menu entry with a blank
+      // name is a row the reader cannot identify.
+      if (id === '' || route === '' || typeof label !== 'string' || label === '') continue
+      const ns = s.selection_namespace ?? s.selectionNamespace
+      sessionViews.push({
+        id,
+        route: route.startsWith('/') ? route : `/${route}`,
+        title: typeof s.title === 'string' ? s.title : label,
+        menuLabel: label,
+        selectionNamespace: typeof ns === 'string' ? ns : '',
+      })
+    }
+  }
+
+  const proxies: string[] = []
+  if (Array.isArray(c.proxies)) {
+    for (const p of c.proxies) if (typeof p === 'string' && p !== '') proxies.push(p)
+  }
+
+  return { pages, sessionViews, proxies }
+}
+
 async function probe(id: string, token: string): Promise<ExtUi | null> {
   try {
     const r = await fetch(`/ext/${encodeURIComponent(id)}/api/v1/ui`, {
@@ -117,6 +246,7 @@ async function probe(id: string, token: string): Promise<ExtUi | null> {
       // Resolved against the mount the extension reported, so an icon path is a path under it rather
       // than a URL the host had to guess. An empty value means the shelf draws a neutral glyph.
       icon: resolveIcon(base, info.icon),
+      contributes: readContributes(info.contributes),
     }
   } catch {
     // Unreachable (a 502 from the proxy, a network failure) means the same thing as "no UI" here:

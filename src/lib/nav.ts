@@ -103,6 +103,30 @@ export function popPage(stack: AppPage[]): AppPage[] {
 }
 
 /**
+ * Replace the top page with an updated copy, when `key` matches.
+ *
+ * USED BY AN EXTENSION VIEW TO RETITLE ITSELF: a sandbox panel that opened on "Sandbox" and then
+ * learned the machine's name should be able to put that in the header. Replacing in place rather
+ * than pushing keeps the stack depth — a retitle is not navigation, and pushing would make the back
+ * button return to the same page under its old name.
+ *
+ * A MISMATCHED KEY CHANGES NOTHING: the panel that asked may have been replaced by another view
+ * between the message being sent and the store seeing it, and retitling the wrong page is worse than
+ * leaving the old title.
+ */
+export function updateTop<K extends AppPage['key']>(
+  stack: AppPage[],
+  key: K,
+  patch: (page: Extract<AppPage, { key: K }>) => Extract<AppPage, { key: K }>,
+): AppPage[] {
+  const top = stack[stack.length - 1]
+  if (!top || top.key !== key) return [...stack]
+  const next = [...stack]
+  next[next.length - 1] = patch(top as Extract<AppPage, { key: K }>)
+  return next
+}
+
+/**
  * THE DEPTH A PAGE BELONGS AT.
  *
  * A stack position is not an accident of click order — it is what the page IS. The chat tab has exactly three

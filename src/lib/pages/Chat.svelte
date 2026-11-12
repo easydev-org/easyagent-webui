@@ -32,6 +32,8 @@
   import TodosPanel from '$lib/components/TodosPanel.svelte'
   import { latestTodos, todoCounts } from '$lib/todos'
   import { Popover } from '$lib/components/ui/popover'
+  import { discoverExtUis, type ExtSessionView } from '$lib/ext-catalog.svelte'
+  import { extViewPage } from '$lib/ext-panel.svelte'
 
   let { store }: PageProps = $props()
 
@@ -75,6 +77,52 @@
 
   const session = $derived<Session | null>(store.activeSession)
   const sid = $derived(session?.id ?? '')
+
+  /**
+   * Extension views this session can open beside itself.
+   *
+   * DISCOVERED ONCE PER STORE, NOT PER SESSION: the list is a property of the installed panels, and
+   * re-probing every panel on every session switch would issue one HTTP request per extension per
+   * click. An empty list is the ordinary case — most deployments have extensions and none of them
+   * declare a session view.
+   *
+   * FAILURES ARE SWALLOWED INTO AN EMPTY LIST. This menu is chrome around the conversation; an
+   * extension being unreachable must not put an error strip above the message list.
+   */
+  let sessionViews = $state<Array<{ ext: string; view: ExtSessionView }>>([])
+  $effect(() => {
+    let cancelled = false
+    void discoverExtUis(store.api)
+      .then(uis => {
+        if (cancelled) return
+        sessionViews = uis.flatMap(u =>
+          u.contributes.sessionViews.map(v => ({ ext: u.id, view: v })),
+        )
+      })
+      .catch(() => {
+        if (!cancelled) sessionViews = []
+      })
+    return () => {
+      cancelled = true
+    }
+  })
+
+  /**
+   * Open an extension's session view beside the conversation.
+   *
+   * THE SIDE PANEL IS THE EXISTING `ext_view` PAGE, so nothing new is created here: on a wide screen
+   * Shell renders the last two pages side by side, and on a narrow one it shows this page full width
+   * with a back button. That is the same rule the mailbox overlay and the shelf already follow.
+   *
+   * `session` is what scopes the panel — it is how the frame learns which conversation it belongs to
+   * without the URL growing a second, unscoped entry point.
+   */
+  function openSessionView(ext: string, v: ExtSessionView): void {
+    if (!sid) return
+    store.pushPage(
+      extViewPage({ ext, route: v.route, title: v.title || v.menuLabel, session: sid }),
+    )
+  }
 
   // (Re)boot the controller whenever the open session changes.
   $effect(() => {
@@ -774,6 +822,18 @@
             <DropdownMenuItem onSelect={() => void openChannels()}
               >{t('channelsMenu')}</DropdownMenuItem
             >
+            <!-- EXTENSION VIEWS SCOPED TO THIS CONVERSATION.
+                 An extension opts in by declaring `sessionViews` in its ui.json; each entry opens
+                 its panel beside the conversation with this session attached. Above the separator
+                 that starts the destructive tail, because none of these are destructive. -->
+            {#if sessionViews.length > 0}
+              <DropdownMenuSeparator />
+              {#each sessionViews as sv (sv.ext + '/' + sv.view.id)}
+                <DropdownMenuItem onSelect={() => openSessionView(sv.ext, sv.view)}
+                  >{sv.view.menuLabel}</DropdownMenuItem
+                >
+              {/each}
+            {/if}
             <DropdownMenuSeparator />
             <DropdownMenuItem onSelect={() => void menuAction('compact')}
               >{t('compactHistory')}</DropdownMenuItem

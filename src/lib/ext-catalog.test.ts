@@ -64,6 +64,7 @@ describe('discoverExtUis', () => {
         base: '/ext/github',
         descriptions: {},
         icon: '',
+        contributes: { pages: [], sessionViews: [], proxies: [] },
       },
     ])
   })
@@ -94,6 +95,7 @@ describe('discoverExtUis', () => {
       base: '/ext/plain',
       descriptions: {},
       icon: '',
+      contributes: { pages: [], sessionViews: [], proxies: [] },
     })
   })
 
@@ -162,6 +164,7 @@ describe('descriptionFor', () => {
     base: '/ext/x',
     descriptions,
     icon: '',
+    contributes: { pages: [], sessionViews: [], proxies: [] },
   })
 
   it('prefers an exact locale match', () => {
@@ -185,5 +188,101 @@ describe('descriptionFor', () => {
 
   it('returns empty when the extension declared none', () => {
     expect(descriptionFor(ex({}), 'en')).toBe('')
+  })
+})
+
+/**
+ * The contributions a panel declares.
+ *
+ * THE PARSING IS THE INTERESTING PART, and the rule is "drop the bad entry, keep the panel": a
+ * session view with no menu label is a menu row nobody can identify, but it must not cost the panel
+ * the other views it declared. Same reasoning as descriptions, which drop blank entries rather than
+ * blanking the panel.
+ */
+describe('contributes', () => {
+  it('is empty when the panel declares nothing', async () => {
+    withFetch(() => Promise.resolve(new Response(JSON.stringify({ title: 'X' }), { status: 200 })))
+    const [got] = await discoverExtUis(fakeApi(['x']))
+    expect(got!.contributes).toEqual({ pages: [], sessionViews: [], proxies: [] })
+  })
+
+  it('reads a session view, including its selection namespace', async () => {
+    const ui = {
+      title: 'Sandboxes',
+      contributes: {
+        session_views: [
+          {
+            id: 'sandbox',
+            route: '/side',
+            title: 'Sandbox',
+            menu_label: 'This session’s sandbox',
+            selection_namespace: 'sandbox',
+          },
+        ],
+      },
+    }
+    withFetch(() => Promise.resolve(new Response(JSON.stringify(ui), { status: 200 })))
+    const [got] = await discoverExtUis(fakeApi(['sandbox']))
+    expect(got!.contributes.sessionViews).toEqual([
+      {
+        id: 'sandbox',
+        route: '/side',
+        title: 'Sandbox',
+        menuLabel: 'This session’s sandbox',
+        selectionNamespace: 'sandbox',
+      },
+    ])
+  })
+
+  it('drops a session view with no menu label but keeps the others', async () => {
+    const ui = {
+      contributes: {
+        session_views: [
+          { id: 'labelled', route: '/a', menu_label: 'A' },
+          { id: 'unlabelled', route: '/b' },
+          { id: '', route: '/c', menu_label: 'no id' },
+          { id: 'no-route', menu_label: 'no route' },
+        ],
+      },
+    }
+    withFetch(() => Promise.resolve(new Response(JSON.stringify(ui), { status: 200 })))
+    const [got] = await discoverExtUis(fakeApi(['x']))
+    expect(got!.contributes.sessionViews.map(v => v.id)).toEqual(['labelled'])
+  })
+
+  it('normalises a route without a leading slash', async () => {
+    // The frame URL is built by concatenating "#" + route, and "side" without the slash would become
+    // "#side" — a hash the panel's router does not recognise.
+    const ui = { contributes: { pages: [{ route: 'pulls' }] } }
+    withFetch(() => Promise.resolve(new Response(JSON.stringify(ui), { status: 200 })))
+    const [got] = await discoverExtUis(fakeApi(['x']))
+    expect(got!.contributes.pages[0]!.route).toBe('/pulls')
+  })
+
+  it('reads pages and proxies', async () => {
+    const ui = {
+      contributes: {
+        pages: [{ route: '/', title: 'Home' }],
+        proxies: ['desktop', ''],
+      },
+    }
+    withFetch(() => Promise.resolve(new Response(JSON.stringify(ui), { status: 200 })))
+    const [got] = await discoverExtUis(fakeApi(['x']))
+    expect(got!.contributes.pages).toHaveLength(1)
+    expect(got!.contributes.proxies).toEqual(['desktop'])
+  })
+
+  it('survives a malformed contributes rather than losing the panel', async () => {
+    for (const bad of ['nonsense', 42, null, [], { pages: 'not-an-array' }]) {
+      withFetch(() =>
+        Promise.resolve(
+          new Response(JSON.stringify({ title: 'X', contributes: bad }), { status: 200 }),
+        ),
+      )
+      const res = await discoverExtUis(fakeApi(['x']))
+      expect(res).toHaveLength(1)
+      expect(res[0]!.contributes.sessionViews).toEqual([])
+      vi.restoreAllMocks()
+    }
   })
 })
